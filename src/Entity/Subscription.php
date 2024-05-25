@@ -12,7 +12,7 @@ use Gedmo\Timestampable\Traits\TimestampableEntity;
 #[ORM\Entity(repositoryClass: SubscriptionRepository::class)]
 class Subscription
 {
-    use TimestampableEntity;
+//    use TimestampableEntity;
 
     #[ORM\Id]
     #[ORM\GeneratedValue]
