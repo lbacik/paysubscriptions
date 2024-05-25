@@ -1,0 +1,68 @@
+<header class="bg-blue-600 text-white">
+        <div class="container mx-auto p-4 flex justify-between items-center">
+            <div class="text-2xl font-bold">
+                <a href="#" class="hover:text-gray-300">PaySubscriptions</a>
+            </div>
+            <nav class="hidden md:flex space-x-4">
+                <a href="#" class="hover:text-gray-300">Home</a>
+                <a href="#" class="hover:text-gray-300">Features</a>
+                <a href="#" class="hover:text-gray-300">Pricing</a>
+                <a href="#" class="hover:text-gray-300">About</a>
+                <a href="#" class="hover:text-gray-300">Contact</a>
+            </nav>
+            <div class="flex space-x-4 items-center">
+                <!-- Non-logged-in user buttons -->
+                <a href="#" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">Sign In</a>
+                <a href="#" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">Register</a>
+                <!-- Logged-in user profile with dropdown -->
+                <div class="hidden relative dropdown">
+                    <button class="flex items-center focus:outline-none">
+                        <img src="https://robohash.org/user@example.com?set=set3" alt="Avatar" class="w-10 h-10 rounded-full mr-2">
+                        <span class="text-white">Profile</span>
+                    </button>
+                    <div class="dropdown-menu absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-2 hidden">
+                        <div class="px-4 py-2 text-gray-800 border-b">
+                            user@example.com
+                        </div>
+                        <a href="#" class="block px-4 py-2 text-gray-800 hover:bg-gray-200">Dashboard</a>
+                        <a href="#" class="block px-4 py-2 text-gray-800 hover:bg-gray-200">Profile</a>
+                        <a href="#" class="block px-4 py-2 text-gray-800 hover:bg-gray-200">Logout</a>
+                    </div>
+                </div>
+            </div>
+            <div class="md:hidden">
+                <button id="menu-toggle" class="text-white focus:outline-none">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <nav id="mobile-menu" class="md:hidden bg-blue-600 hidden">
+            <a href="#" class="block px-4 py-2 text-sm hover:bg-blue-500">Home</a>
+            <a href="#" class="block px-4 py-2 text-sm hover:bg-blue-500">Features</a>
+            <a href="#" class="block px-4 py-2 text-sm hover:bg-blue-500">Pricing</a>
+            <a href="#" class="block px-4 py-2 text-sm hover:bg-blue-500">About</a>
+            <a href="#" class="block px-4 py-2 text-sm hover:bg-blue-500">Contact</a>
+            <!-- Non-logged-in user buttons for mobile -->
+            <a href="#" class="block px-4 py-2 text-sm hover:bg-green-500">Sign In</a>
+            <a href="#" class="block px-4 py-2 text-sm hover:bg-blue-500">Register</a>
+            <!-- Logged-in user button for mobile -->
+            <a href="#" class="hidden block px-4 py-2 text-sm hover:bg-gray-500">Profile</a>
+        </nav>
+    </header>
+
+    <script>
+        document.getElementById('menu-toggle').addEventListener('click', function() {
+            var menu = document.getElementById('mobile-menu');
+            menu.classList.toggle('hidden');
+        });
+
+        // Toggle visibility based on authentication status (for demonstration)
+        // In a real application, you would handle this with your authentication logic
+        const isLoggedIn = true; // Change this to true to simulate a logged-in user
+        if (isLoggedIn) {
+            document.querySelectorAll('.bg-green-500, .bg-blue-500').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.dropdown').forEach(el => el.classList.remove('hidden'));
+        }
+    </script>
