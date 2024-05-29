@@ -1,0 +1,11 @@
+{#{% props %}#}
+
+{% set tag = 'button' %}
+
+{% if attributes.has('href') %}
+    {% set tag = 'a' %}
+{% endif %}
+
+<{{ tag }} {{ attributes.defaults({class: "p-2 px-4 bg-blue-200 border rounded"}) }}>
+    {% block content %}{% endblock %}
+</{{ tag }}>
