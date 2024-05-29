@@ -12,7 +12,6 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
-use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[isGranted('ROLE_USER')]
@@ -23,19 +22,19 @@ class SubscriptionController extends AbstractController
     public function index(SubscriptionRepository $subscriptionRepository): Response
     {
         return $this->render('subscription/index.html.twig', [
-            'subscriptions' => $subscriptionRepository->findAll(),
+            'subscriptions' => $subscriptionRepository->findBy(['owner' => $this->getUser()]),
         ]);
     }
 
     #[Route('/new', name: 'app_subscription_new', methods: ['GET', 'POST'])]
-    public function new(Request $request, EntityManagerInterface $entityManager, UserInterface $user): Response
+    public function new(Request $request, EntityManagerInterface $entityManager): Response
     {
         $subscription = new Subscription();
         $form = $this->createForm(SubscriptionType::class, $subscription);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $subscription->setOwner($user);
+            $subscription->setOwner($this->getUser());
             $entityManager->persist($subscription);
             $entityManager->flush();
 
@@ -67,9 +66,12 @@ class SubscriptionController extends AbstractController
     }
 
     #[Route('/{id}', name: 'app_subscription_delete', methods: ['POST'])]
-    public function delete(Request $request, Subscription $subscription, EntityManagerInterface $entityManager): Response
-    {
-        if ($this->isCsrfTokenValid('delete'.$subscription->getId(), $request->getPayload()->get('_token'))) {
+    public function delete(
+        Request $request,
+        Subscription $subscription,
+        EntityManagerInterface $entityManager
+    ): Response {
+        if ($this->isCsrfTokenValid('delete' . $subscription->getId(), $request->getPayload()->get('_token'))) {
             $entityManager->remove($subscription);
             $entityManager->flush();
         }
