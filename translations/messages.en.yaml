@@ -1,0 +1,17 @@
+service:
+  name: "PaySubscriptions"
+  tab: "PaySub"
+user:
+  login: "Sign in"
+  logout: "Logout"
+  register: "Sign up"
+  settings: "Settings"
+  subscriptions: "Subscriptions (CRUD)"
+main_menu:
+  home: "Home"
+  about: "About"
+  dashboard: "Dashboard"
+add_subscription: "Add Subscription"
+edit: "Edit"
+delete: "Delete"
+back_to_list: "Back to list"
