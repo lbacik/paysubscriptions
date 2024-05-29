@@ -1,9 +1,12 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Hello DashboardController!{% endblock %}
-
 {% block body %}
+    <twig:ContentCenter class="mt-6 md:mt-20" width="w-full md:w-2/3">
+        <div class="p-5">
+            {{ render_chart(chart) }}
+        </div>
 
-    Dashboard
+        {{ include('dashboard/_table.html.twig') }}
 
+    </twig:ContentCenter>
 {% endblock %}

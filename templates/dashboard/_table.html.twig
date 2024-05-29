@@ -1,0 +1,62 @@
+
+<div class="container mx-auto mt-10">
+    <h1 class="text-2xl font-bold mb-4">Subscription Overview</h1>
+    <table class="min-w-full bg-white border border-gray-200 hover-highlight">
+        <thead>
+        <tr class="bg-blue-600 text-white">
+            <th class="py-2 px-4 border-b border-gray-200">#</th>
+            <th class="py-2 px-4 border-b border-gray-200">Subscription</th>
+            <th class="py-2 px-4 border-b border-gray-200">First Payment</th>
+            <th class="py-2 px-4 border-b border-gray-200">Monthly</th>
+            <th class="py-2 px-4 border-b border-gray-200">Yearly (Calculated)</th>
+            <th class="py-2 px-4 border-b border-gray-200">Yearly</th>
+            <th class="py-2 px-4 border-b border-gray-200">Paid Total (till now)</th>
+            <th class="py-2 px-4 border-b border-gray-200">Actions</th>
+        </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200">
+        <!-- Example Rows -->
+        <tr class="bg-gray-50">
+            <td class="py-2 px-4 border-b border-gray-200">1</td>
+            <td class="py-2 px-4 border-b border-gray-200">Subscription A</td>
+            <td></td>
+            <td class="py-2 px-4 border-b border-gray-200">$10</td>
+            <td class="py-2 px-4 border-b border-gray-200">$120</td>
+            <td class="py-2 px-4 border-b border-gray-200">$110</td>
+            <td></td>
+            <td>
+                <twig:Button href="#">{{ "edit"|trans }}</twig:Button>
+            </td>
+        </tr>
+        <tr class="bg-white">
+            <td class="py-2 px-4 border-b border-gray-200">2</td>
+            <td class="py-2 px-4 border-b border-gray-200">Subscription B</td>
+            <td></td>
+            <td class="py-2 px-4 border-b border-gray-200">$20</td>
+            <td class="py-2 px-4 border-b border-gray-200">$240</td>
+            <td class="py-2 px-4 border-b border-gray-200">$220</td>
+            <td></td>
+            <td>
+                <twig:Button href="#">{{ "edit"|trans }}</twig:Button>
+            </td>
+        </tr>
+        <!-- Additional rows here -->
+        </tbody>
+        <tfoot>
+        <tr class="bg-gray-200">
+            <td></td>
+            <td></td>
+            <td class="py-2 px-4 font-bold">Total</td>
+            <td class="py-2 px-4 font-bold">$30</td> <!-- Sum of monthly values -->
+            <td class="py-2 px-4 font-bold">$360</td> <!-- Sum of yearly (calculated) values -->
+            <td class="py-2 px-4 font-bold">$330</td> <!-- Sum of yearly values -->
+            <td></td>
+            <td></td>
+        </tr>
+        </tfoot>
+    </table>
+</div>
+
+<div class="w-full text-right">
+    <twig:Button href="#">{{ "add_subscription"|trans }}</twig:Button>
+</div>
