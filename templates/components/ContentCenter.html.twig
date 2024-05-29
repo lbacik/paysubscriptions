@@ -1,0 +1,5 @@
+{% props width="w-2/3" %}
+
+<div
+        {{ attributes.defaults({class: "m-auto" ~ " " ~ width}) }}
+>{% block content %}{% endblock %}</div>
