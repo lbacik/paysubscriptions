@@ -5,7 +5,21 @@ module.exports = {
     "./templates/**/*.html.twig",
   ],
   theme: {
-    extend: {},
+    extend: {
+      colors: {
+        'color-pri': '#f7f7ff',
+        'color-sec': '#bdd5ea',
+        'color-ter': '#577399',
+        'color-qua': '#495867',
+        'color-qui': '#fe5f55',
+      },
+      fontFamily: {
+        'handwriting': ['Patrick Hand', 'cursive'],
+        'handwriting2': ['Indie Flower', 'cursive'],
+        'sans': ['Roboto', 'sans-serif'],
+        'serif': ['Merriweather', 'serif'],
+      },
+    },
   },
   plugins: [],
 }
