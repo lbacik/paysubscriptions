@@ -3,13 +3,12 @@
 {% block title %}Edit Subscription{% endblock %}
 
 {% block body %}
-    <twig:ContentCenter class="mt-20" width="w-1/3">
+    <twig:ContentCenter class="my-20" width="w-1/3">
         <h1>Edit Subscription</h1>
 
         {{ include('subscription/_form.html.twig', {'button_label': 'Update'}) }}
 
-        <twig:Button href="{{ path('app_subscription_index') }}">{{ 'back_to_list'|trans }}</twig:Button>
-
-        {{ include('subscription/_delete_form.html.twig') }}
+{#        <twig:Button href="{{ path('app_subscription_index') }}">{{ 'back_to_list'|trans }}</twig:Button>#}
+{#        {{ include('subscription/_delete_form.html.twig') }}#}
     </twig:ContentCenter>
 {% endblock %}

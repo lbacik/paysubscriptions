@@ -1,6 +1,13 @@
-{{ form_start(form) }}
+<div class="form">
+
+    {{ form_start(form)}}
+
     {{ form_widget(form) }}
 
-    <twig:Button>{{ button_label|default('Save') }}</twig:Button>
+    <div class="flex flex-row items-center justify-end space-x-2">
+        <twig:Button>{{ 'cancel'|trans }}</twig:Button>
+        <twig:Button>{{ button_label|default('Save') }}</twig:Button>
+    </div>
 
-{{ form_end(form) }}
+    {{ form_end(form) }}
+</div>
