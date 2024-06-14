@@ -1,7 +1,56 @@
 {% extends 'base.html.twig' %}
 
 {% block body %}
+    <div class="relative">
+        <div class="absolute w-screen top-20 block h-56 bg-color-ter z-0"></div>
+    </div>
+    <div class="flex flex-col w-2/3 m-auto py-20">
+        <div class="flex flex-col md:flex-row">
+            <div class="w-full md:w-1/3 p-4 flex items-center justify-center">
+                <img src="{{ asset('images/chart02.png') }}" alt="cartoon chart" class="w-96 hover:scale-110 transition duration-500 z-10"/>
+            </div>
+            <div class="flex flex-col items-center justify-center w-full md:w-2/3 text-xl text-color-qua font-handwriting2 space-y-12">
+                <p class="pl-10 pr-5 font-handwriting md:text-color-pri text-4xl z-10">
+                    Are you tired of losing track of your <span class="underline">subscriptions</span> and being surprised by payment <span class="text-color-qui">deadlines</span>?
+                </p>
+                <div class="px-5 md:px-20 z-20">
+                    <p class="bg-color-pri py-4 px-8 rounded-xl shadow-xl hover:shadow-purple-400 transition duration-500 bg-lime-50 hover:bg-lime-200">
+                        Reassure yourself with <strong>PaySubscriptions</strong> - the ultimate subscription management tool that puts you back in
+                        control.
+                    </p>
+                </div>
+{#                <p class="px-5">#}
+{#                    Say goodbye to the hassle of juggling multiple payment dates and forgotten renewals. With#}
+{#                    our intuitive interface, you can easily store and monitor all your subscriptions in one centralized#}
+{#                    location.#}
+{#                </p>#}
+            </div>
+        </div>
 
-    Home
+        <div class="mt-10 md:mr-10 mb-10 p-10 px-20 font-handwriting text-2xl font-thin bg-blue-100 rounded-xl shadow-xl hover:shadow-purple-400 transition duration-500 text-color-ter">
+            <p>
+                Manage your subscription details, including payment amounts, intervals, and following due dates. Plus,
+                generate comprehensive reports to gain valuable insights into your monthly and annual subscription
+                spending, empowering you to make smart financial decisions.
+            </p>
+        </div>
 
+        <div class="flex flex-col md:flex-row">
+            <div class="flex items-center w-full md:w-2/3 p-4 font-handwriting2 text-xl text-color-qua">
+                <div>
+                    <h3 class="text-3xl mb-5 underline">Key Features:</h3>
+                    <ul class="list-disc list-inside">
+                        <li class="ml-5">Centralized subscription management</li>
+                        <li class="ml-5">Monthly and annual subscription spending reports</li>
+                        <li class="ml-5">Intuitive user interface for easy data entry and management</li>
+                        <li class="ml-5">Customizable notification preferences</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="w-full md:w-1/3 p-8 mr-8 flex items-center justify-center">
+               <img src="{{ asset('images/chart04.png') }}" class="w-64 hover:scale-110 transition duration-500"/>
+            </div>
+
+        </div>
+    </div>
 {% endblock %}
