@@ -114,4 +114,14 @@ class Subscription
 
         return $this;
     }
+
+    public function monthlyCalculated(): float
+    {
+        return round((float) ($this->getMonthly() ?? ((float) $this->getYearly() / 12)), 2);
+    }
+
+    public function yearlyCalculated(): float
+    {
+        return round((float) ($this->getYearly() ?? ((float) $this->getMonthly() * 12)), 2);
+    }
 }
