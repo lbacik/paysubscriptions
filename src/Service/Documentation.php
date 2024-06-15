@@ -1,0 +1,51 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service;
+
+readonly class Documentation
+{
+    public function __construct(
+        private string $docsPath,
+    ) {
+    }
+
+    public function getMenuItems(): array
+    {
+        $files = scandir($this->docsPath, SCANDIR_SORT_ASCENDING);
+
+        return array_reduce(
+            array_filter($files, fn(string $file) => pathinfo($file, PATHINFO_EXTENSION) === 'md'),
+            function (array $menuItems, string $file) {
+                $menuItems[pathinfo($file, PATHINFO_FILENAME)] = $this->getChapters($file);
+                return $menuItems;
+            },
+            []
+        );
+    }
+
+    public function getContent(string $menuItem): string
+    {
+        try {
+            return file_get_contents($this->docsPath . $menuItem . '.md');
+        } catch (\Throwable) {
+            return 'not found';
+        }
+    }
+
+    private function getChapters(string $file): array
+    {
+        $fileContent = file_get_contents($this->docsPath . $file);
+        $lines = explode("\n", $fileContent);
+
+        return array_reduce(
+            array_filter($lines, fn(string $line) => str_starts_with($line, '## ')),
+            function (array $chapters, string $line) {
+                $chapters[] = substr($line, 3);
+                return $chapters;
+            },
+            []
+        );
+    }
+}
