@@ -76,3 +76,24 @@ table#subscriptions {
 h1 {
     @apply text-2xl font-thin text-color-ter;
 }
+
+.doc-menu {
+    @apply text-color-qua;
+
+    .doc-chapters {
+        @apply text-color-ter;
+    }
+}
+
+.prose {
+
+    @apply text-color-ter;
+
+    h1,h2,h3,h4,h5,h6,strong {
+        @apply text-color-qua;
+    }
+
+    a {
+        @apply no-underline text-blue-400 font-bold;
+    }
+}
