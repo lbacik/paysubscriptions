@@ -6,6 +6,8 @@ namespace App\Service;
 
 readonly class Documentation
 {
+    private const EXCLUDED_FILES = ['Dashboard.md'];
+
     public function __construct(
         private string $docsPath,
     ) {
@@ -18,7 +20,9 @@ readonly class Documentation
         return array_reduce(
             array_filter($files, fn(string $file) => pathinfo($file, PATHINFO_EXTENSION) === 'md'),
             function (array $menuItems, string $file) {
-                $menuItems[pathinfo($file, PATHINFO_FILENAME)] = $this->getChapters($file);
+                if (!in_array($file, self::EXCLUDED_FILES, true)) {
+                    $menuItems[pathinfo($file, PATHINFO_FILENAME)] = $this->getChapters($file);
+                }
                 return $menuItems;
             },
             []

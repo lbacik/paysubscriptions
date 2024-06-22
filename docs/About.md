@@ -9,22 +9,23 @@ providing you with a clear overview and control over your spending. Whether you 
 PaySubscriptions ensures you never lose track of your expenses.
 
 
+[//]: # (## How It Works)
 
-## How It Works
+[//]: # ()
+[//]: # (Getting started with PaySubscriptions is quick and straightforward. Simply [sign up]&#40;/register&#41; and add your subscriptions )
 
-Getting started with PaySubscriptions is quick and straightforward. Simply [sign up](/register) and add your subscriptions 
-(more about that at [dashboard](/docs/dashboard) section where you can also find **the credentials for the demo account**). 
-The system tracks due dates and provides insightful analytics to help you optimize your spending.
+[//]: # (&#40;more about that at [dashboard]&#40;/docs/dashboard&#41; section where you can also find **the credentials for the demo account**&#41;. )
 
-*dashboard graphic*
+[//]: # (The system tracks due dates and provides insightful analytics to help you optimize your spending.)
 
-<div class="warning">
-*Warning*
-</div>
+[//]: # (*dashboard graphic*)
+[//]: # ()
+[//]: # (<div class="warning">)
+[//]: # (*Warning*)
+[//]: # (</div>)
 
-
-## Contact Us
-**We’re Here to Help**
+## Contact Me
+**I'm Here to Help**
 
 Have questions or need assistance? Visit [contact page](/contact)! 
 Whether you have inquiries about the service or need help with your account.
