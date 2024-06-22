@@ -19,7 +19,11 @@ main_menu:
   dashboard: "Dashboard"
   contact: "Contact"
   docs: "About"
+subscription:
+  edit: "Edit Subscription"
+  new: "Add New Subscription"
 add_subscription: "Add Subscription"
 edit: "Edit"
 delete: "Delete"
 back_to_list: "Back to list"
+cancel: "Cancel"

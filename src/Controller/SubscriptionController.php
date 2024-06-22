@@ -6,7 +6,6 @@ namespace App\Controller;
 
 use App\Entity\Subscription;
 use App\Form\SubscriptionType;
-use App\Repository\SubscriptionRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -18,13 +17,13 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 #[Route('/subscription')]
 class SubscriptionController extends AbstractController
 {
-    #[Route('/', name: 'app_subscription_index', methods: ['GET'])]
-    public function index(SubscriptionRepository $subscriptionRepository): Response
-    {
-        return $this->render('subscription/index.html.twig', [
-            'subscriptions' => $subscriptionRepository->findBy(['owner' => $this->getUser()]),
-        ]);
-    }
+//    #[Route('/', name: 'app_subscription_index', methods: ['GET'])]
+//    public function index(SubscriptionRepository $subscriptionRepository): Response
+//    {
+//        return $this->render('subscription/index.html.twig', [
+//            'subscriptions' => $subscriptionRepository->findBy(['owner' => $this->getUser()]),
+//        ]);
+//    }
 
     #[Route('/new', name: 'app_subscription_new', methods: ['GET', 'POST'])]
     public function new(Request $request, EntityManagerInterface $entityManager): Response
@@ -38,7 +37,7 @@ class SubscriptionController extends AbstractController
             $entityManager->persist($subscription);
             $entityManager->flush();
 
-            return $this->redirectToRoute('app_subscription_index', [], Response::HTTP_SEE_OTHER);
+            return $this->redirectToRoute('app_dashboard', [], Response::HTTP_SEE_OTHER);
         }
 
         return $this->render('subscription/new.html.twig', [
@@ -56,7 +55,7 @@ class SubscriptionController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $entityManager->flush();
 
-            return $this->redirectToRoute('app_subscription_index', [], Response::HTTP_SEE_OTHER);
+            return $this->redirectToRoute('app_dashboard', [], Response::HTTP_SEE_OTHER);
         }
 
         return $this->render('subscription/edit.html.twig', [
@@ -76,6 +75,6 @@ class SubscriptionController extends AbstractController
             $entityManager->flush();
         }
 
-        return $this->redirectToRoute('app_subscription_index', [], Response::HTTP_SEE_OTHER);
+        return $this->redirectToRoute('app_dashboard', [], Response::HTTP_SEE_OTHER);
     }
 }
