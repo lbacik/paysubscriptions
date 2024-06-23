@@ -1,33 +1,33 @@
-{% props active = {'type': 'bar', 'withCalculated': false} %}
+{% props active = {type: 'bar', withCalculated: false} %}
 
 <div {{ attributes.defaults({ class: "flex flex-row space-x-2 justify-end"}) }}>
     <div>
-        <div class="relative chart-switch-button grouped bg-color-ter text-color-pri">
-            <div class="absolute left-1 rounded-full w-3 h-3 bg-green-400"></div>
-            <a class="chart-switch-link" href="{{ path('app_dashboard') }}">by month</a>
-        </div>
+        <twig:ChartSwitchElement
+                href="{{ path('app_dashboard', {chartType: 'bar'}) }}"
+                active="{{ active.type is not defined or active.type == 'bar' }}"
+        >{{ "dashboard.switch.by_month"|trans }}</twig:ChartSwitchElement>
     </div>
 
     <div class="flex flex-col space-y-1">
-        <div class="relative chart-switch-button text-color-ter">
-            <div class="absolute left-1 rounded-full w-3 h-3 bg-gray-200"></div>
-            <a class="chart-switch-link" href="{{ path('app_dashboard', {chartType: 'monthly'}) }}">per month</a>
-        </div>
-        <div class="relative chart-switch-button">
-            <div class="absolute left-1 rounded-full w-3 h-3 border border-gray-200"></div>
-            <a class="chart-switch-link chart-option" href="{{ path('app_dashboard', {chartType: 'monthly', withCalculated: true}) }}">with calculated</a>
-        </div>
+        <twig:ChartSwitchElement
+                href="{{ path('app_dashboard', {chartType: 'monthly'}) }}"
+                active="{{ active.type == 'monthly' }}"
+        >{{ "dashboard.switch.per_month"|trans }}</twig:ChartSwitchElement>
+        <twig:ChartSwitchElement
+                href="{{ path('app_dashboard', {chartType: 'monthly', withCalculated: true}) }}"
+                active="{{ active.type == 'monthly' and active.withCalculated }}"
+        >{{ "dashboard.switch.with_calculated"|trans }}</twig:ChartSwitchElement>
     </div>
 
     <div class="flex flex-col space-y-1">
-        <div class="relative chart-switch-button">
-            <div class="absolute left-1 rounded-full w-3 h-3 border border-gray-200"></div>
-            <a class="chart-switch-link" href="{{ path('app_dashboard', {chartType: 'yearly'}) }}">per year</a>
-        </div>
-        <div class="relative chart-switch-button">
-            <div class="absolute left-1 rounded-full w-3 h-3 border border-gray-200"></div>
-            <a class="chart-switch-link chart-option" href="{{ path('app_dashboard', {chartType: 'yearly', withCalculated: true}) }}">with calculated</a>
-        </div>
+        <twig:ChartSwitchElement
+                href="{{ path('app_dashboard', {chartType: 'yearly'}) }}"
+                active="{{ active.type == 'yearly' }}"
+        >{{ "dashboard.switch.per_year"|trans }}</twig:ChartSwitchElement>
+        <twig:ChartSwitchElement
+                href="{{ path('app_dashboard', {chartType: 'yearly', withCalculated: true}) }}"
+                active="{{ active.type == 'yearly' and active.withCalculated }}"
+        >{{ "dashboard.switch.with_calculated"|trans }}</twig:ChartSwitchElement>
 
     </div>
 </div>

@@ -22,6 +22,12 @@ main_menu:
 subscription:
   edit: "Edit Subscription"
   new: "Add New Subscription"
+dashboard:
+  switch:
+    by_month: "by month"
+    per_month: "per month"
+    per_year: "per year"
+    with_calculated: "with calculated"
 add_subscription: "Add Subscription"
 edit: "Edit"
 delete: "Delete"

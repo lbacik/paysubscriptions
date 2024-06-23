@@ -3,7 +3,7 @@
 {% block body %}
     <twig:ContentCenter class="mt-6 md:my-10" width="w-full md:w-2/3">
         {% if subscriptions|length > 0 %}
-            <twig:ChartSwitcher class="mb-5 px-5 md:px-0" active=":active"/>
+            <twig:ChartSwitcher class="mb-5 px-5 md:px-0" :active="active"/>
 
             <div id="chart" class="p-5 mx-auto {% if fullWidth %} w-full {% else %} w-2/3 {% endif %}">
                 {{ render_chart(chart) }}
