@@ -10,7 +10,7 @@
     : 'bg-gray-200'
 %}
 
-<div class="relative chart-switch-button grouped {{ buttonClass }}">
+<div class="relative chart-switch-button group {{ buttonClass }}">
     <div class="absolute left-1 rounded-full w-3 h-3 {{ ledClass }}"></div>
     <a class="chart-switch-link" href="{{ href }}">{% block content %}{% endblock %}</a>
 </div>

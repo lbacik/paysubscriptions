@@ -1,4 +1,6 @@
-{#{% props %}#}
+{% props styleType = 'primary' %}
+
+{% set buttonClass = 'btn-' ~ styleType %}
 
 {% set tag = 'button' %}
 
@@ -6,6 +8,6 @@
     {% set tag = 'a' %}
 {% endif %}
 
-<{{ tag }} {{ attributes.defaults({class: "btn p-2 px-4 border rounded-xl"}) }}>
+<{{ tag }} {{ attributes.defaults({class: buttonClass ~ " py-2 px-4 border rounded-xl"}) }}>
     {% block content %}{% endblock %}
 </{{ tag }}>

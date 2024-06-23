@@ -30,8 +30,12 @@ body {
     }
 }
 
-.btn {
-    @apply bg-color-qua text-color-pri font-semibold;
+.btn-primary {
+    @apply bg-color-qua text-color-pri font-semibold hover:bg-color-ter hover:border hover:border-color-qui transition-all duration-500;
+}
+
+.btn-secondary {
+    @apply bg-color-pri border-none group-hover:bg-color-qui hover:font-bold hover:text-color-pri;
 }
 
 .form {
@@ -59,7 +63,7 @@ table#subscriptions {
 }
 
 .calculated {
-    @apply font-thin text-gray-300 group-hover:text-gray-400;
+    @apply font-thin text-gray-300;
 }
 
 .chart-switch-button {
@@ -67,9 +71,6 @@ table#subscriptions {
 
     .chart-switch-link {
         @apply text-sm;
-    }
-
-    .chart-option {
     }
 }
 
@@ -96,4 +97,8 @@ h1 {
     a {
         @apply no-underline text-blue-400 font-bold;
     }
+}
+
+.span-underline {
+    @apply hover:border-b hover:px-2 hover:border-color-pri;
 }

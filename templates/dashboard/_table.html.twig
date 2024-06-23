@@ -14,7 +14,7 @@
             <tr class="bg-zinc-200">
                 <th scope="col" class="w-auto rounded-tl-xl">#</th>
                 <th scope="col" class="w-auto">Subscription</th>
-                <th scope="col" class="w-auto">Monthly</ths>
+                <th scope="col" class="w-auto">Monthly</th>
                 <th scope="col" class="w-auto">Yearly</th>
                 <th scope="col" class="md:w-56 rounded-tr-xl">Actions</th>
             </tr>
@@ -22,13 +22,13 @@
             <tbody class="divide-y divide-gray-200">
 
             {% for subscription in subscriptions %}
-                <tr class="odd:bg-color-pri even:bg-blue-50 group hover:bg-color-ter hover:text-white">
+                <tr class="odd:bg-color-pri even:bg-blue-50 group hover:bg-color-qui hover:text-white">
                     <td class="group-hover:text-white">{{ loop.index }}</td>
                     <td class="group-hover:text-white">
                         <div>
                             {{ subscription.name }}
                         </div>
-                        <div class="text-xs text-gray-400">
+                        <div class="text-xs text-gray-400 group-hover:text-white">
                             from: {{ subscription.firstPayment ? subscription.firstPayment|date('Y-m-d') : '' }}
                         </div>
                     </td>
@@ -37,7 +37,8 @@
                     <td class="flex flex-row space-x-2 items-center justify-end">
                         <twig:Button
                                 href="{{ path('app_subscription_edit', {id: subscription.id}) }}"
-                        >{{ "edit"|trans }}</twig:Button>
+                                styleType="secondary"
+                        ><span class="span-underline">{{ "edit"|trans }}</span></twig:Button>
 
                         {{ include('subscription/_delete_form.html.twig') }}
                     </td>
