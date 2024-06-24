@@ -1,0 +1,13 @@
+{% props route %}
+
+{% set active = "mobile-menu-item mobile-active" %}
+{% set inactive = "mobile-menu-item mobile-inactive" %}
+
+<div class="{% if app.request.attributes.get('_route') == route %}{{ active }}{% else %}{{ inactive }}{% endif %}">
+    <a href="{{ path(route) }}"
+       class=""
+       {% if app.request.attributes.get('_route') == route %}aria-current="page"{% endif %}
+    >{% block content %}{% endblock %}</a>
+
+    <div class="border-b border-color-qui mt-8"></div>
+</div>

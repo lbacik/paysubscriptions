@@ -27,6 +27,18 @@ body {
                 @apply text-color-ter hover:bg-gray-100 md:hover:bg-transparent md:hover:text-blue-700 font-semibold;
             }
         }
+
+        .mobile-menu-item {
+            @apply font-semibold pt-8 text-center text-2xl;
+        }
+
+        .mobile-active {
+            @apply bg-color-qui text-color-pri;
+        }
+
+        .mobile-inactive {
+            @apply bg-color-qua text-color-pri;
+        }
     }
 }
 
