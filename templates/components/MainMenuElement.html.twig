@@ -1,0 +1,13 @@
+{% props route %}
+
+
+{% set active = "active-color" %}
+{% set inactive = "inactive-color" %}
+
+<li class="group">
+    <a href="{{ path(route) }}"
+       class="{% if app.request.attributes.get('_route') == route %}{{ active }}{% else %}{{ inactive }}{% endif %}"
+       {% if app.request.attributes.get('_route') == route %}aria-current="page"{% endif %}
+    >{% block content %}{% endblock %}</a>
+    <div class="-mx-2 mt-2 duration-500 border-b-2 opacity-0 border-color-ter group-hover:opacity-100"></div>
+</li>

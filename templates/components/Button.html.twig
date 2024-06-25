@@ -1,0 +1,13 @@
+{% props styleType = 'primary' %}
+
+{% set buttonClass = 'btn-' ~ styleType %}
+
+{% set tag = 'button' %}
+
+{% if attributes.has('href') %}
+    {% set tag = 'a' %}
+{% endif %}
+
+<{{ tag }} {{ attributes.defaults({class: buttonClass ~ " py-2 px-4 border rounded-xl"}) }}>
+    {% block content %}{% endblock %}
+</{{ tag }}>

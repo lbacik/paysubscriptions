@@ -1,0 +1,41 @@
+{% extends 'base.html.twig' %}
+
+{% block body %}
+    <div>
+        <twig:ContentCenter>
+            <div class="flex my-20">
+                <div class="doc-menu hidden lg:flex flex-col w-52 pt-5 space-y-3 border-r border-color-sec">
+                    {% for section, chapters in documentation.menuItems %}
+                        <div
+                                data-controller="doc-menu-item"
+                        >
+                            <div
+                                    data-action="click->doc-menu-item#toggle"
+                            >
+                                <a href="{{ path('app_docs', {section: section}) }}">
+                                    <i
+                                            data-doc-menu-item-target="arrow"
+                                            class="fa-solid fa-chevron-right fa-xs transition duration-1000"
+                                    ></i>
+                                    {{ section }}
+                                </a>
+                            </div>
+                            <div
+                                    class="doc-chapters {% if show != section %} hidden {% endif %} flex flex-col space-y-2 mt-2 text-sm"
+                                    data-doc-menu-item-target="chapters"
+                            >
+                                {% for chapter in chapters %}
+                                    <div class="ml-8">{{ chapter }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                    {% endfor %}
+                </div>
+                <div class="ml-5 md:ml-20 prose font-thin">
+                    {{ documentation.content(show)|markdown_to_html }}
+                </div>
+            </div>
+        </twig:ContentCenter>
+    </div>
+{% endblock %}

@@ -1,3 +1,116 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 body {
-    background-color: skyblue;
+    @apply bg-color-pri;
+
+    nav {
+        @apply bg-color-pri;
+
+        #header-logo {
+            @apply text-color-ter;
+        }
+
+        #navbar-main {
+            @apply bg-color-sec md:bg-color-pri;
+
+            li.a {
+                @apply block py-2 px-3 md:p-0;
+            }
+
+            .active-color {
+                @apply text-white bg-blue-700 md:bg-transparent md:text-black font-semibold;
+            }
+
+            .inactive-color {
+                @apply text-color-ter hover:bg-gray-100 md:hover:bg-transparent md:hover:text-blue-700 font-semibold;
+            }
+        }
+
+        .mobile-menu-item {
+            @apply font-semibold pt-8 text-center text-2xl;
+        }
+
+        .mobile-active {
+            @apply bg-color-qui text-color-pri;
+        }
+
+        .mobile-inactive {
+            @apply bg-color-qua text-color-pri;
+        }
+    }
+}
+
+.btn-primary {
+    @apply bg-color-qua text-color-pri font-semibold hover:bg-color-ter hover:border hover:border-color-qui transition-all duration-500;
+}
+
+.btn-secondary {
+    @apply bg-color-pri border-none group-hover:bg-color-qui hover:font-bold hover:text-color-pri;
+}
+
+.form {
+
+    form {
+        @apply space-y-6;
+    }
+
+    label {
+        @apply text-sm text-color-ter;
+    }
+    input, textarea {
+        @apply w-full px-3 py-2 rounded-lg border border-color-sec focus:outline-none;
+    }
+
+    #subscription > div {
+        @apply mt-4;
+    }
+}
+
+table#subscriptions {
+    th,td {
+        @apply px-4 py-2;
+    }
+}
+
+.calculated {
+    @apply font-thin text-gray-300;
+}
+
+.chart-switch-button {
+    @apply border border-color-sec rounded-xl px-4 min-w-44 flex justify-center items-center;
+
+    .chart-switch-link {
+        @apply text-sm;
+    }
+}
+
+h1 {
+    @apply text-2xl font-thin text-color-ter;
+}
+
+.doc-menu {
+    @apply text-color-qua;
+
+    .doc-chapters {
+        @apply text-color-ter;
+    }
+}
+
+.prose {
+
+    @apply text-color-ter;
+
+    h1,h2,h3,h4,h5,h6,strong {
+        @apply text-color-qua;
+    }
+
+    a {
+        @apply no-underline text-blue-400 font-bold;
+    }
+}
+
+.span-underline {
+    @apply hover:border-b hover:px-2 hover:border-color-pri;
 }

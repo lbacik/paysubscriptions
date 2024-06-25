@@ -1,0 +1,19 @@
+<div class="form">
+
+    {{ form_start(form)}}
+
+    {{ form_row(form.name) }}
+    {{ form_row(form.firstPayment) }}
+
+    <div class="flex flex-row justify-between space-x-2">
+        {{ form_row(form.monthly) }}
+        {{ form_row(form.yearly) }}
+    </div>
+
+    <div class="flex flex-row items-center justify-end space-x-2 pt-5">
+        <twig:Button>{{ 'cancel'|trans }}</twig:Button>
+        <twig:Button>{{ button_label|default('Save') }}</twig:Button>
+    </div>
+
+    {{ form_end(form) }}
+</div>

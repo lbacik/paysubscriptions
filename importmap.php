@@ -25,4 +25,10 @@ return [
     '@hotwired/turbo' => [
         'version' => '7.3.0',
     ],
+    'stimulus-use' => [
+        'version' => '0.52.2',
+    ],
+    'chart.js/auto' => [
+        'version' => '3.9.1',
+    ],
 ];

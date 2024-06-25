@@ -1,0 +1,53 @@
+{% extends 'base.html.twig' %}
+
+{% block body %}
+<div class="w-2/3 mt-20 m-auto">
+
+    <div class="w-full text-right">
+        <twig:Button href="{{ path('app_subscription_new') }}">{{ "add_subscription"|trans }}</twig:Button>
+    </div>
+
+    <h1 class="text-2xl font-bold mb-4">Subscription Overview</h1>
+
+    {% set tdClass = "py-2 px-4 border-b border-gray-200" %}
+
+    <table class="min-w-full bg-white border border-gray-200 hover-highlight">
+        <thead>
+        <tr>
+            <th class="{{ tdClass }}">#</th>
+            <th class="{{ tdClass }}">Name</th>
+            <th class="{{ tdClass }}">FirstPayment</th>
+            <th class="{{ tdClass }}">Monthly</th>
+            <th class="{{ tdClass }}">Yearly</th>
+            <th class="{{ tdClass }}">actions</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for subscription in subscriptions %}
+            <tr>
+                <td class="{{ tdClass }}">{{ loop.index }}</td>
+                <td class="{{ tdClass }}">{{ subscription.name }}</td>
+                <td class="{{ tdClass }}">{{ subscription.firstPayment ? subscription.firstPayment|date('Y-m-d') : '' }}</td>
+                <td class="{{ tdClass }}">{{ subscription.monthly }}</td>
+                <td class="{{ tdClass }}">
+                    {% if subscription.yearly %}
+                        {{ subscription.yearly }}
+                    {% else %}
+                        <span class="text-gray-400">
+                            {{ subscription.monthly * 12 }}
+                        </span>
+                    {% endif %}
+                </td>
+                <td class="{{ tdClass }}">
+                    <twig:Button href="{{ path('app_subscription_edit', {'id': subscription.id}) }}">edit</twig:Button>
+                </td>
+            </tr>
+        {% else %}
+            <tr>
+                <td  class="{{ tdClass }}" colspan="9">no records found</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

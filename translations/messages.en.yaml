@@ -1,0 +1,35 @@
+service:
+  name: "PaySubscriptions"
+  tab: "PaySub"
+user:
+  login: "Sign in"
+  logout: "Logout"
+  register: "Sign up"
+  settings: "Settings"
+  subscriptions: "Subscriptions (CRUD)"
+  email: "Email"
+  password: "Password"
+  remember_me: "Remember me"
+  please_login: "Please sign in"
+  please_register: "Register"
+main_menu:
+  home: "Home"
+  about: "About"
+  pricing: "Pricing"
+  dashboard: "Dashboard"
+  contact: "Contact"
+  docs: "About"
+subscription:
+  edit: "Edit Subscription"
+  new: "Add New Subscription"
+dashboard:
+  switch:
+    by_month: "by month"
+    per_month: "per month"
+    per_year: "per year"
+    with_calculated: "with calculated"
+add_subscription: "Add Subscription"
+edit: "Edit"
+delete: "Delete"
+back_to_list: "Back to list"
+cancel: "Cancel"

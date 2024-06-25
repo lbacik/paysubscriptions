@@ -1,0 +1,77 @@
+<nav class="py-6"
+     data-controller="mobile-menu"
+>
+    <div class="max-w-screen-xl flex flex-wrap items-center justify-between mx-auto p-4">
+        <div>
+            <a id="header-logo" href="{{ path('app_home') }}" class="flex items-center space-x-3 rtl:space-x-reverse">
+                <img src="{{ asset('images/paysubs-v3.png') }}" class="h-12" alt="PaySubscriptions Logo"/>
+                <span
+                        class="self-center text-2xl font-extralight tracking-wide whitespace-nowrap"
+                >{{ "service.name"|trans }}</span>
+            </a>
+            <div class="flex justify-end -mt-2 font-mono text-color-pri font-semibold">
+                <span class="bg-color-qui px-4 rounded-xl"><span class="text-sm">version </span>BETA</span>
+            </div>
+        </div>
+
+        <div class="flex items-center md:order-2 space-x-3 md:space-x-0 rtl:space-x-reverse">
+
+            <div class="hidden lg:flex">
+                {% if is_granted('IS_AUTHENTICATED_FULLY') %}
+                    {{ include('partials/_user_profile_menu.html.twig') }}
+                {% else %}
+                    <twig:Button class="mr-4" href="{{ path('app_login') }}">{{ 'user.login'|trans }}</twig:Button>
+                    <twig:Button href="{{ path('app_register') }}">{{ 'user.register'|trans }}</twig:Button>
+                {% endif %}
+            </div>
+
+            <button data-collapse-toggle="navbar-main" type="button"
+                    class="inline-flex items-center p-2 w-10 h-10 justify-center text-sm text-gray-500 rounded-lg lg:hidden hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-200"
+                    aria-controls="navbar-user"
+                    aria-expanded="false"
+                    data-action="mobile-menu#toggle"
+            >
+                <span class="sr-only">Open main menu</span>
+                <svg class="w-5 h-5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none"
+                     viewBox="0 0 17 14">
+                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M1 1h15M1 7h15M1 13h15"/>
+                </svg>
+            </button>
+        </div>
+
+        <div class="items-center justify-between hidden w-full lg:flex md:w-auto md:order-1" id="navbar-main">
+            <ul class="flex flex-col p-4 md:p-0 mt-4 border border-gray-100 rounded-lg md:space-x-8 rtl:space-x-reverse md:flex-row md:mt-0 md:border-0">
+                <twig:MainMenuElement route="app_home">{{ 'main_menu.home'|trans }}</twig:MainMenuElement>
+                <twig:MainMenuElement route="app_docs">{{ 'main_menu.docs'|trans }}</twig:MainMenuElement>
+                <twig:MainMenuElement route="app_pricing">{{ 'main_menu.pricing'|trans }}</twig:MainMenuElement>
+                <twig:MainMenuElement route="app_dashboard">{{ 'main_menu.dashboard'|trans }}</twig:MainMenuElement>
+                <twig:MainMenuElement route="app_contact">{{ 'main_menu.contact'|trans }}</twig:MainMenuElement>
+            </ul>
+        </div>
+    </div>
+
+    <div
+            class="absolute left-0 right-0 z-40 flex flex-col hidden"
+            data-target="mobile-menu.menu"
+    >
+        <twig:MobileMenuElement route="app_home">{{ 'main_menu.home'|trans }}</twig:MobileMenuElement>
+        <twig:MobileMenuElement route="app_docs">{{ 'main_menu.docs'|trans }}</twig:MobileMenuElement>
+        <twig:MobileMenuElement route="app_pricing">{{ 'main_menu.pricing'|trans }}</twig:MobileMenuElement>
+        <twig:MobileMenuElement route="app_dashboard">{{ 'main_menu.dashboard'|trans }}</twig:MobileMenuElement>
+        <twig:MobileMenuElement route="app_contact">{{ 'main_menu.contact'|trans }}</twig:MobileMenuElement>
+
+        {% if is_granted('IS_AUTHENTICATED_FULLY') %}
+            <twig:MobileMenuElement route="app_logout">
+                <div class="flex flex-col">
+                    <span class="text-lg">{{ app.user.email }}</span>
+                    <span class="text-color-qui">{{ 'user.logout'|trans }}</span>
+                </div>
+            </twig:MobileMenuElement>
+        {% else %}
+            <twig:MobileMenuElement route="app_login">{{ 'user.login'|trans }}</twig:MobileMenuElement>
+            <twig:MobileMenuElement route="app_register">{{ 'user.register'|trans }}</twig:MobileMenuElement>
+        {% endif %}
+    </div>
+
+</nav>

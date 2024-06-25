@@ -1,7 +1,22 @@
-version: '3'
+#version: '3'
+
+networks:
+  default:
+    name: "${NETWORK}"
+    external: true
 
 services:
-###> doctrine/doctrine-bundle ###
+  web:
+    build: .
+    image: "ps-web-${TAG}"
+    environment:
+      APP_ENV: "${APP_ENV}"
+      VIRTUAL_HOST: "${TAG}.${DOMAIN}"
+      LETSENCRYPT_HOST: "${TAG}.${DOMAIN}"
+      DATABASE_URL: "${DATABASE_URL}"
+      MAILER_DSN: "${MAILER_DSN}"
+
+  ###> doctrine/doctrine-bundle ###
   database:
     image: postgres:${POSTGRES_VERSION:-16}-alpine
     environment:
@@ -10,7 +25,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-!ChangeMe!}
       POSTGRES_USER: ${POSTGRES_USER:-app}
     healthcheck:
-      test: ["CMD", "pg_isready", "-d", "${POSTGRES_DB:-app}", "-U", "${POSTGRES_USER:-app}"]
+      test: [ "CMD", "pg_isready", "-d", "${POSTGRES_DB:-app}", "-U", "${POSTGRES_USER:-app}" ]
       timeout: 5s
       retries: 5
       start_period: 60s
@@ -21,6 +36,6 @@ services:
 ###< doctrine/doctrine-bundle ###
 
 volumes:
-###> doctrine/doctrine-bundle ###
+  ###> doctrine/doctrine-bundle ###
   database_data:
 ###< doctrine/doctrine-bundle ###
