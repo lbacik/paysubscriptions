@@ -32,3 +32,5 @@
 **/vendor
 LICENSE
 README.md
+**/var
+**/.env.*

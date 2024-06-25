@@ -10,7 +10,7 @@ services:
     build: .
     image: "ps-web-${TAG}"
     environment:
-      APP_ENV: dev
+      APP_ENV: "${APP_ENV}"
       VIRTUAL_HOST: "${TAG}.${DOMAIN}"
       LETSENCRYPT_HOST: "${TAG}.${DOMAIN}"
       DATABASE_URL: "${DATABASE_URL}"

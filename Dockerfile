@@ -33,7 +33,7 @@ WORKDIR /opt/app
 # This example adds the apt packages for the 'gd' extension's dependencies and then
 # installs the 'gd' extension. For additional tips on running apt-get:
 # https://docs.docker.com/go/dockerfile-aptget-best-practices/
- RUN apt -y update && apt-get install -y \
+RUN apt -y update && apt-get install -y \
     git \
     unzip \
     && apt -y clean \
@@ -49,9 +49,12 @@ WORKDIR /opt/app
 
 # Use the default production configuration for PHP runtime arguments, see
 # https://github.com/docker-library/docs/tree/master/php#configuration
-RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
+# RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
 
-RUN composer install --no-interaction --no-progress
+RUN composer install --no-interaction --no-progress \
+    && ./bin/console tailwind:build \
+    && ./bin/console assets:install \
+    && ./bin/console asset-map:compile
 
 RUN rm -drf /var/www/html \
     && ln -s /opt/app/public /var/www/html \
