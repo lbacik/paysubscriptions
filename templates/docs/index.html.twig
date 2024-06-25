@@ -1,12 +1,10 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Hello DocsController!{% endblock %}
-
 {% block body %}
     <div>
         <twig:ContentCenter>
             <div class="flex my-20">
-                <div class="doc-menu flex flex-col w-52 pt-5 space-y-3 border-r border-color-sec">
+                <div class="doc-menu hidden lg:flex flex-col w-52 pt-5 space-y-3 border-r border-color-sec">
                     {% for section, chapters in documentation.menuItems %}
                         <div
                                 data-controller="doc-menu-item"

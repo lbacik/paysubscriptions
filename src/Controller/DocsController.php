@@ -12,7 +12,7 @@ use Symfony\Component\Routing\Attribute\Route;
 
 class DocsController extends AbstractController
 {
-    #[Route('/docs', name: 'app_docs')]
+    #[Route('/about', name: 'app_docs')]
     public function index(
         Documentation $documentation,
         #[MapQueryParameter] string $section = 'about'
@@ -23,6 +23,4 @@ class DocsController extends AbstractController
             'show' => ucfirst($section),
         ]);
     }
-
-
 }
