@@ -1,76 +1,89 @@
 <div class="container mx-auto text-color-ter">
 
+    {% if addSubscriptionDisabled == true %}
+        <div
+                class="w-full text-end pb-2 text-red-500"
+        >
+            {{ "subscription.limit_reached"|trans }}.
+            <a
+                    href="{{ path('app_contact') }}"
+                    class="underline font-semibold"
+            >{{ "Contact me"|trans }}</a> {{ "if you need more!"|trans }}
+        </div>
+    {% endif %}
+
     <div class="flex flex-row justify-between">
         <h1 class="text-2xl font-light mb-4">Subscriptions</h1>
-
         <div class="w-full text-right">
-            <twig:Button href="{{ path('app_subscription_new') }}">{{ "add_subscription"|trans }}</twig:Button>
+            {% if addSubscriptionDisabled == false %}
+                <twig:Button href="{{ path('app_subscription_new') }}">{{ "add_subscription"|trans }}</twig:Button>
+            {% else %}
+                <twig:Button disabled="true">{{ "add_subscription"|trans }}</twig:Button>
+            {% endif %}
         </div>
     </div>
 
-{#    <div class="relative overflow-x-auto">#}
-        <table id="subscriptions" class="table-auto w-full rounded-xl border border-separate border-color-sec">
-            <thead>
-            <tr class="bg-zinc-200">
-                <th scope="col" class="w-auto rounded-tl-xl">#</th>
-                <th scope="col" class="w-auto">Subscription</th>
-                <th scope="col" class="w-auto">Monthly</th>
-                <th scope="col" class="w-auto">Yearly</th>
-                <th scope="col" class="md:w-56 rounded-tr-xl">Actions</th>
-            </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-200">
+    <table id="subscriptions" class="table-auto w-full rounded-xl border border-separate border-color-sec">
+        <thead>
+        <tr class="bg-zinc-200">
+            <th scope="col" class="w-auto rounded-tl-xl">#</th>
+            <th scope="col" class="w-auto">Subscription</th>
+            <th scope="col" class="w-auto">Monthly</th>
+            <th scope="col" class="w-auto">Yearly</th>
+            <th scope="col" class="md:w-56 rounded-tr-xl">Actions</th>
+        </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200">
 
-            {% for subscription in subscriptions %}
-                <tr class="odd:bg-color-pri even:bg-blue-50 group hover:bg-color-qui hover:text-white">
-                    <td class="group-hover:text-white">{{ loop.index }}</td>
-                    <td class="group-hover:text-white">
-                        <div>
-                            {{ subscription.name }}
-                        </div>
-                        <div class="text-xs text-gray-400 group-hover:text-white">
-                            from: {{ subscription.firstPayment ? subscription.firstPayment|date('Y-m-d') : '' }}
-                        </div>
-                    </td>
-                    <td class="text-end {% if not subscription.monthly %}calculated{% endif %}">{{ subscription.monthlyCalculated|number_format(2, '.', ' ') }}</td>
-                    <td class="text-end {% if subscription.monthly %}calculated{% endif %}">{{ subscription.yearlyCalculated|number_format(2, '.', ' ') }}</td>
-                    <td class="flex flex-row space-x-2 items-center justify-end">
-                        <twig:Button
-                                href="{{ path('app_subscription_edit', {id: subscription.id}) }}"
-                                styleType="secondary"
-                        ><span class="span-underline">{{ "edit"|trans }}</span></twig:Button>
+        {% for subscription in subscriptions %}
+            <tr class="odd:bg-color-pri even:bg-blue-50 group hover:bg-color-qui hover:text-white">
+                <td class="group-hover:text-white">{{ loop.index }}</td>
+                <td class="group-hover:text-white">
+                    <div>
+                        {{ subscription.name }}
+                    </div>
+                    <div class="text-xs text-gray-400 group-hover:text-white">
+                        from: {{ subscription.firstPayment ? subscription.firstPayment|date('Y-m-d') : '' }}
+                    </div>
+                </td>
+                <td class="text-end {% if not subscription.monthly %}calculated{% endif %}">{{ subscription.monthlyCalculated|number_format(2, '.', ' ') }}</td>
+                <td class="text-end {% if subscription.monthly %}calculated{% endif %}">{{ subscription.yearlyCalculated|number_format(2, '.', ' ') }}</td>
+                <td class="flex flex-row space-x-2 items-center justify-end">
+                    <twig:Button
+                            href="{{ path('app_subscription_edit', {id: subscription.id}) }}"
+                            styleType="secondary"
+                    ><span class="span-underline">{{ "edit"|trans }}</span></twig:Button>
 
-                        {{ include('subscription/_delete_form.html.twig') }}
-                    </td>
-                </tr>
-            {% endfor %}
-            </tbody>
-            <tfoot>
-            <tr class="bg-color-pri">
-                <td></td>
-                <td class="font-bold">
-                    <div>Total</div>
-                    <div class="font-thin">included calculated</div>
+                    {{ include('subscription/_delete_form.html.twig') }}
                 </td>
-                <td class="font-bold text-end">
-                    <div>
-                        {{ total.monthly|number_format(2, '.', ' ') }}
-                    </div>
-                    <div class="font-thin">
-                        {{ total.monthlyCalculated|number_format(2, '.', ' ') }}
-                    </div>
-                </td>
-                <td class="font-bold text-end">
-                    <div>
-                        {{ total.yearly|number_format(2, '.', ' ') }}
-                    </div>
-                    <div class="font-thin">
-                        {{ total.yearlyCalculated|number_format(2, '.', ' ') }}
-                    </div>
-                </td>
-                <td></td>
             </tr>
-            </tfoot>
-        </table>
-{#    </div>#}
+        {% endfor %}
+        </tbody>
+        <tfoot>
+        <tr class="bg-color-pri">
+            <td></td>
+            <td class="font-bold">
+                <div>Total</div>
+                <div class="font-thin">included calculated</div>
+            </td>
+            <td class="font-bold text-end">
+                <div>
+                    {{ total.monthly|number_format(2, '.', ' ') }}
+                </div>
+                <div class="font-thin">
+                    {{ total.monthlyCalculated|number_format(2, '.', ' ') }}
+                </div>
+            </td>
+            <td class="font-bold text-end">
+                <div>
+                    {{ total.yearly|number_format(2, '.', ' ') }}
+                </div>
+                <div class="font-thin">
+                    {{ total.yearlyCalculated|number_format(2, '.', ' ') }}
+                </div>
+            </td>
+            <td></td>
+        </tr>
+        </tfoot>
+    </table>
 </div>
