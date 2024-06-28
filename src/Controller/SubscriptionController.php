@@ -6,6 +6,7 @@ namespace App\Controller;
 
 use App\Entity\Subscription;
 use App\Form\SubscriptionType;
+use App\Service\SubscriptionService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -17,16 +18,13 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 #[Route('/subscription')]
 class SubscriptionController extends AbstractController
 {
-//    #[Route('/', name: 'app_subscription_index', methods: ['GET'])]
-//    public function index(SubscriptionRepository $subscriptionRepository): Response
-//    {
-//        return $this->render('subscription/index.html.twig', [
-//            'subscriptions' => $subscriptionRepository->findBy(['owner' => $this->getUser()]),
-//        ]);
-//    }
+    public function __construct(
+        private SubscriptionService $subscriptionService,
+    ) {
+    }
 
     #[Route('/new', name: 'app_subscription_new', methods: ['GET', 'POST'])]
-    public function new(Request $request, EntityManagerInterface $entityManager): Response
+    public function new(Request $request): Response
     {
         $subscription = new Subscription();
         $form = $this->createForm(SubscriptionType::class, $subscription);
@@ -34,8 +32,13 @@ class SubscriptionController extends AbstractController
 
         if ($form->isSubmitted() && $form->isValid()) {
             $subscription->setOwner($this->getUser());
-            $entityManager->persist($subscription);
-            $entityManager->flush();
+            try {
+                $this->subscriptionService->add($subscription);
+            } catch (\LogicException $exception) {
+                $this->addFlash('danger', $exception->getMessage());
+
+                return $this->redirectToRoute('app_dashboard', [], Response::HTTP_SEE_OTHER);
+            }
 
             return $this->redirectToRoute('app_dashboard', [], Response::HTTP_SEE_OTHER);
         }

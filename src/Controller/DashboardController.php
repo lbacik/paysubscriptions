@@ -7,6 +7,7 @@ namespace App\Controller;
 use App\Entity\Subscription;
 use App\Repository\SubscriptionRepository;
 use App\Service\ChartService;
+use App\Service\SubscriptionService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
@@ -19,6 +20,7 @@ class DashboardController extends AbstractController
     #[Route('/dashboard', name: 'app_dashboard')]
     public function index(
         SubscriptionRepository $subscriptionRepository,
+        SubscriptionService $subscriptionService,
         ChartService $chartService,
         #[MapQueryParameter('chartType')] string $chartType = 'bar',
         #[MapQueryParameter('withCalculated')] bool $withCalculated = false,
@@ -37,6 +39,7 @@ class DashboardController extends AbstractController
             'total' => $this->calculateTotals($subscriptions),
             'fullWidth' => $chartType === 'bar',
             'active' => ['type' => $chartType, 'withCalculated' => $withCalculated],
+            'addSubscriptionDisabled' => ! $subscriptionService->isAbleToAddSubscription($this->getUser()),
         ]);
     }
 
