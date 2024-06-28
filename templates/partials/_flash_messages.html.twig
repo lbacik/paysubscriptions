@@ -1,0 +1,11 @@
+<div class="flex justify-center">
+    <div class="w-full my-5">
+        {% for type, messages in app.flashes %}
+            {% for message in messages %}
+                <div class="flex items-center justify-center py-5 flash-message-{{ type }}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endfor %}
+    </div>
+</div>
