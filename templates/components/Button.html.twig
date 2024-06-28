@@ -1,13 +1,18 @@
-{% props styleType = 'primary' %}
+{% props styleType = 'primary', disabled = false %}
 
 {% set buttonClass = 'btn-' ~ styleType %}
-
 {% set tag = 'button' %}
-
 {% if attributes.has('href') %}
     {% set tag = 'a' %}
 {% endif %}
 
-<{{ tag }} {{ attributes.defaults({class: buttonClass ~ " py-2 px-4 border rounded-xl"}) }}>
+{% set additonalClass = '' %}
+{% if disabled == true %}
+    {% set additonalClass = additonalClass ~ ' disabled:opacity-50 cursor-not-allowed' %}
+{% endif %}
+
+<{{ tag }} {{ attributes.defaults({class: buttonClass ~ " py-2 px-4 border rounded-xl " ~ additonalClass}) }}
+    {% if disabled %}disabled{% endif %}
+>
     {% block content %}{% endblock %}
 </{{ tag }}>
