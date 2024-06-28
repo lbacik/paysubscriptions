@@ -1,5 +1,7 @@
 #version: '3'
 
+name: "ps-web-${TAG}"
+
 networks:
   default:
     name: "${NETWORK}"

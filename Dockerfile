@@ -36,9 +36,16 @@ WORKDIR /opt/app
 RUN apt -y update && apt-get install -y \
     git \
     unzip \
+    libicu-dev \
     && apt -y clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* \
-    && rm -rf /var/cache/apk/*
+    && rm -rf /var/cache/apk/* \
+    && docker-php-ext-configure \
+    intl \
+	&& docker-php-ext-install \
+    pdo_mysql \
+    opcache \
+    intl
 
 # Add PECL extensions, see
 # https://github.com/docker-library/docs/tree/master/php#pecl-extensions
