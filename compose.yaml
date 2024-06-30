@@ -1,5 +1,7 @@
 #version: '3'
 
+# name: "ps-web-${TAG}"
+
 networks:
   default:
     name: "${NETWORK}"
@@ -11,10 +13,29 @@ services:
     image: "ps-web-${TAG}"
     environment:
       APP_ENV: "${APP_ENV}"
-      VIRTUAL_HOST: "${TAG}.${DOMAIN}"
-      LETSENCRYPT_HOST: "${TAG}.${DOMAIN}"
+      VIRTUAL_HOST: "${DOMAIN}"
+      LETSENCRYPT_HOST: "${DOMAIN}"
       DATABASE_URL: "${DATABASE_URL}"
       MAILER_DSN: "${MAILER_DSN}"
+      MESSENGER_TRANSPORT_DSN: "${MESSENGER_TRANSPORT_DSN}"
+      JSON_HUB_PROJECT: "${JSON_HUB_PROJECT}"
+      MAILING_PROVIDER_ROUTING_KEY: "${MAILING_PROVIDER_ROUTING_KEY}"
+
+  worker:
+    image: "ps-web-${TAG}"
+    environment:
+      APP_ENV: "${APP_ENV}"
+      DATABASE_URL: "${DATABASE_URL}"
+      MAILER_DSN: "${MAILER_DSN}"
+    command:
+      - 'bin/console'
+      - 'messenger:consume'
+      - 'async'
+      - '--memory-limit=110M'
+      - '--time-limit=3600'
+      - '--limit=100'
+    depends_on:
+      - web
 
   ###> doctrine/doctrine-bundle ###
   database:

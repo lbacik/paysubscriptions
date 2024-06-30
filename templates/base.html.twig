@@ -20,6 +20,8 @@
     <body class="flex flex-col h-screen">
         {{ include('partials/_header.html.twig') }}
 
+        {{ include('partials/_flash_messages.html.twig') }}
+
         <div class="flex-1">
             {% block body %}{% endblock %}
         </div>

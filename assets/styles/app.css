@@ -114,3 +114,11 @@ h1 {
 .span-underline {
     @apply hover:border-b hover:px-2 hover:border-color-pri;
 }
+
+.flash-message-danger {
+    @apply bg-red-200 text-red-800;
+}
+
+.flash-message-success {
+    @apply bg-green-200 text-green-800;
+}

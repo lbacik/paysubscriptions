@@ -5,7 +5,7 @@
 
         <form method="post">
             {% if error %}
-                <div class="text-red-600">{{ error.messageKey|trans(error.messageData, 'security') }}</div>
+                <div class="text-red-600">{{ error.messageKey|trans(error.messageData, 'security')|raw }}</div>
             {% endif %}
 
             {% if app.user %}

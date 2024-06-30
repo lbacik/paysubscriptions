@@ -20,8 +20,10 @@ use SymfonyCasts\Bundle\VerifyEmail\Exception\VerifyEmailExceptionInterface;
 
 class RegistrationController extends AbstractController
 {
-    public function __construct(private EmailVerifier $emailVerifier)
-    {
+    public function __construct(
+        private readonly EmailVerifier $emailVerifier,
+        private readonly string $systemEmail,
+    ) {
     }
 
     #[Route('/register', name: 'app_register')]
@@ -44,17 +46,13 @@ class RegistrationController extends AbstractController
             $entityManager->flush();
 
             // generate a signed url and email it to the user
-            $this->emailVerifier->sendEmailConfirmation('app_verify_email', $user,
-                (new TemplatedEmail())
-                    ->from(new Address('no-reply@paysubscriptions.com', 'PaySubscriptions'))
-                    ->to($user->getEmail())
-                    ->subject('Please Confirm your Email')
-                    ->htmlTemplate('registration/confirmation_email.html.twig')
-            );
+            $this->sendConfirmationEmail($user);
 
             // do anything else you need here, like send an email
+            $this->addFlash('success', 'Your account has been created. Please check your email for a verification link.');
 
-            return $security->login($user, AppCustomAuthenticator::class, 'main');
+            // return $security->login($user, AppCustomAuthenticator::class, 'main');
+            return $this->redirectToRoute('app_login');
         }
 
         return $this->render('registration/register.html.twig', [
@@ -80,5 +78,33 @@ class RegistrationController extends AbstractController
         $this->addFlash('success', 'Your email address has been verified.');
 
         return $this->redirectToRoute('app_register');
+    }
+
+    #[Route('/register/activation/resend', name: 'resend_activation')]
+    public function resendActivationEmail(Request $request,  Security $security, EntityManagerInterface $entityManager): Response
+    {
+        $email = $request->query->get('email');
+        $user = $entityManager->getRepository(User::class)->findOneBy(['email' => $email]);
+
+        if ($user) {
+            $this->sendConfirmationEmail($user);
+        }
+
+        $this->addFlash('success', 'Activation email has been sent to your email address.');
+        // return $security->login($user, AppCustomAuthenticator::class, 'main');
+        return $this->redirectToRoute('app_login');
+    }
+
+    private function sendConfirmationEmail(User $user): void
+    {
+        $this->emailVerifier->sendEmailConfirmation(
+            'app_verify_email',
+            $user,
+            (new TemplatedEmail())
+                ->from(new Address($this->systemEmail, 'PaySubscriptions'))
+                ->to($user->getEmail())
+                ->subject('Please Confirm your Email')
+                ->htmlTemplate('registration/confirmation_email.html.twig')
+        );
     }
 }
