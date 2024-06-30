@@ -18,7 +18,7 @@ services:
             $docsPath: '%docsPath%'
             $systemEmail: '%systemEmail%'
             $contactEmail: '%contactEmail%'
-            $jsonHubProjectUuid: '%env(JSON_HUB_PROJECT_UUID)%'
+            $jsonHubProjectUuid: '%env(JSON_HUB_PROJECT)%'
             $mailingProviderRoutingKey: '%mailingProviderRoutingKey%'
 
 
