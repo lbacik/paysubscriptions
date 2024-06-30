@@ -12,7 +12,7 @@
 {% endif %}
 
 <{{ tag }} {{ attributes.defaults({class: buttonClass ~ " py-2 px-4 border rounded-xl " ~ additonalClass}) }}
-    {% if disabled %}disabled{% endif %}
+    {% if disabled == true %}disabled{% endif %}
 >
     {% block content %}{% endblock %}
 </{{ tag }}>
