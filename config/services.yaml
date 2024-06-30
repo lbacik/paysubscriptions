@@ -7,6 +7,7 @@ parameters:
     docsPath: '%kernel.project_dir%/docs/'
     systemEmail: '%env(SYSTEM_EMAIL)%'
     contactEmail: '%env(CONTACT_EMAIL)%'
+    mailingProviderRoutingKey: '%env(MAILING_PROVIDER_ROUTING_KEY)%'
 
 services:
     # default configuration for services in *this* file
@@ -17,6 +18,9 @@ services:
             $docsPath: '%docsPath%'
             $systemEmail: '%systemEmail%'
             $contactEmail: '%contactEmail%'
+            $jsonHubProjectUuid: '%env(JSON_HUB_PROJECT_UUID)%'
+            $mailingProviderRoutingKey: '%mailingProviderRoutingKey%'
+
 
     # makes classes in src/ available to be used as services
     # this creates a service per class whose id is the fully-qualified class name
