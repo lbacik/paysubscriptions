@@ -66,6 +66,10 @@ body {
     #subscription > div {
         @apply mt-4;
     }
+
+    li {
+        @apply text-sm;
+    }
 }
 
 table#subscriptions {

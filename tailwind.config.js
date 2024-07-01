@@ -4,6 +4,9 @@ module.exports = {
     "./assets/**/*.js",
     "./templates/**/*.html.twig",
   ],
+  safelist: [
+    'text-red-700',
+  ],
   theme: {
     extend: {
       colors: {
