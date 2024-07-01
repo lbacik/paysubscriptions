@@ -17,6 +17,7 @@ class ContactController extends AbstractController
     public function index(
         Request $request,
         MailerInterface $mailer,
+        string $systemEmail,
         string $contactEmail,
     ): Response {
         $form = $this->createForm(ContactType::class);
@@ -25,7 +26,7 @@ class ContactController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
 
             $email = (new TemplatedEmail())
-                ->from(new Address($form->get('email')->getData(), $form->get('name')->getData()))
+                ->from(new Address($systemEmail, 'PaySubscriptions'))
                 ->to($contactEmail)
                 ->subject('PaySubscriptions Contact: ' . $form->get('subject')->getData())
                 ->htmlTemplate('contact/contact_email.html.twig')
