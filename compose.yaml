@@ -23,6 +23,7 @@ services:
 
   worker:
     image: "ps-web-${TAG}"
+    restart: always
     environment:
       APP_ENV: "${APP_ENV}"
       DATABASE_URL: "${DATABASE_URL}"
