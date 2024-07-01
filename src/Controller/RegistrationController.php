@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use App\Entity\User;
 use App\Form\RegistrationFormType;
+use App\Repository\UserRepository;
 use App\Security\AppCustomAuthenticator;
 use App\Security\EmailVerifier;
 use Doctrine\ORM\EntityManagerInterface;
@@ -27,8 +28,12 @@ class RegistrationController extends AbstractController
     }
 
     #[Route('/register', name: 'app_register')]
-    public function register(Request $request, UserPasswordHasherInterface $userPasswordHasher, Security $security, EntityManagerInterface $entityManager): Response
-    {
+    public function register(
+        Request $request,
+        UserPasswordHasherInterface $userPasswordHasher,
+        Security $security,
+        EntityManagerInterface $entityManager
+    ): Response {
         $user = new User();
         $form = $this->createForm(RegistrationFormType::class, $user);
         $form->handleRequest($request);
@@ -49,7 +54,10 @@ class RegistrationController extends AbstractController
             $this->sendConfirmationEmail($user);
 
             // do anything else you need here, like send an email
-            $this->addFlash('success', 'Your account has been created. Please check your email for a verification link.');
+            $this->addFlash(
+                'success',
+                'Your account has been created. Please check your email for a verification link.'
+            );
 
             // return $security->login($user, AppCustomAuthenticator::class, 'main');
             return $this->redirectToRoute('app_login');
@@ -61,15 +69,27 @@ class RegistrationController extends AbstractController
     }
 
     #[Route('/verify/email', name: 'app_verify_email')]
-    public function verifyUserEmail(Request $request, TranslatorInterface $translator): Response
-    {
-        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+    public function verifyUserEmail(
+        Request $request,
+        TranslatorInterface $translator,
+        UserRepository $userRepository
+    ): Response {
+        $email = $request->query->get('email');
+        if (null === $email) {
+            return $this->redirectToRoute('app_home');
+        }
 
-        // validate email confirmation link, sets User::isVerified=true and persists
+        $user = $userRepository->findOneBy(['email' => $email]);
+
+        // Ensure the user exists in persistence
+        if (null === $user) {
+            return $this->redirectToRoute('app_home');
+        }
+
         try {
-            $this->emailVerifier->handleEmailConfirmation($request, $this->getUser());
+            $this->emailVerifier->handleEmailConfirmation($request, $user);
         } catch (VerifyEmailExceptionInterface $exception) {
-            $this->addFlash('verify_email_error', $translator->trans($exception->getReason(), [], 'VerifyEmailBundle'));
+            $this->addFlash('danger', $translator->trans($exception->getReason(), [], 'VerifyEmailBundle'));
 
             return $this->redirectToRoute('app_register');
         }
@@ -77,12 +97,15 @@ class RegistrationController extends AbstractController
         // @TODO Change the redirect on success and handle or remove the flash message in your templates
         $this->addFlash('success', 'Your email address has been verified.');
 
-        return $this->redirectToRoute('app_register');
+        return $this->redirectToRoute('app_login');
     }
 
     #[Route('/register/activation/resend', name: 'resend_activation')]
-    public function resendActivationEmail(Request $request,  Security $security, EntityManagerInterface $entityManager): Response
-    {
+    public function resendActivationEmail(
+        Request $request,
+        Security $security,
+        EntityManagerInterface $entityManager
+    ): Response {
         $email = $request->query->get('email');
         $user = $entityManager->getRepository(User::class)->findOneBy(['email' => $email]);
 
