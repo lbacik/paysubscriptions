@@ -52,6 +52,10 @@ body {
 
 .form {
 
+    h1 {
+        @apply mb-10 font-thin text-lg text-color-qua text-right border-b border-color-sec;
+    }
+
     form {
         @apply space-y-6;
     }
