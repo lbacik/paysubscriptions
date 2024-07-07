@@ -71,6 +71,7 @@ RUN rm -drf /var/www/html \
     && ln -s /opt/app/public /var/www/html \
     && chown -R www-data:www-data /opt/app/var \
     && a2enmod rewrite
+#    && a2enmod headers
 
 # Switch to a non-privileged user (defined in the base image) that the app will run under.
 # See https://docs.docker.com/go/dockerfile-user-best-practices/

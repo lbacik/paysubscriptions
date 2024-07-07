@@ -68,3 +68,12 @@ DirectoryIndex index.php
         # RedirectTemp cannot be used instead
     </IfModule>
 </IfModule>
+
+<IfModule mod_headers.c>
+    # Header set Access-Control-Allow-Origin "https://paysubscriptions.com"
+    # Header set Access-Control-Allow-Methods "GET,POST,OPTIONS,PUT,DELETE"
+    # Header set Access-Control-Allow-Headers "Content-Type, Authorization"
+
+    # If you need to allow credentials
+    # Header set Access-Control-Allow-Credentials "true"
+</IfModule>
