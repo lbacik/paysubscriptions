@@ -13,6 +13,7 @@ services:
     image: "ps-web-${TAG}"
     environment:
       APP_ENV: "${APP_ENV}"
+      APP_URL: "${APP_URL}"
       VIRTUAL_HOST: "${DOMAIN}"
       LETSENCRYPT_HOST: "${DOMAIN}"
       DATABASE_URL: "${DATABASE_URL}"
@@ -26,6 +27,7 @@ services:
     restart: always
     environment:
       APP_ENV: "${APP_ENV}"
+      APP_URL: "${APP_URL}"
       DATABASE_URL: "${DATABASE_URL}"
       MAILER_DSN: "${MAILER_DSN}"
     command:
