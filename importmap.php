@@ -16,19 +16,25 @@ return [
         'path' => './assets/app.js',
         'entrypoint' => true,
     ],
-    '@hotwired/stimulus' => [
-        'version' => '3.2.2',
-    ],
     '@symfony/stimulus-bundle' => [
         'path' => './vendor/symfony/stimulus-bundle/assets/dist/loader.js',
     ],
+    '@hotwired/stimulus' => [
+        'version' => '3.2.2',
+    ],
     '@hotwired/turbo' => [
-        'version' => '7.3.0',
+        'version' => '8.0.5',
     ],
     'stimulus-use' => [
         'version' => '0.52.2',
     ],
     'chart.js/auto' => [
-        'version' => '3.9.1',
+        'version' => '4.4.4',
+    ],
+    'chart.js' => [
+        'version' => '4.4.4',
+    ],
+    '@kurkle/color' => [
+        'version' => '0.3.2',
     ],
 ];
