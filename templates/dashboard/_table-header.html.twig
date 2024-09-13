@@ -6,7 +6,12 @@
 
     <div>
         {% if addSubscriptionDisabled == false %}
-            <twig:Button href="{{ path('app_subscription_new') }}">{{ "add_subscription"|trans }}</twig:Button>
+            <twig:Button
+                    data-turbo-frame="modal"
+                    href="{{ path('app_subscription_new') }}"
+            >
+                {{ "add_subscription"|trans }}
+            </twig:Button>
         {% else %}
             <twig:Button disabled="true">{{ "add_subscription"|trans }}</twig:Button>
         {% endif %}

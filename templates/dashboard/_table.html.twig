@@ -15,76 +15,55 @@
     {{ include('dashboard/_table-header.html.twig') }}
 
     <turbo-frame id="subscriptions">
-        <div>
-            <table id="subscriptions" class="table-auto w-full rounded-xl border border-separate border-color-sec">
-                <thead>
-                <tr class="bg-zinc-200">
-                    <th scope="col" class="w-auto rounded-tl-xl">#</th>
-                    <th scope="col" class="w-auto">
-                        <twig:SortableColumn field="name">Subscription</twig:SortableColumn>
-                    </th>
-                    <th scope="col" class="w-auto">
-                        <twig:SortableColumn field="monthly">Monthly</twig:SortableColumn>
-                    </th>
-                    <th scope="col" class="w-auto">
-                        <twig:SortableColumn field="yearly">Yearly</twig:SortableColumn>
-                    </th>
-                    <th scope="col" class="md:w-56 rounded-tr-xl">Actions</th>
-                </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-200">
+        <table id="subscriptions-table" class="table-auto w-full rounded-xl border border-separate border-color-sec">
+            <thead>
+            <tr class="bg-zinc-200">
+                <th scope="col" class="w-auto rounded-tl-xl">#</th>
+                <th scope="col" class="w-auto">
+                    <twig:SortableColumn field="name">Subscription</twig:SortableColumn>
+                </th>
+                <th scope="col" class="w-auto">
+                    <twig:SortableColumn field="monthly">Monthly</twig:SortableColumn>
+                </th>
+                <th scope="col" class="w-auto">
+                    <twig:SortableColumn field="yearly">Yearly</twig:SortableColumn>
+                </th>
+                <th scope="col" class="md:w-56 rounded-tr-xl">Actions</th>
+            </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
 
-                {% for subscription in subscriptions %}
-                    <tr class="odd:bg-color-pri even:bg-blue-50 group hover:bg-color-qui hover:text-white">
-                        <td class="group-hover:text-white">{{ loop.index }}</td>
-                        <td class="group-hover:text-white">
-                            <div>
-                                {{ subscription.name }}
-                            </div>
-                            <div class="text-xs text-gray-400 group-hover:text-white">
-                                from: {{ subscription.firstPayment ? subscription.firstPayment|date('Y-m-d') : '' }}
-                            </div>
-                        </td>
-                        <td class="text-end {% if not subscription.monthly %}calculated{% endif %}">{{ subscription.monthlyCalculated|number_format(2, '.', ' ') }}</td>
-                        <td class="text-end {% if subscription.monthly %}calculated{% endif %}">{{ subscription.yearlyCalculated|number_format(2, '.', ' ') }}</td>
-                        <td class="flex flex-row space-x-2 items-center justify-end">
-                            <twig:Button
-                                    data-turbo-frame="_top"
-                                    href="{{ path('app_subscription_edit', {id: subscription.id}) }}"
-                                    styleType="secondary"
-                            ><span class="span-underline">{{ "edit"|trans }}</span></twig:Button>
-                            {{ include('subscription/_delete_form.html.twig') }}
-                        </td>
-                    </tr>
-                {% endfor %}
-                </tbody>
-                <tfoot>
-                <tr class="bg-color-pri">
-                    <td></td>
-                    <td class="font-bold">
-                        <div>Total</div>
-                        <div class="font-thin">included calculated</div>
-                    </td>
-                    <td class="font-bold text-end">
-                        <div>
-                            {{ total.monthly|number_format(2, '.', ' ') }}
-                        </div>
-                        <div class="font-thin">
-                            {{ total.monthlyCalculated|number_format(2, '.', ' ') }}
-                        </div>
-                    </td>
-                    <td class="font-bold text-end">
-                        <div>
-                            {{ total.yearly|number_format(2, '.', ' ') }}
-                        </div>
-                        <div class="font-thin">
-                            {{ total.yearlyCalculated|number_format(2, '.', ' ') }}
-                        </div>
-                    </td>
-                    <td></td>
-                </tr>
-                </tfoot>
-            </table>
-        </div>
+            {% for subscription in subscriptions %}
+                {{ include('dashboard/_row.html.twig', {subscription: subscription}) }}
+            {% endfor %}
+
+            </tbody>
+            <tfoot>
+            <tr class="bg-color-pri">
+                <td></td>
+                <td class="font-bold">
+                    <div>Total</div>
+                    <div class="font-thin">included calculated</div>
+                </td>
+                <td class="font-bold text-end">
+                    <div>
+                        {{ total.monthly|number_format(2, '.', ' ') }}
+                    </div>
+                    <div class="font-thin">
+                        {{ total.monthlyCalculated|number_format(2, '.', ' ') }}
+                    </div>
+                </td>
+                <td class="font-bold text-end">
+                    <div>
+                        {{ total.yearly|number_format(2, '.', ' ') }}
+                    </div>
+                    <div class="font-thin">
+                        {{ total.yearlyCalculated|number_format(2, '.', ' ') }}
+                    </div>
+                </td>
+                <td></td>
+            </tr>
+            </tfoot>
+        </table>
     </turbo-frame>
 </div>

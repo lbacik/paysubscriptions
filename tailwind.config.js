@@ -1,5 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
+  darkMode: 'class',
   content: [
     "./assets/**/*.js",
     "./templates/**/*.html.twig",
@@ -9,6 +10,15 @@ module.exports = {
   ],
   theme: {
     extend: {
+      animation: {
+        'fade-in': 'fadeIn .5s ease-out;',
+      },
+      keyframes: {
+        fadeIn: {
+          '0%': { opacity: 0 },
+          '100%': { opacity: 1 },
+        },
+      },
       colors: {
         'color-pri': '#f7f7ff',
         'color-sec': '#bdd5ea',
@@ -26,5 +36,8 @@ module.exports = {
   },
   plugins: [
     require('@tailwindcss/typography'),
+    // plugin(function({ addVariant }) {
+    //   addVariant('modal', 'dialog &');
+    // })
   ],
 }

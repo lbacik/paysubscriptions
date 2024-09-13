@@ -27,20 +27,49 @@ class SubscriptionController extends AbstractController
     public function new(Request $request): Response
     {
         $subscription = new Subscription();
-        $form = $this->createForm(SubscriptionType::class, $subscription);
+        $form = $this->createForm(
+            SubscriptionType::class,
+            $subscription,
+            ['action' => $this->generateUrl('app_subscription_new')]
+        );
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
             $subscription->setOwner($this->getUser());
             try {
                 $this->subscriptionService->add($subscription);
+
+                $this->addFlash('success', 'Subscription created successfully');
+
+                if ($request->headers->has('turbo-frame')) {
+                    $subscriptions = $this->subscriptionService->get($this->getUser(), 'name', 'asc');
+                    $newTable = $this->renderView('dashboard/_table.html.twig', [
+                        'subscriptions' => $subscriptions,
+                        'total' => [
+                            'monthly' => 0.0,
+                            'yearly' => 0.0,
+                            'monthlyCalculated' => 0.0,
+                            'yearlyCalculated' => 0.0,
+                        ],
+                        'addSubscriptionDisabled' => false,
+                        'sort' => 'name',
+                        'order' => 'asc',
+                    ]);
+
+                    $stream = $this->renderView('dashboard/turbo_stream.html.twig', [
+                        'content' => $newTable,
+                    ]);
+
+                    $this->addFlash('stream', $stream);
+                }
+
+                return $this->redirectToRoute('app_dashboard', [], Response::HTTP_SEE_OTHER);
+
             } catch (\LogicException $exception) {
                 $this->addFlash('danger', $exception->getMessage());
 
                 return $this->redirectToRoute('app_dashboard', [], Response::HTTP_SEE_OTHER);
             }
-
-            return $this->redirectToRoute('app_dashboard', [], Response::HTTP_SEE_OTHER);
         }
 
         return $this->render('subscription/new.html.twig', [
@@ -52,11 +81,17 @@ class SubscriptionController extends AbstractController
     #[Route('/{id}/edit', name: 'app_subscription_edit', methods: ['GET', 'POST'])]
     public function edit(Request $request, Subscription $subscription): Response
     {
-        $form = $this->createForm(SubscriptionType::class, $subscription);
+        $form = $this->createForm(
+            SubscriptionType::class,
+            $subscription,
+            ['action' => $this->generateUrl('app_subscription_edit', ['id' => $subscription->getId()])]
+        );
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
             $this->subscriptionService->update($subscription);
+
+            $this->addFlash('success', 'Subscription updated successfully');
 
             return $this->redirectToRoute('app_dashboard', [], Response::HTTP_SEE_OTHER);
         }
