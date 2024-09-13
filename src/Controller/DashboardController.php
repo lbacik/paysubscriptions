@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Entity\Subscription;
-use App\Repository\SubscriptionRepository;
 use App\Service\ChartService;
 use App\Service\SubscriptionService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -17,21 +16,26 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 #[isGranted('ROLE_USER')]
 class DashboardController extends AbstractController
 {
+    public function __construct(
+        private readonly SubscriptionService $subscriptionService,
+        private readonly ChartService $chartService,
+    ) {
+    }
+
     #[Route('/dashboard', name: 'app_dashboard')]
     public function index(
-        SubscriptionRepository $subscriptionRepository,
-        SubscriptionService $subscriptionService,
-        ChartService $chartService,
         #[MapQueryParameter('chartType')] string $chartType = 'bar',
         #[MapQueryParameter('withCalculated')] bool $withCalculated = false,
         #[MapQueryParameter('month')] int|null $month = null,
+        #[MapQueryParameter('sort')] string $sort = 'name',
+        #[MapQueryParameter('order')] string $order = 'asc',
     ): Response {
-        $subscriptions = $subscriptionRepository->findBy(['owner' => $this->getUser()]);
+        $subscriptions = $this->subscriptionService->get($this->getUser(), $sort, $order);
 
         $chart = match($chartType) {
-            'monthly' => $chartService->createMonthlyChart($subscriptions, $withCalculated, $month),
-            'yearly' => $chartService->createYearlyChart($subscriptions, $withCalculated),
-            default => $chartService->createBarChart($subscriptions),
+            'monthly' => $this->chartService->createMonthlyChart($subscriptions, $withCalculated, $month),
+            'yearly' => $this->chartService->createYearlyChart($subscriptions, $withCalculated),
+            default => $this->chartService->createBarChart($subscriptions),
         };
 
         return $this->render('dashboard/index.html.twig', [
@@ -40,7 +44,9 @@ class DashboardController extends AbstractController
             'total' => $this->calculateTotals($subscriptions),
             'fullWidth' => $chartType === 'bar',
             'active' => ['type' => $chartType, 'withCalculated' => $withCalculated, 'month' => $month],
-            'addSubscriptionDisabled' => ! $subscriptionService->isAbleToAddSubscription($this->getUser()),
+            'addSubscriptionDisabled' => ! $this->subscriptionService->isAbleToAddSubscription($this->getUser()),
+            'sort' => $sort,
+            'order' => $order,
         ]);
     }
 
@@ -58,8 +64,8 @@ class DashboardController extends AbstractController
             function (array $totals, Subscription $subscription) {
                 $totals['monthly'] += (float)$subscription->getMonthly();
                 $totals['yearly'] += (float)$subscription->getYearly();
-                $totals['monthlyCalculated'] += $subscription->monthlyCalculated();
-                $totals['yearlyCalculated'] += $subscription->yearlyCalculated();
+                $totals['monthlyCalculated'] += $subscription->getMonthlyCalculated();
+                $totals['yearlyCalculated'] += $subscription->getYearlyCalculated();
 
                 return $totals;
             },

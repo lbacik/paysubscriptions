@@ -11,8 +11,22 @@ use Symfony\Component\Security\Core\User\UserInterface;
 class SubscriptionService
 {
     public function __construct(
-        private SubscriptionRepository $subscriptionRepository,
+        private readonly SubscriptionRepository $subscriptionRepository,
     ) {
+    }
+
+    public function get(UserInterface $owner, string $sortBy, string $order): array
+    {
+        $subscriptions = $this->subscriptionRepository->findBy(['owner' => $owner]);
+
+        uasort($subscriptions, fn(Subscription $a, Subscription $b) => match($sortBy) {
+                'name' => $a->getName() <=> $b->getName(),
+                'monthly' => $a->getMonthlyCalculated() <=> $b->getMonthlyCalculated(),
+                'yearly' => $a->getYearlyCalculated() <=> $b->getYearlyCalculated(),
+                default => 0,
+            } * ($order === 'asc' ? 1 : -1));
+
+        return $subscriptions;
     }
 
     public function add(Subscription $subscription): void
