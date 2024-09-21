@@ -104,12 +104,12 @@ class Subscription
         return $this;
     }
 
-    public function monthlyCalculated(): float
+    public function getMonthlyCalculated(): float
     {
         return round((float) ($this->getMonthly() ?? ((float) $this->getYearly() / 12)), 2);
     }
 
-    public function yearlyCalculated(): float
+    public function getYearlyCalculated(): float
     {
         return round((float) ($this->getYearly() ?? ((float) $this->getMonthly() * 12)), 2);
     }

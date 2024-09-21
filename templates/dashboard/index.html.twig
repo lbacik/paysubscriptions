@@ -1,7 +1,7 @@
 {% extends 'base.html.twig' %}
 
 {% block body %}
-    <twig:ContentCenter class="mt-6 md:my-10" width="w-full md:w-2/3">
+    <twig:ContentCenter class="mt-6 md:my-10" width="w-full md:w-4/5 lg:w-2/3">
         {% if subscriptions|length > 0 %}
             <twig:ChartSwitcher class="mb-5 px-5 md:px-0" :active="active"/>
 

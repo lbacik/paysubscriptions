@@ -1,0 +1,15 @@
+<div class="flex justify-between">
+
+    <div>
+        <h1 class="text-2xl font-light mb-4">Subscriptions</h1>
+    </div>
+
+    <div>
+        {% if addSubscriptionDisabled == false %}
+            <twig:Button href="{{ path('app_subscription_new') }}">{{ "add_subscription"|trans }}</twig:Button>
+        {% else %}
+            <twig:Button disabled="true">{{ "add_subscription"|trans }}</twig:Button>
+        {% endif %}
+    </div>
+
+</div>

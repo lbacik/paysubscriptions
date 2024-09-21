@@ -1,0 +1,11 @@
+{% props order=null %}
+
+<div{{ attributes }}>
+        {% if order is null %}
+            <i class="fa-solid fa-sort"></i>
+        {% elseif order == 'asc' %}
+            <i class="fa-solid fa-sort-up"></i>
+        {% else %}
+            <i class="fa-solid fa-sort-down"></i>
+        {% endif %}
+</div>
