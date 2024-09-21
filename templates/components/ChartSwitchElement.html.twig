@@ -1,4 +1,4 @@
-{% props href, active = false %}
+{% props href, active = false, select = false, selected = 0 %}
 
 {% set active = active is defined ? active : false %}
 {% set buttonClass = active
@@ -10,7 +10,16 @@
     : 'bg-gray-200'
 %}
 
-<div class="relative chart-switch-button group {{ buttonClass }}">
-    <div class="absolute left-1 rounded-full w-3 h-3 {{ ledClass }}"></div>
-    <a class="chart-switch-link" href="{{ href }}">{% block content %}{% endblock %}</a>
-</div>
+<a href="{{ href }}">
+    <div class="relative chart-switch-button group {{ buttonClass }}">
+        <div class="absolute left-1 rounded-full w-3 h-3 {{ ledClass }}"></div>
+        <span class="chart-switch-link">{% block content %}{% endblock %}</span>
+        {% if select %}
+            {% if selected > 0 %}
+                {% set selected = selected - 1 %}
+            {% endif %}
+            <twig:Select class="ml-2" :options="select" :selected="selected" />
+        {%  endif %}
+    </div>
+</a>
+

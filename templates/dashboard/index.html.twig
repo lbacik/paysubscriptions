@@ -5,8 +5,15 @@
         {% if subscriptions|length > 0 %}
             <twig:ChartSwitcher class="mb-5 px-5 md:px-0" :active="active"/>
 
-            <div id="chart" class="p-5 mx-auto {% if fullWidth %} w-full {% else %} w-2/3 {% endif %}">
-                {{ render_chart(chart) }}
+            <div
+                    id="chart"
+                    class="p-5 mx-auto {% if fullWidth %} w-full {% else %} w-2/3 {% endif %}"
+                    data-controller="chart-click"
+            >
+                {{ render_chart(chart, {
+                    'data-controller': 'chart-click',
+                    'data-chart-click-url-value': url('app_dashboard', { 'chartType': 'monthly' }),
+                } ) }}
             </div>
         {% endif %}
 

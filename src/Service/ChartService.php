@@ -26,7 +26,7 @@ class ChartService
     ];
 
     public function __construct(
-        private ChartBuilderInterface $chartBuilder,
+        private readonly ChartBuilderInterface $chartBuilder,
     ) {
     }
 
@@ -58,7 +58,7 @@ class ChartService
         return $chart;
     }
 
-    public function createMonthlyChart(array $subscriptions, bool $withYearly = false): Chart
+    public function createMonthlyChart(array $subscriptions, bool $withYearly = false, int|null $month = null): Chart
     {
         $chart = $this->chartBuilder->createChart(Chart::TYPE_DOUGHNUT);
 
@@ -71,9 +71,17 @@ class ChartService
                 $subscriptions
             )
             : $data = array_map(
-            fn(Subscription $subscription) => ['m' => $subscription->getMonthly(), 'l' => $subscription->getName()],
-            array_filter($subscriptions, fn(Subscription $subscription) => $subscription->getMonthly() !== null)
-        );
+                fn(Subscription $subscription) => [
+                    'm' => $subscription->getMonthly() ?? $subscription->getYearly(),
+                    'l' => $subscription->getName()
+                ],
+                array_filter(
+                    $subscriptions,
+                    fn(Subscription $subscription) => $month === null
+                        ? $subscription->getMonthly() !== null
+                        : $subscription->getMonthly() !== null || $subscription->getFirstPayment()->format('n') === (string) $month
+                )
+            );
 
         $data = array_values($data);
 

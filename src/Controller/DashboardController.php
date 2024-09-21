@@ -24,11 +24,12 @@ class DashboardController extends AbstractController
         ChartService $chartService,
         #[MapQueryParameter('chartType')] string $chartType = 'bar',
         #[MapQueryParameter('withCalculated')] bool $withCalculated = false,
+        #[MapQueryParameter('month')] int|null $month = null,
     ): Response {
         $subscriptions = $subscriptionRepository->findBy(['owner' => $this->getUser()]);
 
         $chart = match($chartType) {
-            'monthly' => $chartService->createMonthlyChart($subscriptions, $withCalculated),
+            'monthly' => $chartService->createMonthlyChart($subscriptions, $withCalculated, $month),
             'yearly' => $chartService->createYearlyChart($subscriptions, $withCalculated),
             default => $chartService->createBarChart($subscriptions),
         };
@@ -38,7 +39,7 @@ class DashboardController extends AbstractController
             'chart' => $chart,
             'total' => $this->calculateTotals($subscriptions),
             'fullWidth' => $chartType === 'bar',
-            'active' => ['type' => $chartType, 'withCalculated' => $withCalculated],
+            'active' => ['type' => $chartType, 'withCalculated' => $withCalculated, 'month' => $month],
             'addSubscriptionDisabled' => ! $subscriptionService->isAbleToAddSubscription($this->getUser()),
         ]);
     }
@@ -65,5 +66,4 @@ class DashboardController extends AbstractController
             $totals,
         );
     }
-
 }
