@@ -65,7 +65,7 @@ class ChartService
         $withYearly ?
             $data = array_map(
                 fn(Subscription $subscription) => [
-                    'm' => $subscription->getMonthly() ?? ((float)$subscription->getYearly() / 12),
+                    'm' => $subscription->getMonthly() ?? ($subscription->getYearly() / 12),
                     'l' => $subscription->getName()
                 ],
                 $subscriptions
@@ -116,7 +116,7 @@ class ChartService
         $withMonthly ?
             $data = array_map(
                 fn(Subscription $subscription) => [
-                    'm' => $subscription->getYearly() ?? ((float)$subscription->getMonthly() * 12),
+                    'm' => $subscription->getYearly() ?? $subscription->getMonthly() * 12,
                     'l' => $subscription->getName()
                 ],
                 $subscriptions

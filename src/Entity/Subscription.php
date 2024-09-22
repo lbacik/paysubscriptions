@@ -68,26 +68,26 @@ class Subscription
         return $this;
     }
 
-    public function getMonthly(): ?string
+    public function getMonthly(): ?float
     {
-        return $this->monthly;
+        return $this->monthly !== null ? (float) $this->monthly : null;
     }
 
-    public function setMonthly(?string $monthly): static
+    public function setMonthly(?float $monthly): static
     {
-        $this->monthly = $monthly;
+        $this->monthly = $monthly !== null ? (string) $monthly : null;
 
         return $this;
     }
 
-    public function getYearly(): ?string
+    public function getYearly(): ?float
     {
-        return $this->yearly;
+        return $this->yearly !== null ? (float) $this->yearly : null;
     }
 
-    public function setYearly(?string $yearly): static
+    public function setYearly(?float $yearly): static
     {
-        $this->yearly = $yearly;
+        $this->yearly = $yearly !== null ? (string) $yearly : null;
 
         return $this;
     }
@@ -106,11 +106,11 @@ class Subscription
 
     public function getMonthlyCalculated(): float
     {
-        return round((float) ($this->getMonthly() ?? ((float) $this->getYearly() / 12)), 2);
+        return round(($this->getMonthly() ?? $this->getYearly() / 12), 2);
     }
 
     public function getYearlyCalculated(): float
     {
-        return round((float) ($this->getYearly() ?? ((float) $this->getMonthly() * 12)), 2);
+        return round(($this->getYearly() ?? $this->getMonthly() * 12), 2);
     }
 }

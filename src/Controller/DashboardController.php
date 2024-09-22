@@ -62,8 +62,8 @@ class DashboardController extends AbstractController
         return array_reduce(
             $subscriptions,
             function (array $totals, Subscription $subscription) {
-                $totals['monthly'] += (float)$subscription->getMonthly();
-                $totals['yearly'] += (float)$subscription->getYearly();
+                $totals['monthly'] += $subscription->getMonthly();
+                $totals['yearly'] += $subscription->getYearly();
                 $totals['monthlyCalculated'] += $subscription->getMonthlyCalculated();
                 $totals['yearlyCalculated'] += $subscription->getYearlyCalculated();
 
