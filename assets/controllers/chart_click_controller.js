@@ -29,7 +29,7 @@ export default class extends Controller {
 
         if (this.months.includes(label)) {
           const month = this.months.indexOf(label) + 1;
-          window.Turbo.visit(`${this.urlValue}&month=${month}`);
+          window.Turbo.visit(`${this.urlValue}&month=${month}`, { frame: 'chart' });
         }
       }
     }

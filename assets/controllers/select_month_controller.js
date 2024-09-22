@@ -17,6 +17,6 @@ export default class extends Controller {
   select(event) {
     event.preventDefault();
     this.optionsTarget.classList.add('hidden');
-    window.Turbo.visit(`${this.urlValue}&month=${event.currentTarget.value + 1}`);
+    window.Turbo.visit(`${this.urlValue}&month=${event.currentTarget.value + 1}`, { frame: "chart" });
   }
 }
