@@ -13,6 +13,7 @@ services:
     image: "ps-web-${TAG}"
     environment:
       APP_ENV: "${APP_ENV}"
+      APP_VERSION: "${TAG}"
       APP_URL: "${APP_URL}"
       VIRTUAL_HOST: "${DOMAIN}"
       LETSENCRYPT_HOST: "${DOMAIN}"
@@ -37,6 +38,7 @@ services:
       - '--memory-limit=110M'
       - '--time-limit=3600'
       - '--limit=100'
+      - '-vv'
     depends_on:
       - web
 
