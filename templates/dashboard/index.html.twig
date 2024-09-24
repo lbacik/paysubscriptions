@@ -3,11 +3,20 @@
 {% block body %}
     <twig:ContentCenter class="mt-6 md:my-10" width="w-full md:w-2/3">
         {% if subscriptions|length > 0 %}
-            <twig:ChartSwitcher class="mb-5 px-5 md:px-0" :active="active"/>
+            <turbo-frame id="chart">
+                <twig:ChartSwitcher class="mb-5 px-5 md:px-0" :active="active"/>
 
-            <div id="chart" class="p-5 mx-auto {% if fullWidth %} w-full {% else %} w-2/3 {% endif %}">
-                {{ render_chart(chart) }}
-            </div>
+                <div
+                        id="chart"
+                        class="p-5 mx-auto {% if fullWidth %} w-full {% else %} w-2/3 lg:w-1/2 {% endif %}"
+                        data-controller="chart-click"
+                >
+                    {{ render_chart(chart, {
+                        'data-controller': 'chart-click',
+                        'data-chart-click-url-value': path('app_dashboard', { 'chartType': 'monthly' }),
+                    } ) }}
+                </div>
+            </turbo-frame>
         {% endif %}
 
         <div class="my-20">

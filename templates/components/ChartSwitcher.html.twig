@@ -1,17 +1,22 @@
 {% props active = {type: 'bar', withCalculated: false} %}
 
 <div {{ attributes.defaults({ class: "flex flex-row space-x-2 justify-end"}) }}>
-    <div>
+    <div class="flex flex-col space-y-1">
         <twig:ChartSwitchElement
                 href="{{ path('app_dashboard', {chartType: 'bar'}) }}"
                 active="{{ active.type is not defined or active.type == 'bar' }}"
         >{{ "dashboard.switch.by_month"|trans }}</twig:ChartSwitchElement>
+        <twig:ChartSwitchElement
+                href="{{ path('app_dashboard', {chartType: 'monthly', month: active.month or 1}) }}"
+                active="{{ active.type == 'monthly' and active.month }}"
+                :select="['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec']"
+                :selected="active.month" />
     </div>
 
     <div class="flex flex-col space-y-1">
         <twig:ChartSwitchElement
                 href="{{ path('app_dashboard', {chartType: 'monthly'}) }}"
-                active="{{ active.type == 'monthly' }}"
+                active="{{ active.type == 'monthly' and active.month is null }}"
         >{{ "dashboard.switch.per_month"|trans }}</twig:ChartSwitchElement>
         <twig:ChartSwitchElement
                 href="{{ path('app_dashboard', {chartType: 'monthly', withCalculated: true}) }}"

@@ -9,5 +9,9 @@
             This link will expire in {{ resetToken.expirationMessageKey|trans(resetToken.expirationMessageData, 'ResetPasswordBundle') }}.
         </p>
         <p>If you don't receive an email please check your spam folder or <a href="{{ path('app_forgot_password_request') }}">try again</a>.</p>
+        <div class="pt-10">
+            <p class="bg-color-qui text-color-pri rounded rounded-2xl py-3 px-5 mx-10 text-center"
+            >You can request only one password reset per hour.</p>
+        </div>
     </twig:ContentCenter>
 {% endblock %}

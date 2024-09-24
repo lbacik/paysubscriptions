@@ -6,6 +6,7 @@ namespace App\Form;
 
 use App\Entity\Subscription;
 use Symfony\Component\Form\AbstractType;
+use Symfony\Component\Form\Extension\Core\Type\NumberType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
@@ -25,8 +26,12 @@ class SubscriptionType extends AbstractType
             ->add('firstPayment', null, [
                 'widget' => 'single_text',
             ])
-            ->add('monthly')
-            ->add('yearly')
+            ->add('monthly', NumberType::class, [
+                'required' => false,
+            ])
+            ->add('yearly', NumberType::class, [
+                'required' => false,
+            ])
         ;
     }
 

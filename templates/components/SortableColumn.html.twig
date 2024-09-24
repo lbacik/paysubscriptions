@@ -1,0 +1,11 @@
+{% props field='' %}
+
+{% set query = app.request.query.all %}
+
+<a
+        {{ attributes.defaults({class: "flex justify-between"}) }}
+        href="{{ path(app.current_route, query|merge({sort: field, order: this.order(order)})) }}"
+>
+    {% block content %}{% endblock %}
+    <twig:SortButtons :order="sort == field ? order : null" class="ml-2" />
+</a>
