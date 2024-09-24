@@ -13,7 +13,7 @@
                 >
                     {{ render_chart(chart, {
                         'data-controller': 'chart-click',
-                        'data-chart-click-url-value': url('app_dashboard', { 'chartType': 'monthly' }),
+                        'data-chart-click-url-value': path('app_dashboard', { 'chartType': 'monthly' }),
                     } ) }}
                 </div>
             </turbo-frame>
