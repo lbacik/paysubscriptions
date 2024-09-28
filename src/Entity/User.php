@@ -5,18 +5,24 @@ declare(strict_types=1);
 namespace App\Entity;
 
 use App\Repository\UserRepository;
+use DateTime;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
+use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Gedmo\Timestampable\Traits\Timestampable;
 use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
+use Gedmo\Mapping\Annotation as Gedmo;
 
 #[ORM\Entity(repositoryClass: UserRepository::class)]
 #[ORM\UniqueConstraint(name: 'UNIQ_IDENTIFIER_EMAIL', fields: ['email'])]
 #[UniqueEntity(fields: ['email'], message: 'There is already an account with this email')]
 class User implements UserInterface, PasswordAuthenticatedUserInterface
 {
+    use Timestampable;
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
@@ -46,8 +52,19 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\OneToMany(targetEntity: Subscription::class, mappedBy: 'owner', orphanRemoval: true)]
     private Collection $subscriptions;
 
+    #[Gedmo\Timestampable(on: 'create')]
+    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: false, columnDefinition: 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP')]
+    protected $createdAt;
+
+    #[Gedmo\Timestampable(on: 'create')]
+    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: false, columnDefinition: 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP')]
+    protected $updatedAt;
+
     public function __construct()
     {
+        $this->createdAt = new DateTime();
+        $this->updatedAt = new DateTime();
+
         $this->subscriptions = new ArrayCollection();
     }
 
@@ -136,6 +153,11 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->isVerified = $isVerified;
 
         return $this;
+    }
+
+    public function setIsVerified(bool $isVerified): static
+    {
+        return $this->setVerified($isVerified);
     }
 
     /**
