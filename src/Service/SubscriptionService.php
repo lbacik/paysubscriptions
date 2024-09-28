@@ -6,12 +6,14 @@ namespace App\Service;
 
 use App\Entity\Subscription;
 use App\Repository\SubscriptionRepository;
+use App\Repository\UserRepository;
 use Symfony\Component\Security\Core\User\UserInterface;
 
 class SubscriptionService
 {
     public function __construct(
         private readonly SubscriptionRepository $subscriptionRepository,
+        private readonly UserRepository $userRepository,
     ) {
     }
 
@@ -43,9 +45,9 @@ class SubscriptionService
 
     public function canAddNewSubscription(UserInterface $user): void
     {
-        $currentSubscriptionCount = $this->subscriptionRepository->count(['owner' => $user]);
+        $user = $this->userRepository->find($user->getId());
 
-        if ($currentSubscriptionCount >= 30) {
+        if (count($user->getSubscriptions()) >= $user->getSubscriptionsLimit()) {
             throw new \LogicException('You have reached the maximum number of subscriptions.');
         }
     }

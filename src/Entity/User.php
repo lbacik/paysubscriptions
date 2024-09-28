@@ -55,6 +55,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\OneToMany(targetEntity: Subscription::class, mappedBy: 'owner', orphanRemoval: true)]
     private Collection $subscriptions;
 
+    #[ORM\OneToOne(mappedBy: 'user', cascade: ['persist', 'remove'])]
+    private ?Limits $limits = null;
+
     #[Gedmo\Timestampable(on: 'create')]
     #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: false, options: ["default" => "CURRENT_TIMESTAMP"])]
     protected $createdAt;
@@ -189,6 +192,37 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
                 $subscription->setOwner(null);
             }
         }
+
+        return $this;
+    }
+
+    public function getLimits(): ?Limits
+    {
+        return $this->limits;
+    }
+
+    public function setLimits(Limits $limits): static
+    {
+        // set the owning side of the relation if necessary
+        if ($limits->getUser() !== $this) {
+            $limits->setUser($this);
+        }
+
+        $this->limits = $limits;
+
+        return $this;
+    }
+
+    public function getSubscriptionsLimit(): int
+    {
+        return $this->limits?->getSubscriptions() ?? Limits::DEFAULT_SUBSCRIPTIONS_LIMIT;
+    }
+
+    public function setSubscriptionsLimit(int $limit): static
+    {
+        $this->getLimits()
+            ? $this->limits->setSubscriptions($limit)
+            : $this->setLimits((new Limits($this))->setSubscriptions($limit));
 
         return $this;
     }
