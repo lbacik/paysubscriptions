@@ -5,15 +5,17 @@ declare(strict_types=1);
 namespace App\Entity;
 
 use App\Repository\SubscriptionRepository;
+use DateTime;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
-use Gedmo\Timestampable\Traits\TimestampableEntity;
+use Gedmo\Timestampable\Traits\Timestampable;
 use Symfony\Component\Validator\Constraints as Assert;
+use Gedmo\Mapping\Annotation as Gedmo;
 
 #[ORM\Entity(repositoryClass: SubscriptionRepository::class)]
 class Subscription
 {
-//    use TimestampableEntity;
+    use Timestampable;
 
     #[ORM\Id]
     #[ORM\GeneratedValue]
@@ -38,6 +40,20 @@ class Subscription
     #[ORM\ManyToOne(inversedBy: 'subscriptions')]
     #[ORM\JoinColumn(nullable: false)]
     private ?User $owner = null;
+
+    #[Gedmo\Timestampable(on: 'create')]
+    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: false, columnDefinition: 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP')]
+    protected $createdAt;
+
+    #[Gedmo\Timestampable(on: 'create')]
+    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: false, columnDefinition: 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP')]
+    protected $updatedAt;
+
+    public function __construct()
+    {
+        $this->createdAt = new DateTime();
+        $this->updatedAt = new DateTime();
+    }
 
     public function getId(): ?int
     {

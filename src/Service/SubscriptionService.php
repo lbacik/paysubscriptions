@@ -36,6 +36,11 @@ class SubscriptionService
         $this->subscriptionRepository->save($subscription);
     }
 
+    public function update(Subscription $subscription): void
+    {
+        $this->subscriptionRepository->save($subscription);
+    }
+
     public function canAddNewSubscription(UserInterface $user): void
     {
         $currentSubscriptionCount = $this->subscriptionRepository->count(['owner' => $user]);
