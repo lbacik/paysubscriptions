@@ -50,13 +50,13 @@ class SubscriptionController extends AbstractController
     }
 
     #[Route('/{id}/edit', name: 'app_subscription_edit', methods: ['GET', 'POST'])]
-    public function edit(Request $request, Subscription $subscription, EntityManagerInterface $entityManager): Response
+    public function edit(Request $request, Subscription $subscription): Response
     {
         $form = $this->createForm(SubscriptionType::class, $subscription);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $entityManager->flush();
+            $this->subscriptionService->update($subscription);
 
             return $this->redirectToRoute('app_dashboard', [], Response::HTTP_SEE_OTHER);
         }
