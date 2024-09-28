@@ -42,11 +42,11 @@ class Subscription
     private ?User $owner = null;
 
     #[Gedmo\Timestampable(on: 'create')]
-    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: false, columnDefinition: 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP')]
+    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: false, options: ["default" => "CURRENT_TIMESTAMP"])]
     protected $createdAt;
 
     #[Gedmo\Timestampable(on: 'create')]
-    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: false, columnDefinition: 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP')]
+    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: false, options: ["default" => "CURRENT_TIMESTAMP"])]
     protected $updatedAt;
 
     public function __construct()
