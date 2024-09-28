@@ -11,10 +11,12 @@ use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Gedmo\Timestampable\Traits\Timestampable;
+use Symfony\Bridge\Doctrine\Types\UuidType;
 use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
 use Gedmo\Mapping\Annotation as Gedmo;
+use Symfony\Component\Uid\Uuid;
 
 #[ORM\Entity(repositoryClass: UserRepository::class)]
 #[ORM\UniqueConstraint(name: 'UNIQ_IDENTIFIER_EMAIL', fields: ['email'])]
@@ -24,9 +26,10 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     use Timestampable;
 
     #[ORM\Id]
-    #[ORM\GeneratedValue]
-    #[ORM\Column]
-    private ?int $id = null;
+    #[ORM\Column(type: UuidType::NAME, unique: true)]
+    #[ORM\GeneratedValue(strategy: 'CUSTOM')]
+    #[ORM\CustomIdGenerator(class: 'doctrine.uuid_generator')]
+    private ?Uuid $id = null;
 
     #[ORM\Column(length: 180)]
     private ?string $email = null;
@@ -52,12 +55,15 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\OneToMany(targetEntity: Subscription::class, mappedBy: 'owner', orphanRemoval: true)]
     private Collection $subscriptions;
 
+    #[ORM\OneToOne(mappedBy: 'user', cascade: ['persist', 'remove'])]
+    private ?Limits $limits = null;
+
     #[Gedmo\Timestampable(on: 'create')]
-    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: false, columnDefinition: 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP')]
+    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: false, options: ["default" => "CURRENT_TIMESTAMP"])]
     protected $createdAt;
 
     #[Gedmo\Timestampable(on: 'create')]
-    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: false, columnDefinition: 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP')]
+    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: false, options: ["default" => "CURRENT_TIMESTAMP"])]
     protected $updatedAt;
 
     public function __construct()
@@ -68,7 +74,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->subscriptions = new ArrayCollection();
     }
 
-    public function getId(): ?int
+    public function getId(): ?Uuid
     {
         return $this->id;
     }
@@ -186,6 +192,37 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
                 $subscription->setOwner(null);
             }
         }
+
+        return $this;
+    }
+
+    public function getLimits(): ?Limits
+    {
+        return $this->limits;
+    }
+
+    public function setLimits(Limits $limits): static
+    {
+        // set the owning side of the relation if necessary
+        if ($limits->getUser() !== $this) {
+            $limits->setUser($this);
+        }
+
+        $this->limits = $limits;
+
+        return $this;
+    }
+
+    public function getSubscriptionsLimit(): int
+    {
+        return $this->limits?->getSubscriptions() ?? Limits::DEFAULT_SUBSCRIPTIONS_LIMIT;
+    }
+
+    public function setSubscriptionsLimit(int $limit): static
+    {
+        $this->getLimits()
+            ? $this->limits->setSubscriptions($limit)
+            : $this->setLimits((new Limits($this))->setSubscriptions($limit));
 
         return $this;
     }
