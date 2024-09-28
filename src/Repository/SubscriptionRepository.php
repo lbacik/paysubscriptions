@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Entity\Subscription;
+use DateTime;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -20,6 +21,8 @@ class SubscriptionRepository extends ServiceEntityRepository
 
     public function save(Subscription $subscription): void
     {
+        $subscription->setUpdatedAt(new DateTime());
+
         $this->getEntityManager()->persist($subscription);
         $this->getEntityManager()->flush();
     }
