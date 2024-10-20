@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}{{ "service.tab"|trans }}{% endblock %}</title>
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('images/apple-touch-icon.png') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('images/favicon-32x32.png') }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('images/favicon-16x16.png') }}">
+    <link rel="manifest" href="{{ asset('images/site.webmanifest') }}">
+    <script defer src="https://cloud.umami.is/script.js"
+            data-website-id="92804189-0611-44c6-9151-3ccee0e35284"></script>
+    {% block stylesheets %}
+    {% endblock %}
+
+    {% block javascripts %}
+        {% block importmap %}{{ importmap('app') }}{% endblock %}
+    {% endblock %}
+</head>
+<body class="flex flex-col h-screen">
+    <div class="flex-1">
+        <div class="m-auto w-1/2">
+            <div class="flex flex-col items-center justify-center h-screen">
+                <h1 class="text-4xl font-bold text-center">{{ "maintenance.title"|trans }}</h1>
+                <p class="text-lg text-center">{{ "maintenance.message"|trans }}</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

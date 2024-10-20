@@ -44,3 +44,6 @@ contact:
   title: "Contact Form"
   info: "Please fill out the form below and I will get back to you as soon as possible."
   send: "Send Message"
+maintenance:
+  title: "Maintenance"
+  message: "The site is currently under maintenance. Please check back later."
