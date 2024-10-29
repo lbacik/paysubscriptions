@@ -8,6 +8,7 @@ parameters:
     systemEmail: '%env(SYSTEM_EMAIL)%'
     contactEmail: '%env(CONTACT_EMAIL)%'
     mailingProviderRoutingKey: '%env(MAILING_PROVIDER_ROUTING_KEY)%'
+    google_recaptcha_site_key: '%env(GOOGLE_RECAPTCHA_SITE_KEY)%'
 
 services:
     # default configuration for services in *this* file
