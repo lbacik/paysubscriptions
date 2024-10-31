@@ -10,8 +10,11 @@
         <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap" rel="stylesheet">
         <link href="https://fonts.googleapis.com/css2?family=Indie+Flower&display=swap" rel="stylesheet">
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-        <script defer src="https://cloud.umami.is/script.js" data-website-id="92804189-0611-44c6-9151-3ccee0e35284"></script>
-        <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+        <script src="https://cloud.umami.is/script.js" data-website-id="92804189-0611-44c6-9151-3ccee0e35284" defer></script>
+
+        {% block metaheaders %}
+        {% endblock %}
+
         {% block stylesheets %}
         {% endblock %}
 
@@ -19,7 +22,7 @@
             {% block importmap %}{{ importmap('app') }}{% endblock %}
         {% endblock %}
     </head>
-    <body class="flex flex-col h-screen">
+    <body class="flex flex-col h-screen" data-turbo="true">
         {{ include('partials/_header.html.twig') }}
 
         {{ include('partials/_flash_messages.html.twig') }}
