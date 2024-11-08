@@ -1,25 +1,44 @@
 {% extends 'base.html.twig' %}
 
+{% block metaheaders %}
+    <meta name="turbo-cache-control" content="no-cache">
+    <meta name="turbo-visit-control" content="reload">
+{% endblock %}
+
 {% block body %}
     <twig:ContentCenter class="my-20" width="w-4/5 lg:w-2/5">
         <div>
             <h1 class="text-color-qua text-2xl font-bold">{{ "contact.title"|trans }}</h1>
             <p class="text-color-ter py-10">{{ "contact.info"|trans }}</p>
         </div>
-        <div class="form">
-            {{ form_start(form) }}
-            <div class="md:columns-2 space-y-4 md:space-y-0">
-                {{ form_row(form.name) }}
-                {{ form_row(form.email) }}
-            </div>
-            {{ form_row(form.subject) }}
-            {{ form_row(form.message) }}
+            <div class="form">
+                {{ form_start(form, {
+                    'attr': {
+                        'data-turbo': 'false',
+                        'data-controller': 'recaptcha',
+                        'data-recaptcha-sitekey-value': google_recaptcha_site_key,
+                        'data-recaptcha-action-value': 'contact_form',
+                    }
+                }) }}
 
-            <div class="text-center">
-                <twig:Button type="submit" class="w-full md:w-auto">{{ "contact.send"|trans }}</twig:Button>
-            </div>
+                <div class="md:columns-2 space-y-4 md:space-y-0">
+                    {{ form_row(form.name) }}
+                    {{ form_row(form.email) }}
+                </div>
 
-            {{ form_end(form) }}
-        </div>
+                {{ form_row(form.subject) }}
+                {{ form_row(form.message) }}
+
+                <input type="hidden" name="g-recaptcha-response">
+
+                <div class="text-center">
+                    <twig:Button
+                            type="submit"
+                            class="w-full md:w-auto g-recaptcha"
+                    >{{ "contact.send"|trans }}</twig:Button>
+                </div>
+
+                {{ form_end(form) }}
+            </div>
     </twig:ContentCenter>
 {% endblock %}

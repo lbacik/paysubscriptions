@@ -43,3 +43,11 @@ framework:
             # 'App\Message\YourMessage': async
 
             App\Message\MailingSubscribe: newsletter
+
+when@dev:
+    framework:
+        messenger:
+            transports:
+                sync: 'sync://'
+            routing:
+                Symfony\Component\Mailer\Messenger\SendEmailMessage: sync
