@@ -1,17 +1,5 @@
 <div class="container mx-auto text-color-ter">
 
-    {% if addSubscriptionDisabled == true %}
-        <div
-                class="w-full text-end pb-2 text-red-500"
-        >
-            {{ "subscription.limit_reached"|trans }}.
-            <a
-                    href="{{ path('app_contact') }}"
-                    class="underline font-semibold"
-            >{{ "Contact me"|trans }}</a> {{ "if you need more!"|trans }}
-        </div>
-    {% endif %}
-
     {{ include('dashboard/_table-header.html.twig') }}
 
     <turbo-frame id="subscriptions">
