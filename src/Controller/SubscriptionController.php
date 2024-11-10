@@ -41,26 +41,8 @@ class SubscriptionController extends AbstractController
 
                 $this->addFlash('success', 'Subscription created successfully');
 
-                if ($request->headers->has('turbo-frame')) {
-                    $subscriptions = $this->subscriptionService->get($this->getUser(), 'name', 'asc');
-                    $newTable = $this->renderView('dashboard/_table.html.twig', [
-                        'subscriptions' => $subscriptions,
-                        'total' => [
-                            'monthly' => 0.0,
-                            'yearly' => 0.0,
-                            'monthlyCalculated' => 0.0,
-                            'yearlyCalculated' => 0.0,
-                        ],
-                        'addSubscriptionDisabled' => false,
-                        'sort' => 'name',
-                        'order' => 'asc',
-                    ]);
-
-                    $stream = $this->renderView('dashboard/turbo_stream.html.twig', [
-                        'content' => $newTable,
-                    ]);
-
-                    $this->addFlash('stream', $stream);
+                if ($request->isXmlHttpRequest() || $request->headers->get('Turbo-Frame')) {
+                    return $this->streamResponse();
                 }
 
                 return $this->redirectToRoute('app_dashboard', [], Response::HTTP_SEE_OTHER);
@@ -93,6 +75,10 @@ class SubscriptionController extends AbstractController
 
             $this->addFlash('success', 'Subscription updated successfully');
 
+            if ($request->isXmlHttpRequest() || $request->headers->get('Turbo-Frame')) {
+                return $this->streamResponse();
+            }
+
             return $this->redirectToRoute('app_dashboard', [], Response::HTTP_SEE_OTHER);
         }
 
@@ -102,7 +88,7 @@ class SubscriptionController extends AbstractController
         ]);
     }
 
-    #[Route('/{id}', name: 'app_subscription_delete', methods: ['POST'])]
+    #[Route('/{id}', name: 'app_subscription_delete', methods: ['GET', 'POST'])]
     public function delete(
         Request $request,
         Subscription $subscription,
@@ -111,8 +97,29 @@ class SubscriptionController extends AbstractController
         if ($this->isCsrfTokenValid('delete' . $subscription->getId(), $request->getPayload()->get('_token'))) {
             $entityManager->remove($subscription);
             $entityManager->flush();
+
+            $this->addFlash('success', 'Subscription deleted successfully');
+
+            if ($request->isXmlHttpRequest() || $request->headers->get('Turbo-Frame')) {
+                return $this->streamResponse();
+            }
+
+            return $this->redirectToRoute('app_dashboard', [], Response::HTTP_SEE_OTHER);
         }
 
-        return $this->redirectToRoute('app_dashboard', [], Response::HTTP_SEE_OTHER);
+        return $this->render('subscription/delete.html.twig', [
+            'subscription' => $subscription,
+        ]);
+    }
+
+    private function streamResponse(): Response
+    {
+        $subscriptions = $this->subscriptionService->get($this->getUser(), 'name', 'asc');
+
+        return $this->render('dashboard/_table_stream.html.twig', [
+            'subscriptions' => $subscriptions,
+            'order' => 'asc',
+            'sort' => 'name',
+        ], new Response('', 200, ['Content-Type' => 'text/vnd.turbo-stream.html']));
     }
 }

@@ -50,6 +50,10 @@ body {
     @apply bg-color-pri border-none group-hover:bg-color-qui hover:font-bold hover:text-color-pri;
 }
 
+.btn-delete {
+    @apply bg-red-500 text-white font-semibold hover:bg-red-700 transition-all duration-500;
+}
+
 .form {
 
     h1 {
