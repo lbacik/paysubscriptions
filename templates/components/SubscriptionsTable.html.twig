@@ -1,0 +1,53 @@
+<table id="subscriptions-table" class="table-auto w-full rounded-xl border border-separate border-color-sec">
+    <thead>
+    <tr class="bg-zinc-200">
+        <th scope="col" class="w-auto rounded-tl-xl">#</th>
+        <th scope="col" class="w-auto">
+            <twig:SortableColumn field="name">Subscription</twig:SortableColumn>
+        </th>
+        <th scope="col" class="w-auto">
+            <twig:SortableColumn field="monthly">Monthly</twig:SortableColumn>
+        </th>
+        <th scope="col" class="w-auto">
+            <twig:SortableColumn field="yearly">Yearly</twig:SortableColumn>
+        </th>
+        <th scope="col" class="md:w-56 rounded-tr-xl">Actions</th>
+    </tr>
+    </thead>
+    <tbody class="divide-y divide-gray-200">
+
+    {% for subscription in this.subscriptions %}
+        {{ include('dashboard/_row.html.twig', {subscription: subscription}) }}
+    {% endfor %}
+
+    </tbody>
+    <tfoot>
+
+    {% set total = this.total %}
+
+    <tr class="bg-color-pri">
+        <td></td>
+        <td class="font-bold">
+            <div>Total</div>
+            <div class="font-thin">included calculated</div>
+        </td>
+        <td class="font-bold text-end">
+            <div>
+                {{ total.monthly|number_format(2, '.', ' ') }}
+            </div>
+            <div class="font-thin">
+                {{ total.monthlyCalculated|number_format(2, '.', ' ') }}
+            </div>
+        </td>
+        <td class="font-bold text-end">
+            <div>
+                {{ total.yearly|number_format(2, '.', ' ') }}
+            </div>
+            <div class="font-thin">
+                {{ total.yearlyCalculated|number_format(2, '.', ' ') }}
+            </div>
+        </td>
+        <td></td>
+    </tr>
+    </tfoot>
+</table>
