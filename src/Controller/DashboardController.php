@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
-use App\Entity\Subscription;
 use App\Service\ChartService;
 use App\Service\SubscriptionService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -41,35 +40,9 @@ class DashboardController extends AbstractController
         return $this->render('dashboard/index.html.twig', [
             'subscriptions' => $subscriptions,
             'chart' => $chart,
-            'total' => $this->calculateTotals($subscriptions),
             'fullWidth' => $chartType === 'bar',
             'active' => ['type' => $chartType, 'withCalculated' => $withCalculated, 'month' => $month],
             'addSubscriptionDisabled' => ! $this->subscriptionService->isAbleToAddSubscription($this->getUser()),
-            'sort' => $sort,
-            'order' => $order,
         ]);
-    }
-
-    private function calculateTotals(array $subscriptions): array
-    {
-        $totals = [
-            'monthly' => 0.0,
-            'yearly' => 0.0,
-            'monthlyCalculated' => 0.0,
-            'yearlyCalculated' => 0.0,
-        ];
-
-        return array_reduce(
-            $subscriptions,
-            function (array $totals, Subscription $subscription) {
-                $totals['monthly'] += $subscription->getMonthly();
-                $totals['yearly'] += $subscription->getYearly();
-                $totals['monthlyCalculated'] += $subscription->getMonthlyCalculated();
-                $totals['yearlyCalculated'] += $subscription->getYearlyCalculated();
-
-                return $totals;
-            },
-            $totals,
-        );
     }
 }
