@@ -4,8 +4,8 @@
 
 <a
         {{ attributes.defaults({class: "flex justify-between"}) }}
-        href="{{ path('app_dashboard', query|merge({sort: field, order: this.order(order)})) }}"
+        href="{{ path('app_dashboard', query|merge({sort: field, order: this.nextOrder(this.order)})) }}"
 >
     {% block content %}{% endblock %}
-    <twig:SortButtons :order="sort == field ? order : null" class="ml-2" />
+    <twig:SortButtons :order="this.sort == field ? this.order : null" class="ml-2" />
 </a>
