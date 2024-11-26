@@ -15,6 +15,10 @@ use Symfony\Component\Validator\Constraints as Assert;
 use Gedmo\Mapping\Annotation as Gedmo;
 
 #[ORM\Entity(repositoryClass: SubscriptionRepository::class)]
+#[Assert\Expression(
+    'this.isValid() === true',
+    message: 'Please provide either monthly or yearly value (any, but not both).',
+)]
 class Subscription
 {
     use Timestampable;
@@ -125,11 +129,20 @@ class Subscription
 
     public function getMonthlyCalculated(): float
     {
-        return round(($this->getMonthly() ?? $this->getYearly() / 12), 2);
+        return round($this->getMonthly() ?? $this->getYearly() / 12, 2);
     }
 
     public function getYearlyCalculated(): float
     {
-        return round(($this->getYearly() ?? $this->getMonthly() * 12), 2);
+        return round($this->getYearly() ?? $this->getMonthly() * 12, 2);
+    }
+
+    public function isValid(): bool
+    {
+        if ((!empty($this->getMonthly()) && !empty($this->getYearly()))) {
+            return false;
+        }
+
+        return !empty($this->getMonthly()) || !empty($this->getYearly());
     }
 }

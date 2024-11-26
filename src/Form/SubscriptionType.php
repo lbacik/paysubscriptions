@@ -28,9 +28,19 @@ class SubscriptionType extends AbstractType
             ])
             ->add('monthly', NumberType::class, [
                 'required' => false,
+                'html5' => true,
+                'attr' => [
+                    'step' => 0.01,
+                    'min' => 0,
+                ],
             ])
             ->add('yearly', NumberType::class, [
                 'required' => false,
+                'html5' => true,
+                'attr' => [
+                    'step' => 0.01,
+                    'min' => 0,
+                ],
             ])
         ;
     }
