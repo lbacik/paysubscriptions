@@ -17,7 +17,7 @@ use Gedmo\Mapping\Annotation as Gedmo;
 #[ORM\Entity(repositoryClass: SubscriptionRepository::class)]
 #[Assert\Expression(
     'this.isValid() === true',
-    message: 'Please provide either monthly or yearly value.',
+    message: 'Please provide either monthly or yearly value (any, but not both).',
 )]
 class Subscription
 {
@@ -139,6 +139,10 @@ class Subscription
 
     public function isValid(): bool
     {
+        if ((!empty($this->getMonthly()) && !empty($this->getYearly()))) {
+            return false;
+        }
+
         return !empty($this->getMonthly()) || !empty($this->getYearly());
     }
 }
