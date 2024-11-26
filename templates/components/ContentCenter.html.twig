@@ -1,5 +1,11 @@
-{% props width="w-2/3" %}
+{% props width="w-2/3", inModal=false %}
 
-<div
-        {{ attributes.defaults({class: "m-auto" ~ " " ~ width}) }}
->{% block content %}{% endblock %}</div>
+{% if inModal != true %}
+    <div{{ attributes.defaults({class: "m-auto" ~ " " ~ width}) }}>
+{% endif %}
+
+    {% block content %}{% endblock %}
+
+{% if inModal != true %}
+    </div>
+{% endif %}

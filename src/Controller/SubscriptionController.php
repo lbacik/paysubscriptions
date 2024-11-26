@@ -27,20 +27,31 @@ class SubscriptionController extends AbstractController
     public function new(Request $request): Response
     {
         $subscription = new Subscription();
-        $form = $this->createForm(SubscriptionType::class, $subscription);
+        $form = $this->createForm(
+            SubscriptionType::class,
+            $subscription,
+            ['action' => $this->generateUrl('app_subscription_new')]
+        );
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
             $subscription->setOwner($this->getUser());
             try {
                 $this->subscriptionService->add($subscription);
+
+                $this->addFlash('success', 'Subscription created successfully');
+
+                if ($request->isXmlHttpRequest() || $request->headers->get('Turbo-Frame')) {
+                    return $this->streamResponse();
+                }
+
+                return $this->redirectToRoute('app_dashboard', [], Response::HTTP_SEE_OTHER);
+
             } catch (\LogicException $exception) {
                 $this->addFlash('danger', $exception->getMessage());
 
                 return $this->redirectToRoute('app_dashboard', [], Response::HTTP_SEE_OTHER);
             }
-
-            return $this->redirectToRoute('app_dashboard', [], Response::HTTP_SEE_OTHER);
         }
 
         return $this->render('subscription/new.html.twig', [
@@ -52,11 +63,21 @@ class SubscriptionController extends AbstractController
     #[Route('/{id}/edit', name: 'app_subscription_edit', methods: ['GET', 'POST'])]
     public function edit(Request $request, Subscription $subscription): Response
     {
-        $form = $this->createForm(SubscriptionType::class, $subscription);
+        $form = $this->createForm(
+            SubscriptionType::class,
+            $subscription,
+            ['action' => $this->generateUrl('app_subscription_edit', ['id' => $subscription->getId()])]
+        );
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
             $this->subscriptionService->update($subscription);
+
+            $this->addFlash('success', 'Subscription updated successfully');
+
+            if ($request->isXmlHttpRequest() || $request->headers->get('Turbo-Frame')) {
+                return $this->streamResponse();
+            }
 
             return $this->redirectToRoute('app_dashboard', [], Response::HTTP_SEE_OTHER);
         }
@@ -67,7 +88,7 @@ class SubscriptionController extends AbstractController
         ]);
     }
 
-    #[Route('/{id}', name: 'app_subscription_delete', methods: ['POST'])]
+    #[Route('/{id}', name: 'app_subscription_delete', methods: ['GET', 'POST'])]
     public function delete(
         Request $request,
         Subscription $subscription,
@@ -76,8 +97,29 @@ class SubscriptionController extends AbstractController
         if ($this->isCsrfTokenValid('delete' . $subscription->getId(), $request->getPayload()->get('_token'))) {
             $entityManager->remove($subscription);
             $entityManager->flush();
+
+            $this->addFlash('success', 'Subscription deleted successfully');
+
+            if ($request->isXmlHttpRequest() || $request->headers->get('Turbo-Frame')) {
+                return $this->streamResponse();
+            }
+
+            return $this->redirectToRoute('app_dashboard', [], Response::HTTP_SEE_OTHER);
         }
 
-        return $this->redirectToRoute('app_dashboard', [], Response::HTTP_SEE_OTHER);
+        return $this->render('subscription/delete.html.twig', [
+            'subscription' => $subscription,
+        ]);
+    }
+
+    private function streamResponse(): Response
+    {
+        $subscriptions = $this->subscriptionService->get($this->getUser(), 'name', 'asc');
+
+        return $this->render('dashboard/_table_stream.html.twig', [
+            'subscriptions' => $subscriptions,
+            'order' => 'asc',
+            'sort' => 'name',
+        ], new Response('', 200, ['Content-Type' => 'text/vnd.turbo-stream.html']));
     }
 }

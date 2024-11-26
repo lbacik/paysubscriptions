@@ -1,3 +1,17 @@
+
+{% if addSubscriptionDisabled == true %}
+    <div
+            class="w-full text-end pb-2 text-red-500"
+    >
+        {{ "subscription.limit_reached"|trans }}.
+        <a
+                href="{{ path('app_contact') }}"
+                class="underline font-semibold"
+        >{{ "Contact me"|trans }}</a> {{ "if you need more!"|trans }}
+    </div>
+{% endif %}
+
+
 <div class="flex justify-between">
 
     <div>
@@ -6,7 +20,12 @@
 
     <div>
         {% if addSubscriptionDisabled == false %}
-            <twig:Button href="{{ path('app_subscription_new') }}">{{ "add_subscription"|trans }}</twig:Button>
+            <twig:Button
+                    data-turbo-frame="modal"
+                    href="{{ path('app_subscription_new') }}"
+            >
+                {{ "add_subscription"|trans }}
+            </twig:Button>
         {% else %}
             <twig:Button disabled="true">{{ "add_subscription"|trans }}</twig:Button>
         {% endif %}

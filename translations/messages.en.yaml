@@ -28,6 +28,8 @@ subscription:
   edit: "Edit Subscription"
   new: "Add New Subscription"
   limit_reached: "Subscriptions limit reached"
+  delete: "Delete Subscription"
+  confirm_delete: "Are you sure you want to delete this subscription?"
 dashboard:
   switch:
     by_month: "by month"
@@ -47,3 +49,4 @@ contact:
 maintenance:
   title: "Maintenance"
   message: "The site is currently under maintenance. Please check back later."
+operation_cant_be_undone: "This operation can't be undone!"

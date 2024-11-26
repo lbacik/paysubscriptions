@@ -1,36 +1,41 @@
 <!DOCTYPE html>
 <html>
-    <head>
-        <meta charset="UTF-8">
-        <title>{% block title %}{{ "service.tab"|trans }}{% endblock %}</title>
-        <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('images/apple-touch-icon.png') }}">
-        <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('images/favicon-32x32.png') }}">
-        <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('images/favicon-16x16.png') }}">
-        <link rel="manifest" href="{{ asset('images/site.webmanifest') }}">
-        <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap" rel="stylesheet">
-        <link href="https://fonts.googleapis.com/css2?family=Indie+Flower&display=swap" rel="stylesheet">
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-        <script src="https://cloud.umami.is/script.js" data-website-id="92804189-0611-44c6-9151-3ccee0e35284" defer></script>
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}{{ "service.tab"|trans }}{% endblock %}</title>
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('images/apple-touch-icon.png') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('images/favicon-32x32.png') }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('images/favicon-16x16.png') }}">
+    <link rel="manifest" href="{{ asset('images/site.webmanifest') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Indie+Flower&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <script src="https://cloud.umami.is/script.js"
+            data-website-id="92804189-0611-44c6-9151-3ccee0e35284" defer></script>
 
         {% block metaheaders %}
         {% endblock %}
 
-        {% block stylesheets %}
-        {% endblock %}
+    {% block stylesheets %}
+    {% endblock %}
 
-        {% block javascripts %}
-            {% block importmap %}{{ importmap('app') }}{% endblock %}
-        {% endblock %}
-    </head>
-    <body class="flex flex-col h-screen" data-turbo="true">
-        {{ include('partials/_header.html.twig') }}
+    {% block javascripts %}
+        {% block importmap %}{{ importmap('app') }}{% endblock %}
+    {% endblock %}
+</head>
+<body class="flex flex-col h-screen" data-turbo="true">
+{{ include('partials/_header.html.twig') }}
 
-        {{ include('partials/_flash_messages.html.twig') }}
+<div class="flex-1">
+    {% block body %}{% endblock %}
+</div>
 
-        <div class="flex-1">
-            {% block body %}{% endblock %}
-        </div>
+{{ include('dashboard/_dialog.html.twig') }}
 
-        {{ include('partials/_footer.html.twig') }}
-    </body>
+<div id="flash-container" data-turbo-temporary>
+    {{ include('partials/_flash_messages.html.twig') }}
+</div>
+
+{{ include('partials/_footer.html.twig') }}
+</body>
 </html>
