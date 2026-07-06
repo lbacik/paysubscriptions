@@ -12,7 +12,7 @@ use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
-#[isGranted('ROLE_USER')]
+#[IsGranted('ROLE_USER')]
 class DashboardController extends AbstractController
 {
     public function __construct(

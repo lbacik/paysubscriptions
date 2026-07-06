@@ -10,13 +10,15 @@ export default class extends Controller {
 
   click(event) {
     event.preventDefault();
+    event.stopPropagation();
     console.log('select month click');
     this.optionsTarget.classList.toggle('hidden');
   }
 
   select(event) {
     event.preventDefault();
+    event.stopPropagation();
     this.optionsTarget.classList.add('hidden');
-    window.Turbo.visit(`${this.urlValue}&month=${event.currentTarget.value + 1}`, { frame: "chart" });
+    window.Turbo.visit(`${this.urlValue}&month=${parseInt(event.currentTarget.getAttribute('value')) + 1}`, { frame: "chart" });
   }
 }

@@ -11,11 +11,12 @@ export default class extends Controller {
   ];
 
   connect() {
-    window.addEventListener('chartjs:connect', this._onConnect.bind(this), {once: true});
+    this._onConnect = this._onConnect.bind(this);
+    this.element.addEventListener('chartjs:connect', this._onConnect);
   }
 
   disconnect() {
-    window.removeEventListener('chartjs:connect', this._onConnect.bind(this));
+    this.element.removeEventListener('chartjs:connect', this._onConnect);
   }
 
   _onConnect(event) {
