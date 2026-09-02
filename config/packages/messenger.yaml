@@ -48,3 +48,24 @@ when@dev:
                 sync: 'sync://'
             routing:
                 Symfony\Component\Mailer\Messenger\SendEmailMessage: sync
+
+when@test:
+    framework:
+        messenger:
+            transports:
+                # `newsletter` is the only consumer of MESSENGER_TRANSPORT_DSN, and
+                # the `exchange` options block above is AMQP-only: point it at a
+                # doctrine:// DSN and the Doctrine transport factory rejects
+                # `exchange`, killing any command that instantiates the transport.
+                # Overriding the DSN here means the test suite never depends on
+                # what that variable happens to hold - the in-memory transport
+                # ignores options it does not recognise, so the block is inert.
+                #
+                # Only the dsn key is overridden; Symfony merges this onto the base
+                # definition, so serializer/retry_strategy/options still apply.
+                #
+                # Not merely tidiness: the PHPUnit step in test.yml inherits that
+                # job's doctrine:// value, and passes today only because the suite
+                # is empty. The first test that creates the test schema or
+                # dispatches MailingSubscribe would hit the failure above.
+                newsletter: 'in-memory://'

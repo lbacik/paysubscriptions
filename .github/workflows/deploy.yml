@@ -168,12 +168,13 @@ jobs:
       # leaves the schema untouched and aborts the deploy before any running
       # container is restarted.
       #
-      # This step is where the messenger transport defect recorded in test.yml
-      # bites: config/packages/messenger.yaml gives the `async` and `newsletter`
-      # transports mutually exclusive option sets from one MESSENGER_TRANSPORT_DSN,
-      # so bin/console dies here whichever scheme the DSN has. test.yml's
-      # `migrations` job is red for the same reason and will stop a tag before it
-      # ever reaches this point.
+      # MESSENGER_TRANSPORT_DSN must be an amqp:// URL for this step to survive.
+      # config/packages/messenger.yaml gives `newsletter` an AMQP-only `exchange`
+      # options block, and Doctrine's schema listener instantiates every transport
+      # whose scheme is doctrine://, so a doctrine:// value makes the Doctrine
+      # factory reject `exchange` and kills the command here. test.yml's
+      # `migrations` job replays this exact command and would stop a tag first.
+      # See the comment above that job for the full mechanism.
       - name: Run database migrations
         run: |
           $COMPOSE run --rm --no-deps --pull always web \

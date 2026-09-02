@@ -30,10 +30,20 @@ name: Quality
 # unlike the rest of the suite. Adding any of those tools is what would fill this
 # file out; until then the waiting room holds the two checks the existing
 # dependency set can already run.
+#
+# Triggers mirror test.yml, and for the same reasons recorded at length there:
+# `push` on every branch is the only commit trigger, so each commit runs this
+# file once. No `pull_request` - with both, every commit ran it twice, and on the
+# long-lived `develop` -> `main` promotion PR narrowing `push` to the long-lived
+# branches does not help, because `develop` is both the PR head and a push
+# branch.
+#
+# `schedule` is what makes the permanent watchers useful, and is the one trigger
+# here that test.yml has no use for: `audit` and `outdated` go red because a
+# third party published something, which no push of ours would ever notice.
 on:
   push:
     branches: ['**']
-  pull_request:
   schedule:
     # Deliberately off the hour: GitHub queues scheduled runs and drops them
     # under load, and :00 is the most popular minute by a wide margin.
@@ -70,7 +80,7 @@ jobs:
       APP_ENV: prod
       APP_SECRET: ci
       DATABASE_URL: "mysql://root:root@127.0.0.1:3306/paysub?serverVersion=8.4&charset=utf8mb4"
-      MESSENGER_TRANSPORT_DSN: 'doctrine://default?auto_setup=0'
+      MESSENGER_TRANSPORT_DSN: 'amqp://guest:guest@127.0.0.1:5672/%2f/messages'
       MAILER_DSN: 'null://null'
       JSON_HUB_PROJECT: '00000000-0000-0000-0000-000000000000'
       MAILING_PROVIDER_ROUTING_KEY: 'ci'
@@ -101,7 +111,7 @@ jobs:
       APP_ENV: prod
       APP_SECRET: ci
       DATABASE_URL: "mysql://root:root@127.0.0.1:3306/paysub?serverVersion=8.4&charset=utf8mb4"
-      MESSENGER_TRANSPORT_DSN: 'doctrine://default?auto_setup=0'
+      MESSENGER_TRANSPORT_DSN: 'amqp://guest:guest@127.0.0.1:5672/%2f/messages'
       MAILER_DSN: 'null://null'
       JSON_HUB_PROJECT: '00000000-0000-0000-0000-000000000000'
       MAILING_PROVIDER_ROUTING_KEY: 'ci'
