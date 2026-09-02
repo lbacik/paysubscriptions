@@ -1,0 +1,198 @@
+name: Test
+
+# The gate. Runs on every branch push and pull request, and is called by
+# release.yml before it builds an image - so the thing that blocks a production
+# deploy is definitionally the same thing you see on every push, not a second
+# copy that can drift.
+#
+# `branches: ['**']` matches every branch and no tag, so a `v*` tag push does not
+# run this twice: once here and once through release.yml.
+#
+# Keeping `pull_request` as well means a same-repo PR runs this twice (once for
+# the branch push, once for the merge commit). That is deliberate: `push` alone
+# never fires for a PR opened from a fork, so without this the gate would not
+# cover outside contributions at all.
+#
+# No continue-on-error anywhere in this file. It is allowed to be red only when
+# the repository is broken - see the `migrations` job, which is red today for a
+# reason recorded there.
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_call:
+
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Matches `FROM php:8.4-apache` in the Dockerfile and .php-version. CI is only
+  # a gate if it runs the same interpreter as production; if the Dockerfile's
+  # base image moves, this moves with it.
+  PHP_VERSION: '8.4'
+
+jobs:
+  # One job for every fast check, sharing a single composer install. Splitting
+  # `composer validate` and two lint commands into separate jobs would cost more
+  # in repeated install time than the parallelism buys.
+  #
+  # Order is compile, then lint, then tests: a container that does not compile
+  # is not worth linting, and a step that runs first cannot be hidden behind an
+  # earlier failure.
+  checks:
+    name: Checks
+    runs-on: ubuntu-latest
+
+    # Real environment variables win over .env/.env.local, so these pin what the
+    # checks resolve instead of inheriting the dev defaults committed in .env
+    # (a postgres DATABASE_URL, an empty APP_SECRET). Nothing here connects to a
+    # database - the value only has to parse.
+    env:
+      APP_ENV: prod
+      APP_DEBUG: '0'
+      APP_SECRET: ci
+      DATABASE_URL: "mysql://root:root@127.0.0.1:3306/paysub?serverVersion=8.4&charset=utf8mb4"
+      MESSENGER_TRANSPORT_DSN: 'doctrine://default?auto_setup=0'
+      MAILER_DSN: 'null://null'
+      JSON_HUB_PROJECT: '00000000-0000-0000-0000-000000000000'
+      MAILING_PROVIDER_ROUTING_KEY: 'ci'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up PHP ${{ env.PHP_VERSION }}
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          # The set the Dockerfile builds: amqp via pecl, then pdo_mysql, opcache
+          # and intl via docker-php-ext-install. opcache is omitted here - it
+          # changes nothing a lint or a test can observe.
+          extensions: amqp, ctype, iconv, intl, pdo_mysql
+          coverage: none
+          ini-values: memory_limit=1G
+
+      - name: Install dependencies
+        uses: ramsey/composer-install@v4
+
+      # The compile check, and the most valuable one this repository has. The app
+      # resolves 14 environment variables through %env()%, binds
+      # $jsonHubProjectUuid, $systemEmail, $contactEmail and $docsPath by
+      # autowiring, and injects %env(bool:MAINTENANCE_MODE)% into
+      # MaintenanceKernelRequestSubscriber via #[Autowire]. A container that does
+      # not compile is a 500 on every route, which is exactly what a deploy most
+      # needs caught before it ships.
+      - name: Lint the service container
+        run: php bin/console lint:container
+
+      - name: Validate composer.json
+        # --strict is omitted on purpose: this is a `type: project` package with
+        # no name or description, which --strict rejects, and neither is a defect
+        # for something that is never published. --no-check-publish covers that.
+        run: composer validate --no-check-publish
+
+      - name: Lint YAML
+        run: php bin/console lint:yaml config translations
+
+      # There is no `lint:twig` step. It cannot run in this dependency set at
+      # all: doctrine/doctrine-migrations-bundle registers a Twig namespace for a
+      # Resources/views directory it does not ship, and Twig's FilesystemLoader
+      # throws on the missing path before it looks at a single template. The
+      # failure is in the bundle, not in templates/, so gating on it would block
+      # releases for something this repository cannot fix. It is parked in
+      # quality.yml instead, where its red is visible without being fatal.
+
+      # Runs an empty suite today - tests/ contains only bootstrap.php, and
+      # PHPUnit exits 0 on "No tests executed!". Kept in the gate so that the
+      # first real test is enforced the moment it lands, rather than the gate
+      # being wired up after the fact.
+      - name: Run PHPUnit
+        env:
+          APP_ENV: test
+        run: vendor/bin/phpunit
+
+  # Its own job because it needs a database, and the checks above do not - the
+  # suite builds nothing from mappings, so this is the only thing that proves the
+  # migrations actually apply. Replays the exact command deploy.yml runs against
+  # production, then loads the fixtures on top, which is what proves the migrated
+  # schema still matches the entity mappings well enough to insert into.
+  #
+  # KNOWN RED, and not because of anything this workflow does: config/packages/
+  # messenger.yaml drives both the `async` and the `newsletter` transport from a
+  # single MESSENGER_TRANSPORT_DSN, but gives `async` the Doctrine-only options
+  # use_notify/check_delayed_interval and `newsletter` the AMQP-only `exchange`
+  # block. Whichever scheme the DSN has, one of the two transports rejects its
+  # options and every bin/console command that builds them dies:
+  #
+  #   doctrine://... -> Unknown option found: [exchange]
+  #   amqp://...     -> Invalid option(s) "use_notify", "check_delayed_interval"
+  #
+  # Verified locally: giving `newsletter` its own DSN makes this job's two steps
+  # pass (9 migrations, 21 queries, then fixtures) against mysql:9. Until that is
+  # fixed the same failure will stop deploy.yml's migration step, which is why
+  # this belongs in the gate rather than in quality.yml.
+  migrations:
+    name: Migrations
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        # rum runs MySQL 9.7.2 (the shared `my.rum` container), so CI replays
+        # against the 9 series. The DSN below still declares serverVersion=8.4,
+        # matching what production actually passes - reproducing that mismatch
+        # is the point, since it is what selects Doctrine's platform.
+        image: mysql:9
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: paysub
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      DATABASE_URL: "mysql://root:root@127.0.0.1:3306/paysub?serverVersion=8.4&charset=utf8mb4"
+      MESSENGER_TRANSPORT_DSN: 'doctrine://default?auto_setup=0'
+      MAILER_DSN: 'null://null'
+      APP_SECRET: ci
+      JSON_HUB_PROJECT: '00000000-0000-0000-0000-000000000000'
+      MAILING_PROVIDER_ROUTING_KEY: 'ci'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up PHP ${{ env.PHP_VERSION }}
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          extensions: amqp, ctype, iconv, intl, pdo_mysql
+          coverage: none
+          ini-values: memory_limit=1G
+
+      - name: Install dependencies
+        uses: ramsey/composer-install@v4
+
+      # Byte-for-byte the command deploy.yml runs on the host, and under the same
+      # APP_ENV=prod the container uses there. --allow-no-migration keeps this
+      # honest if the set is ever emptied; --all-or-nothing is what makes a
+      # partial failure leave no half-migrated schema behind.
+      - name: Replay the production migration command
+        env:
+          APP_ENV: prod
+          APP_DEBUG: '0'
+        run: php bin/console doctrine:migrations:migrate --no-interaction --all-or-nothing --allow-no-migration
+
+      # APP_ENV=dev, not prod: DoctrineFixturesBundle and ZenstruckFoundryBundle
+      # are registered for dev/test only (config/bundles.php). dev is the right
+      # one of the two - `when@test` in config/packages/doctrine.yaml appends
+      # `_test` to the database name, which would point this at an empty schema
+      # and prove nothing.
+      - name: Load fixtures onto the migrated schema
+        env:
+          APP_ENV: dev
+        run: php bin/console doctrine:fixtures:load --no-interaction

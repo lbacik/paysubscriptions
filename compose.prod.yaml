@@ -1,0 +1,141 @@
+# Production stack for rum (https://paysubscriptions.com).
+#
+# Deployed from CI against a remote daemon, so compose reads this file and the
+# environment locally while the containers run on the target host:
+#
+#   DOCKER_HOST=ssh://rum docker compose --env-file /dev/null \
+#     -f compose.prod.yaml -p paysubscriptions up -d --pull always --wait
+#
+# --env-file /dev/null is load-bearing. Without it compose reads the repo's
+# committed .env, where APP_SECRET is empty, DATABASE_URL is
+# postgresql://app:!ChangeMe!@127.0.0.1:5432/app and MAILER_DSN is null://null -
+# so every ${VAR:?} guard below would resolve to a dev value and the deploy
+# would come up silently misconfigured instead of failing loudly.
+#
+# The project name is always passed explicitly with -p; nothing here relies on
+# COMPOSE_PROJECT_NAME (which .env.docker.rum sets to ps-${TAG}).
+#
+# This is deliberately NOT a copy of compose.yaml, which is the dev file:
+#
+#   - `build: .` and `image: ps-web-${TAG}` become ${APP_IMAGE}, a digest-stable
+#     tag pulled from registry.rum.luka.sh. Production never builds on the host.
+#   - the `database` (postgres) service is gone. Production talks to the shared
+#     external MySQL on `my.rum`, reached over the external `main` network, so a
+#     postgres container here would be an unused second database.
+#   - the `mailcatcher` service is gone. Production mail goes out over MAILER_DSN.
+#   - APP_ENV and APP_DEBUG are fixed here rather than passed in, so a stray
+#     APP_ENV=dev in the deploy environment cannot put production into debug mode.
+#     Note .env.docker.rum pins APP_ENV=dev - that file describes the *staging*
+#     deployment this stack replaces, not this one.
+#   - APP_SECRET is passed, which compose.yaml never did: a container started
+#     from compose.yaml runs on the empty APP_SECRET committed in .env, which
+#     silently weakens every signed URL the reset-password and verify-email
+#     bundles issue.
+#   - SYSTEM_EMAIL, CONTACT_EMAIL and DEFAULT_URI are passed, which compose.yaml
+#     also never did, even though config/services.yaml and config/packages/
+#     read all three via %env()%. They too were resolving from committed .env.
+#   - MESSENGER_TRANSPORT_DSN is passed to the worker, which compose.yaml did not
+#     do - so the consumer was reading its transport from committed .env rather
+#     than from the deploy configuration.
+
+networks:
+  default:
+    name: "${NETWORK:-main}"
+    external: true
+
+services:
+  web:
+    image: "${APP_IMAGE:?APP_IMAGE is required}"
+    container_name: paysubscriptions-web
+    restart: "${RESTART:-unless-stopped}"
+    environment:
+      APP_ENV: prod
+      APP_DEBUG: "0"
+      APP_SECRET: "${APP_SECRET:?APP_SECRET is required}"
+      # Rendered into every page by config/packages/twig.yaml as `appVersion`.
+      # Supplied by the deploy job from the tag, not by an environment variable.
+      APP_VERSION: "${APP_VERSION:?APP_VERSION is required}"
+      DATABASE_URL: "${DATABASE_URL:?DATABASE_URL is required}"
+      MAILER_DSN: "${MAILER_DSN:?MAILER_DSN is required}"
+      MESSENGER_TRANSPORT_DSN: "${MESSENGER_TRANSPORT_DSN:?MESSENGER_TRANSPORT_DSN is required}"
+      # What Symfony uses to build absolute URLs outside an HTTP request - the
+      # links in the verify-email and reset-password messages the worker sends.
+      # APP_URL, which compose.yaml passes, is not set here on purpose: nothing
+      # in config/ or src/ reads it, DEFAULT_URI is the one that matters.
+      DEFAULT_URI: "${DEFAULT_URI:-https://paysubscriptions.com}"
+      SYSTEM_EMAIL: "${SYSTEM_EMAIL:?SYSTEM_EMAIL is required}"
+      CONTACT_EMAIL: "${CONTACT_EMAIL:?CONTACT_EMAIL is required}"
+      # Both are compile-time container parameters (config/services.yaml), so
+      # the container will not boot at all if either is missing - hence :? even
+      # though neither is a credential.
+      JSON_HUB_PROJECT: "${JSON_HUB_PROJECT:?JSON_HUB_PROJECT is required}"
+      MAILING_PROVIDER_ROUTING_KEY: "${MAILING_PROVIDER_ROUTING_KEY:?MAILING_PROVIDER_ROUTING_KEY is required}"
+      # Read as %env(bool:MAINTENANCE_MODE)% by MaintenanceKernelRequestSubscriber.
+      # Defaulted rather than required so a deploy cannot accidentally serve the
+      # maintenance page because a variable went missing.
+      MAINTENANCE_MODE: "${MAINTENANCE_MODE:-0}"
+      GOOGLE_RECAPTCHA_SITE_KEY: "${GOOGLE_RECAPTCHA_SITE_KEY:?GOOGLE_RECAPTCHA_SITE_KEY is required}"
+      GOOGLE_RECAPTCHA_SECRET: "${GOOGLE_RECAPTCHA_SECRET:?GOOGLE_RECAPTCHA_SECRET is required}"
+      # nginx-proxy / acme-companion discovery. No VIRTUAL_PORT here: the
+      # php:8.4-apache base exposes only 80, so nginx-proxy infers it - unlike
+      # the FrankenPHP images used elsewhere in the suite, which expose three.
+      VIRTUAL_HOST: "${VIRTUAL_HOST:-paysubscriptions.com}"
+      LETSENCRYPT_HOST: "${LETSENCRYPT_HOST:-${VIRTUAL_HOST:-paysubscriptions.com}}"
+      LETSENCRYPT_EMAIL: "${LETSENCRYPT_EMAIL}"
+    healthcheck:
+      # The runtime image carries no curl (the Dockerfile installs git, unzip and
+      # the icu/rabbitmq/ssl headers, nothing else); php is guaranteed present.
+      # `/` is enough for a liveness check - it proves Apache, the rewrite rules
+      # and a warm prod container. Whether the *database* is reachable is proven
+      # separately by deploy.yml's smoke test, because no public GET route in
+      # this app queries it.
+      test: [
+        "CMD", "php", "-r",
+        "exit(@file_get_contents('http://127.0.0.1/') === false ? 1 : 0);"
+      ]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      # Generous: the first request after a deploy warms the prod container and
+      # compiles Doctrine proxies into %kernel.build_dir%.
+      start_period: 60s
+
+  worker:
+    image: "${APP_IMAGE:?APP_IMAGE is required}"
+    container_name: paysubscriptions-worker
+    # `always`, not `unless-stopped`: --time-limit/--limit below make a clean
+    # exit the normal end of a shift, and the consumer is expected to come
+    # straight back.
+    restart: always
+    environment:
+      APP_ENV: prod
+      APP_DEBUG: "0"
+      APP_SECRET: "${APP_SECRET:?APP_SECRET is required}"
+      APP_VERSION: "${APP_VERSION:?APP_VERSION is required}"
+      DATABASE_URL: "${DATABASE_URL:?DATABASE_URL is required}"
+      MAILER_DSN: "${MAILER_DSN:?MAILER_DSN is required}"
+      MESSENGER_TRANSPORT_DSN: "${MESSENGER_TRANSPORT_DSN:?MESSENGER_TRANSPORT_DSN is required}"
+      # The worker is what actually sends the mail, so it needs the URL builder
+      # and the sender identities just as much as the web container does.
+      DEFAULT_URI: "${DEFAULT_URI:-https://paysubscriptions.com}"
+      SYSTEM_EMAIL: "${SYSTEM_EMAIL:?SYSTEM_EMAIL is required}"
+      CONTACT_EMAIL: "${CONTACT_EMAIL:?CONTACT_EMAIL is required}"
+      JSON_HUB_PROJECT: "${JSON_HUB_PROJECT:?JSON_HUB_PROJECT is required}"
+      MAILING_PROVIDER_ROUTING_KEY: "${MAILING_PROVIDER_ROUTING_KEY:?MAILING_PROVIDER_ROUTING_KEY is required}"
+      # No VIRTUAL_HOST/LETSENCRYPT_HOST: the consumer serves no HTTP and must
+      # not be picked up by nginx-proxy as a second backend for the hostname.
+    command:
+      - 'bin/console'
+      - 'messenger:consume'
+      - 'async'
+      - '--memory-limit=110M'
+      - '--time-limit=3600'
+      - '--limit=100'
+      - '-vv'
+    # No healthcheck: a messenger consumer exposes no port and the runtime image
+    # has no pgrep (procps is not installed), so there is nothing cheap to probe.
+    # `up --wait` therefore only waits for this container to *start*. deploy.yml's
+    # smoke test is what actually proves it stayed up - see the comment there.
+    depends_on:
+      web:
+        condition: service_healthy
