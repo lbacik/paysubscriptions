@@ -146,6 +146,15 @@ jobs:
   # packages composer.json actually names, so a transitive bump three levels down
   # does not light this up; --strict is what turns "something is behind" into a
   # non-zero exit.
+  #
+  # --minor-only is what keeps that exit code meaningful. Without it the command
+  # also counts major releases, and ~47 direct dependencies sit a major behind
+  # (Symfony 7.4 vs 8.1, PHPUnit 9 vs 13, DBAL 3 vs 4). None of those closes
+  # without a framework migration, so the job would fail on every single run and
+  # a watcher that is always red reports nothing at all. Scoped to
+  # semver-compatible releases it goes red only when there is a bump we can
+  # actually take, which is the whole point. Majors are still printed in the log
+  # for anyone reading it - they just do not set the exit code.
   outdated:
     name: Upstream freshness
     runs-on: ubuntu-latest
@@ -158,4 +167,4 @@ jobs:
           extensions: amqp, ctype, iconv, intl, pdo_mysql
           coverage: none
       - uses: ramsey/composer-install@v4
-      - run: composer outdated --direct --strict
+      - run: composer outdated --direct --strict --minor-only
