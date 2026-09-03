@@ -61,8 +61,9 @@ jobs:
             org.opencontainers.image.title=${{ github.event.repository.name }}
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
 
-      # The Dockerfile has a single stage (php:8.4-apache), so there is no
-      # `target:` to select - unlike the multi-stage images elsewhere in the suite.
+      # The Dockerfile has a single stage (dunglas/frankenphp:1-php8.4), so there
+      # is no `target:` to select - unlike the multi-stage images elsewhere in the
+      # suite.
       #
       # A single platform: `docker --context rum info` reports x86_64, and
       # building the arm64 half would double the build for an image nothing pulls.

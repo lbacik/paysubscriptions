@@ -48,7 +48,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  # Matches `FROM php:8.4-apache` in the Dockerfile and .php-version. CI is only
+  # Matches `FROM dunglas/frankenphp:1-php8.4` in the Dockerfile and .php-version.
+  # CI is only
   # a gate if it runs the same interpreter as production; if the Dockerfile's
   # base image moves, this moves with it.
   PHP_VERSION: '8.4'

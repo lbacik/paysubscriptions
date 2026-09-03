@@ -4,20 +4,29 @@
 # If you need more help, visit the Dockerfile reference guide at
 # https://docs.docker.com/go/dockerfile-reference/
 
-# Want to help us make this template better? Share your feedback here: https://forms.gle/ybq9Krt8jtBL3iCk7
-
 ################################################################################
 
-# The PHP Apache image is the production runtime; there is only one stage, so
-# release.yml needs no `target:`.
+# FrankenPHP is the production runtime; there is only one stage, so release.yml
+# needs no `target:`.
 #
-# Pinned to the 8.4 minor rather than a patch: it matches .php-version, the
-# PHP_VERSION that test.yml/quality.yml pin CI to, and the 8.4 the rest of the
-# suite runs. Keep those four in step - CI is only a gate if it runs the same
-# interpreter as production.
-FROM php:8.4-apache
+# Pinned to the FrankenPHP 1.x major and the PHP 8.4 minor rather than a patch:
+# the 8.4 matches .php-version, the PHP_VERSION that test.yml/quality.yml pin CI
+# to, and the 8.4 the rest of the suite runs. Keep those four in step - CI is
+# only a gate if it runs the same interpreter as production.
+FROM dunglas/frankenphp:1-php8.4
 
 ENV COMPOSER_ALLOW_SUPERUSER=1
+
+# Serve plain HTTP on :80 and leave TLS to nginx-proxy / acme-companion in front,
+# as the rest of the suite does. The image defaults SERVER_NAME to `localhost`,
+# which switches on Caddy's automatic HTTPS with a self-signed internal
+# certificate - a listener the proxy cannot talk to.
+ENV SERVER_NAME=:80
+
+# The image's Caddyfile resolves `{$SERVER_ROOT:public/}` against the working
+# directory. This app lives in /opt/app rather than the image's default /app, so
+# name the document root outright instead of relying on the cwd.
+ENV SERVER_ROOT=/opt/app/public
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
@@ -35,6 +44,10 @@ WORKDIR /opt/app
 # This example adds the apt packages for the 'gd' extension's dependencies and then
 # installs the 'gd' extension. For additional tips on running apt-get:
 # https://docs.docker.com/go/dockerfile-aptget-best-practices/
+#
+# opcache is absent from the list below on purpose: the FrankenPHP image already
+# builds and enables it (conf.d/docker-php-ext-opcache.ini), unlike php:8.4-apache
+# which shipped it disabled and needed the explicit install.
 RUN apt -y update && apt-get install -y \
     git \
     unzip \
@@ -50,7 +63,6 @@ RUN apt -y update && apt-get install -y \
     intl \
 	&& docker-php-ext-install \
     pdo_mysql \
-    opcache \
     intl
 
 # Add PECL extensions, see
@@ -69,11 +81,37 @@ RUN composer install --no-interaction --no-progress \
     && ./bin/console assets:install \
     && ./bin/console asset-map:compile
 
-RUN rm -drf /var/www/html \
-    && ln -s /opt/app/public /var/www/html \
-    && chown -R www-data:www-data /opt/app/var \
-    && a2enmod rewrite
-#    && a2enmod headers
+# FrankenPHP is the web server, so there is no /var/www/html to point at
+# /opt/app/public and no mod_rewrite to enable: the Caddyfile's `php_server`
+# directive serves SERVER_ROOT and falls back to public/index.php for every
+# unmatched path.
+#
+# public/.htaccess (from symfony/apache-pack) is deleted rather than left in
+# place. Caddy never reads it, but it does *serve* it: Apache treated .htaccess
+# as configuration and refused to send it, while to a file server it is just
+# another file under the document root, and `GET /.htaccess` would return the
+# app's rewrite rules with a 200. Removing symfony/apache-pack from composer.json
+# is the tidier long-term fix; this keeps the image correct meanwhile.
+#
+# CAP_NET_BIND_SERVICE is what lets the unprivileged user below bind port 80. It
+# was not needed under Apache, where a root master process bound the port and
+# dropped to www-data by itself; FrankenPHP has no such split, the whole server
+# runs as USER.
+#
+# /data and /config are Caddy's XDG_DATA_HOME and XDG_CONFIG_HOME (set by the
+# base image); it writes to both on startup, so www-data has to own them.
+RUN rm -f /opt/app/public/.htaccess \
+    && setcap CAP_NET_BIND_SERVICE=+eip /usr/local/bin/frankenphp \
+    && chown -R www-data:www-data /opt/app/var /data /config
+
+# The base image healthchecks Caddy's admin API on :2019. Drop it rather than
+# inherit it, which also keeps php:8.4-apache's behaviour of shipping no probe at
+# all: health belongs in the compose files, next to the service it guards, and
+# compose.prod.yaml declares the one that matters for `up --wait`. Inheriting it
+# would additionally mark every one-shot `compose run ... web ./bin/console ...`
+# container unhealthy - the migration step in deploy.yml is one - since a console
+# command starts no server for the probe to reach.
+HEALTHCHECK NONE
 
 # Switch to a non-privileged user (defined in the base image) that the app will run under.
 # See https://docs.docker.com/go/dockerfile-user-best-practices/

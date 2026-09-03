@@ -15,6 +15,9 @@ services:
       APP_ENV: "${APP_ENV}"
       APP_VERSION: "${TAG}"
       APP_URL: "${APP_URL}"
+      # Explicit for the same reason as in compose.prod.yaml: the FrankenPHP
+      # image exposes four ports, and only 80 is listening.
+      VIRTUAL_PORT: "80"
       VIRTUAL_HOST: "${DOMAIN}"
       LETSENCRYPT_HOST: "${DOMAIN}"
       DATABASE_URL: "${DATABASE_URL}"
@@ -25,25 +28,6 @@ services:
       MAINTENANCE_MODE: "${MAINTENANCE_MODE}"
       GOOGLE_RECAPTCHA_SITE_KEY: "${GOOGLE_RECAPTCHA_SITE_KEY}"
       GOOGLE_RECAPTCHA_SECRET: "${GOOGLE_RECAPTCHA_SECRET}"
-
-  worker:
-    image: "ps-web-${TAG}"
-    restart: always
-    environment:
-      APP_ENV: "${APP_ENV}"
-      APP_URL: "${APP_URL}"
-      DATABASE_URL: "${DATABASE_URL}"
-      MAILER_DSN: "${MAILER_DSN}"
-    command:
-      - 'bin/console'
-      - 'messenger:consume'
-      - 'async'
-      - '--memory-limit=110M'
-      - '--time-limit=3600'
-      - '--limit=100'
-      - '-vv'
-    depends_on:
-      - web
 
   ###> doctrine/doctrine-bundle ###
   database:

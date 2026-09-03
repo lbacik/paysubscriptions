@@ -23,6 +23,11 @@
 #     external MySQL on `my.rum`, reached over the external `main` network, so a
 #     postgres container here would be an unused second database.
 #   - the `mailcatcher` service is gone. Production mail goes out over MAILER_DSN.
+#   - there is no `worker` service. paysubscriptions is the web application only;
+#     the messenger consumer that drains the `async` transport is a separate
+#     application with its own image and its own deploy. This stack still passes
+#     MESSENGER_TRANSPORT_DSN, because the web container is what *dispatches*
+#     onto that transport - it just no longer runs anything that reads from it.
 #   - APP_ENV and APP_DEBUG are fixed here rather than passed in, so a stray
 #     APP_ENV=dev in the deploy environment cannot put production into debug mode.
 #     Note .env.docker.rum pins APP_ENV=dev - that file describes the *staging*
@@ -34,9 +39,6 @@
 #   - SYSTEM_EMAIL, CONTACT_EMAIL and DEFAULT_URI are passed, which compose.yaml
 #     also never did, even though config/services.yaml and config/packages/
 #     read all three via %env()%. They too were resolving from committed .env.
-#   - MESSENGER_TRANSPORT_DSN is passed to the worker, which compose.yaml did not
-#     do - so the consumer was reading its transport from committed .env rather
-#     than from the deploy configuration.
 
 networks:
   default:
@@ -59,9 +61,10 @@ services:
       MAILER_DSN: "${MAILER_DSN:?MAILER_DSN is required}"
       MESSENGER_TRANSPORT_DSN: "${MESSENGER_TRANSPORT_DSN:?MESSENGER_TRANSPORT_DSN is required}"
       # What Symfony uses to build absolute URLs outside an HTTP request - the
-      # links in the verify-email and reset-password messages the worker sends.
-      # APP_URL, which compose.yaml passes, is not set here on purpose: nothing
-      # in config/ or src/ reads it, DEFAULT_URI is the one that matters.
+      # links in the verify-email and reset-password messages, and anything
+      # bin/console generates. APP_URL, which compose.yaml passes, is not set
+      # here on purpose: nothing in config/ or src/ reads it, DEFAULT_URI is the
+      # one that matters.
       DEFAULT_URI: "${DEFAULT_URI:-https://paysubscriptions.com}"
       SYSTEM_EMAIL: "${SYSTEM_EMAIL:?SYSTEM_EMAIL is required}"
       CONTACT_EMAIL: "${CONTACT_EMAIL:?CONTACT_EMAIL is required}"
@@ -76,17 +79,22 @@ services:
       MAINTENANCE_MODE: "${MAINTENANCE_MODE:-0}"
       GOOGLE_RECAPTCHA_SITE_KEY: "${GOOGLE_RECAPTCHA_SITE_KEY:?GOOGLE_RECAPTCHA_SITE_KEY is required}"
       GOOGLE_RECAPTCHA_SECRET: "${GOOGLE_RECAPTCHA_SECRET:?GOOGLE_RECAPTCHA_SECRET is required}"
-      # nginx-proxy / acme-companion discovery. No VIRTUAL_PORT here: the
-      # php:8.4-apache base exposes only 80, so nginx-proxy infers it - unlike
-      # the FrankenPHP images used elsewhere in the suite, which expose three.
+      # nginx-proxy / acme-companion discovery. VIRTUAL_PORT is explicit because
+      # the FrankenPHP image exposes four ports (80, 443, 443/udp and Caddy's
+      # admin API on 2019); with more than one exposed port nginx-proxy falls
+      # back to a guess rather than inferring, as it could under php:8.4-apache,
+      # which exposed 80 alone. The Dockerfile pins SERVER_NAME=:80, so 80 is the
+      # only one of the four that is actually listening.
+      VIRTUAL_PORT: "80"
       VIRTUAL_HOST: "${VIRTUAL_HOST:-paysubscriptions.com}"
       LETSENCRYPT_HOST: "${LETSENCRYPT_HOST:-${VIRTUAL_HOST:-paysubscriptions.com}}"
       LETSENCRYPT_EMAIL: "${LETSENCRYPT_EMAIL}"
     healthcheck:
-      # The runtime image carries no curl (the Dockerfile installs git, unzip and
-      # the icu/rabbitmq/ssl headers, nothing else); php is guaranteed present.
-      # `/` is enough for a liveness check - it proves Apache, the rewrite rules
-      # and a warm prod container. Whether the *database* is reachable is proven
+      # Kept on php rather than the curl the FrankenPHP image now ships: php is
+      # guaranteed present whatever the base, and this probe is not worth coupling
+      # to the runtime image's package list. `/` is enough for a liveness check -
+      # it proves Caddy, the php_server fallback to public/index.php and a warm
+      # prod container. Whether the *database* is reachable is proven
       # separately by deploy.yml's smoke test, because no public GET route in
       # this app queries it.
       test: [
@@ -100,42 +108,3 @@ services:
       # compiles Doctrine proxies into %kernel.build_dir%.
       start_period: 60s
 
-  worker:
-    image: "${APP_IMAGE:?APP_IMAGE is required}"
-    container_name: paysubscriptions-worker
-    # `always`, not `unless-stopped`: --time-limit/--limit below make a clean
-    # exit the normal end of a shift, and the consumer is expected to come
-    # straight back.
-    restart: always
-    environment:
-      APP_ENV: prod
-      APP_DEBUG: "0"
-      APP_SECRET: "${APP_SECRET:?APP_SECRET is required}"
-      APP_VERSION: "${APP_VERSION:?APP_VERSION is required}"
-      DATABASE_URL: "${DATABASE_URL:?DATABASE_URL is required}"
-      MAILER_DSN: "${MAILER_DSN:?MAILER_DSN is required}"
-      MESSENGER_TRANSPORT_DSN: "${MESSENGER_TRANSPORT_DSN:?MESSENGER_TRANSPORT_DSN is required}"
-      # The worker is what actually sends the mail, so it needs the URL builder
-      # and the sender identities just as much as the web container does.
-      DEFAULT_URI: "${DEFAULT_URI:-https://paysubscriptions.com}"
-      SYSTEM_EMAIL: "${SYSTEM_EMAIL:?SYSTEM_EMAIL is required}"
-      CONTACT_EMAIL: "${CONTACT_EMAIL:?CONTACT_EMAIL is required}"
-      JSON_HUB_PROJECT: "${JSON_HUB_PROJECT:?JSON_HUB_PROJECT is required}"
-      MAILING_PROVIDER_ROUTING_KEY: "${MAILING_PROVIDER_ROUTING_KEY:?MAILING_PROVIDER_ROUTING_KEY is required}"
-      # No VIRTUAL_HOST/LETSENCRYPT_HOST: the consumer serves no HTTP and must
-      # not be picked up by nginx-proxy as a second backend for the hostname.
-    command:
-      - 'bin/console'
-      - 'messenger:consume'
-      - 'async'
-      - '--memory-limit=110M'
-      - '--time-limit=3600'
-      - '--limit=100'
-      - '-vv'
-    # No healthcheck: a messenger consumer exposes no port and the runtime image
-    # has no pgrep (procps is not installed), so there is nothing cheap to probe.
-    # `up --wait` therefore only waits for this container to *start*. deploy.yml's
-    # smoke test is what actually proves it stayed up - see the comment there.
-    depends_on:
-      web:
-        condition: service_healthy
