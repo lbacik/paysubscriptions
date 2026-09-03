@@ -1,0 +1,256 @@
+name: Deploy
+
+# Reusable: called by release.yml right after a tag is built, and callable by
+# hand to redeploy or to roll back to any tag that already has an image in the
+# registry.
+on:
+  workflow_call:
+    inputs:
+      tag:
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Image tag to deploy (e.g. v0.1.0)'
+        required: true
+        type: string
+
+concurrency:
+  group: deploy-prod
+  # Never cancel a deploy halfway through a converge: a killed job leaves the
+  # stack with the web container on the new image and the worker on the old one,
+  # or the migrations applied and nothing restarted.
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://paysubscriptions.com
+    permissions:
+      contents: read
+
+    env:
+      DOCKER_HOST: ssh://rum
+      COMPOSE: docker compose --env-file /dev/null -f compose.prod.yaml -p paysubscriptions
+      APP_IMAGE: registry.rum.luka.sh/paysubscriptions/web:${{ inputs.tag }}
+      # Supplied by the job, not by a variable - like APP_IMAGE, it is a property
+      # of what is being deployed. config/packages/twig.yaml renders it into every
+      # page as `appVersion`.
+      APP_VERSION: ${{ inputs.tag }}
+
+      # --- Infrastructure wiring (non-secret), from the production environment's
+      # --- variables. `main` is external and already provisioned on rum.
+      NETWORK: ${{ vars.NETWORK }}
+      VIRTUAL_HOST: ${{ vars.VIRTUAL_HOST }}
+      LETSENCRYPT_HOST: ${{ vars.LETSENCRYPT_HOST }}
+      LETSENCRYPT_EMAIL: ${{ vars.LETSENCRYPT_EMAIL }}
+      DEFAULT_URI: ${{ vars.DEFAULT_URI }}
+      SYSTEM_EMAIL: ${{ vars.SYSTEM_EMAIL }}
+      CONTACT_EMAIL: ${{ vars.CONTACT_EMAIL }}
+      JSON_HUB_PROJECT: ${{ vars.JSON_HUB_PROJECT }}
+      MAILING_PROVIDER_ROUTING_KEY: ${{ vars.MAILING_PROVIDER_ROUTING_KEY }}
+      MAINTENANCE_MODE: ${{ vars.MAINTENANCE_MODE }}
+      # The reCAPTCHA *site* key is rendered into the page for every visitor to
+      # read, so it is a variable. Its paired secret is not.
+      GOOGLE_RECAPTCHA_SITE_KEY: ${{ vars.GOOGLE_RECAPTCHA_SITE_KEY }}
+
+      # --- Secrets, from the production environment.
+      APP_SECRET: ${{ secrets.APP_SECRET }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      MAILER_DSN: ${{ secrets.MAILER_DSN }}
+      # No credentials in this one today (doctrine://default?auto_setup=0), but
+      # it is a transport DSN and the suite's other repositories keep it as a
+      # secret - it becomes credential-bearing the moment it points at AMQP,
+      # which is what .env.docker.gin used.
+      MESSENGER_TRANSPORT_DSN: ${{ secrets.MESSENGER_TRANSPORT_DSN }}
+      GOOGLE_RECAPTCHA_SECRET: ${{ secrets.GOOGLE_RECAPTCHA_SECRET }}
+
+    steps:
+      # Take compose.prod.yaml from the tag being deployed, not from HEAD - the
+      # stack definition that ships must be the one that was tagged.
+      - name: Checkout ${{ inputs.tag }}
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.tag }}
+
+      # Fails before touching the host. Without this, a missing value surfaces as
+      # a ${VAR:?} error from compose after the SSH session and the registry login
+      # are already established - and, worse, only after the migration step has
+      # possibly already run.
+      - name: Pre-flight check
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_SSH_KNOWN_HOSTS: ${{ secrets.DEPLOY_SSH_KNOWN_HOSTS }}
+          REGISTRY_USER: ${{ secrets.REGISTRY_USER }}
+          REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+        run: |
+          # Everything compose.prod.yaml guards with ${VAR:?}, plus the four the
+          # deploy itself needs. MAINTENANCE_MODE, LETSENCRYPT_EMAIL and RESTART
+          # are absent on purpose: they have defaults in compose.prod.yaml.
+          required='
+            NETWORK VIRTUAL_HOST LETSENCRYPT_HOST DEFAULT_URI
+            SYSTEM_EMAIL CONTACT_EMAIL JSON_HUB_PROJECT
+            MAILING_PROVIDER_ROUTING_KEY GOOGLE_RECAPTCHA_SITE_KEY
+            APP_SECRET DATABASE_URL MAILER_DSN MESSENGER_TRANSPORT_DSN
+            GOOGLE_RECAPTCHA_SECRET
+            DEPLOY_SSH_KEY DEPLOY_SSH_KNOWN_HOSTS
+            REGISTRY_USER REGISTRY_PASSWORD
+          '
+          unset_names=
+          placeholder_names=
+          for name in $required; do
+            value="${!name}"
+            if [ -z "$value" ]; then
+              unset_names="$unset_names $name"
+            # Only the name is ever echoed, never the value - but a placeholder
+            # is a known-fake string, and catching it here turns "the converge
+            # failed strangely 90 seconds in" into one clear line.
+            elif case "$value" in PLACEHOLDER-*-SET-ME) true ;; *) false ;; esac; then
+              placeholder_names="$placeholder_names $name"
+            fi
+          done
+          status=0
+          if [ -n "$unset_names" ]; then
+            echo "::error::unset in the production environment:$unset_names"
+            status=1
+          fi
+          if [ -n "$placeholder_names" ]; then
+            echo "::error::still a placeholder in the production environment:$placeholder_names"
+            status=1
+          fi
+          [ "$status" -eq 0 ] && echo "all required variables and secrets are present"
+          exit "$status"
+
+      # Mirrors the local `rum` docker context, so DOCKER_HOST=ssh://rum resolves
+      # on the runner exactly as it does on a workstation. The values below are
+      # what `ssh -G rum` reports locally, not guesses.
+      #
+      # StrictHostKeyChecking yes with a pinned known_hosts: the host keys come
+      # from the DEPLOY_SSH_KNOWN_HOSTS secret, generated with
+      # `ssh-keyscan -p 2211 rum.host.luka.sh`.
+      - name: Configure SSH access to rum
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_SSH_KNOWN_HOSTS: ${{ secrets.DEPLOY_SSH_KNOWN_HOSTS }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/github-actions-deploy
+          chmod 600 ~/.ssh/github-actions-deploy
+          printf '%s\n' "$DEPLOY_SSH_KNOWN_HOSTS" >> ~/.ssh/known_hosts
+          cat >> ~/.ssh/config <<'EOF'
+          Host rum
+            HostName rum.host.luka.sh
+            Port 2211
+            User debian
+            IdentityFile ~/.ssh/github-actions-deploy
+            IdentitiesOnly yes
+            StrictHostKeyChecking yes
+          EOF
+
+      # The registry runs on rum itself, but the pull still goes out through its
+      # public name. Logging in here is enough: the CLI forwards the auth with the
+      # pull, so the private image reaches rum's daemon without credentials ever
+      # landing on the host.
+      - name: Log in to the registry
+        uses: docker/login-action@v4
+        with:
+          registry: registry.rum.luka.sh
+          username: ${{ secrets.REGISTRY_USER }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+
+      # Before the app comes up, and in a throwaway container: --no-deps so this
+      # does not start the web service as a side effect, --pull always so the
+      # migrations that run are the ones baked into the tag being deployed.
+      # --all-or-nothing wraps the batch in a single transaction, so a failure
+      # leaves the schema untouched and aborts the deploy before any running
+      # container is restarted.
+      #
+      # MESSENGER_TRANSPORT_DSN must be an amqp:// URL for this step to survive.
+      # config/packages/messenger.yaml gives `newsletter` an AMQP-only `exchange`
+      # options block, and Doctrine's schema listener instantiates every transport
+      # whose scheme is doctrine://, so a doctrine:// value makes the Doctrine
+      # factory reject `exchange` and kills the command here. test.yml's
+      # `migrations` job replays this exact command and would stop a tag first.
+      # See the comment above that job for the full mechanism.
+      - name: Run database migrations
+        run: |
+          $COMPOSE run --rm --no-deps --pull always web \
+            ./bin/console doctrine:migrations:migrate --no-interaction --all-or-nothing --allow-no-migration
+
+      # --wait-timeout bounds the step: the deploy-prod concurrency group has
+      # cancel-in-progress: false, so a converge that never settles would block
+      # every later deploy until the job's own 6h limit.
+      - name: Deploy
+        run: |
+          $COMPOSE up -d --pull always --wait --wait-timeout 180
+
+      # Three separate things, because no single check covers them.
+      #
+      # (1) The public route, over HTTPS through nginx-proxy and acme-companion's
+      #     certificate - the path a real visitor takes, which the container
+      #     healthcheck (localhost, inside the container, at converge time only)
+      #     cannot speak to. /login rather than /: it renders a form with a CSRF
+      #     token, so asserting on `_csrf_token` in the body proves Symfony
+      #     rendered the page. A 200 alone would also be satisfied by an
+      #     nginx-proxy error page or a stale certificate landing page.
+      #
+      #     Note what this does NOT prove: no public GET route in this app queries
+      #     the database, so a reachable page says nothing about DATABASE_URL.
+      #     Hence (2).
+      - name: Smoke test the public route
+        run: |
+          code=
+          body=/tmp/smoke.html
+          for _ in $(seq 1 20); do
+            code=$(curl -fsS -o "$body" -w '%{http_code}' https://paysubscriptions.com/login || true)
+            if [ "$code" = "200" ] && grep -q '_csrf_token' "$body"; then
+              echo "web is up and rendering"
+              exit 0
+            fi
+            echo "web not ready yet (HTTP ${code:-none}), retrying"
+            sleep 15
+          done
+          echo "::error::web did not serve a rendered /login (last status: ${code:-none})" >&2
+          $COMPOSE logs --tail 100 web || true
+          exit 1
+
+      # (2) The database, from inside the web container - the one thing the public
+      #     surface cannot demonstrate. Shares the migration step's dependency on
+      #     bin/console being able to boot, so it will fail for the messenger
+      #     reason above until that is fixed; by then the deploy has already
+      #     stopped at the migration step, so this never fails alone.
+      - name: Smoke test the database connection
+        run: |
+          if $COMPOSE exec -T web ./bin/console dbal:run-sql 'SELECT 1' </dev/null; then
+            echo "database is reachable from the web container"
+            exit 0
+          fi
+          echo "::error::web container could not query the database" >&2
+          $COMPOSE logs --tail 100 web || true
+          exit 1
+
+      # (3) The worker. `up --wait` only saw it *start* - compose.prod.yaml gives
+      #     it no healthcheck because a messenger consumer exposes no port and the
+      #     image has no pgrep. A consumer that boots and then dies on its first
+      #     transport connection would otherwise ship green, which is precisely
+      #     the failure mode the messenger defect above produces.
+      #
+      #     RestartCount is the tell. The command carries --limit=100 and
+      #     --time-limit=3600, so a clean exit and restart is normal *eventually* -
+      #     but not within 45 seconds of a fresh converge unless 100 messages were
+      #     already queued. A non-zero count this early means crash-looping.
+      - name: Smoke test the worker
+        run: |
+          sleep 45
+          state=$(docker inspect -f '{{.State.Status}}' paysubscriptions-worker 2>/dev/null || echo missing)
+          restarts=$(docker inspect -f '{{.RestartCount}}' paysubscriptions-worker 2>/dev/null || echo -1)
+          if [ "$state" = "running" ] && [ "$restarts" = "0" ]; then
+            echo "worker is consuming (state=$state, restarts=$restarts)"
+            exit 0
+          fi
+          echo "::error::worker is not healthy (state=$state, restarts=$restarts)" >&2
+          $COMPOSE logs --tail 100 worker || true
+          exit 1

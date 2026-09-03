@@ -1,6 +1,20 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+@custom-variant backdrop (&::backdrop);
+
+@theme {
+    --color-color-pri: #f7f7ff;
+    --color-color-sec: #bdd5ea;
+    --color-color-ter: #577399;
+    --color-color-qua: #495867;
+    --color-color-qui: #fe5f55;
+
+    --font-handwriting: 'Patrick Hand', cursive;
+    --font-handwriting2: 'Indie Flower', cursive;
+    --font-sans: Roboto, sans-serif;
+    --font-serif: Merriweather, serif;
+}
 
 body {
     @apply bg-color-pri;

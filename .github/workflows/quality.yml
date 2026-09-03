@@ -1,0 +1,180 @@
+name: Quality
+
+# Advisory only. Every job here is continue-on-error, so nothing in this file can
+# block a push, a pull request or a release. The point is visibility: each tool
+# reports as its own job, so several independent numbers can be watched moving
+# rather than one green box hiding four red steps.
+#
+# Two kinds of check live here, and they have different destinies:
+#
+#   1. WAITING ROOM - a check whose red is a defect in this repository, parked
+#      here until it reaches zero. When it does and can be held there, it
+#      graduates to test.yml and is deleted from here rather than duplicated: an
+#      advisory copy of a gating check reports nothing the gate has not already
+#      blocked on, and pays a second composer install on every push to say it.
+#      Here: `schema-validate` and `twig-lint`.
+#
+#   2. PERMANENT WATCHER - a check that goes red when *someone else* acts. Its
+#      red is news, not a defect, so it can never satisfy "held at zero" and must
+#      never graduate: gating on it would hand a third party a veto over our
+#      releases, biting hardest exactly when we are shipping a fix.
+#      Here: `audit` and `outdated`.
+#
+# Deliberately a separate file from test.yml rather than conditional jobs inside
+# it: test.yml is reused by release.yml via workflow_call, and inside a called
+# workflow `github.event_name` is still "push" for a tag push, so an `if:` cannot
+# tell "called by release" from "someone pushed a branch".
+#
+# This repository has no phpstan, psalm, php-cs-fixer, rector or phpmd in
+# require-dev, so there are no static-analysis or code-style jobs here yet -
+# unlike the rest of the suite. Adding any of those tools is what would fill this
+# file out; until then the waiting room holds the two checks the existing
+# dependency set can already run.
+#
+# Triggers mirror test.yml, and for the same reasons recorded at length there:
+# `push` on every branch is the only commit trigger, so each commit runs this
+# file once. No `pull_request` - with both, every commit ran it twice, and on the
+# long-lived `develop` -> `main` promotion PR narrowing `push` to the long-lived
+# branches does not help, because `develop` is both the PR head and a push
+# branch.
+#
+# `schedule` is what makes the permanent watchers useful, and is the one trigger
+# here that test.yml has no use for: `audit` and `outdated` go red because a
+# third party published something, which no push of ours would ever notice.
+on:
+  push:
+    branches: ['**']
+  schedule:
+    # Deliberately off the hour: GitHub queues scheduled runs and drops them
+    # under load, and :00 is the most popular minute by a wide margin.
+    #
+    # A schedule only ever runs from the DEFAULT BRANCH's copy of this file. This
+    # entry does nothing until it is merged to main, and edits to it on a feature
+    # branch have no effect at all.
+    - cron: '17 6 * * 1'
+
+concurrency:
+  group: quality-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PHP_VERSION: '8.4'
+
+jobs:
+  # WAITING ROOM. Red today: App\Entity\ResetPasswordRequest#id and
+  # App\Entity\Limits#id are mapped as type 'uuid' with
+  # #[ORM\CustomIdGenerator(class: 'doctrine.uuid_generator')], but no DBAL type
+  # named `uuid` is registered - config/packages/doctrine.yaml declares no
+  # dbal.types block. Two entities, so this is a small, finite number to drive to
+  # zero; once it is, this graduates into test.yml's `checks` job as one more
+  # step and is deleted from here.
+  #
+  # --skip-sync on purpose: this asks whether the *mappings* are coherent, which
+  # needs no database. Whether the migrated schema matches them is a different
+  # question, and test.yml's `migrations` job answers it against a real server.
+  schema-validate:
+    name: Doctrine mapping
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    env:
+      APP_ENV: prod
+      APP_SECRET: ci
+      DATABASE_URL: "mysql://root:root@127.0.0.1:3306/paysub?serverVersion=8.4&charset=utf8mb4"
+      MESSENGER_TRANSPORT_DSN: 'amqp://guest:guest@127.0.0.1:5672/%2f/messages'
+      MAILER_DSN: 'null://null'
+      JSON_HUB_PROJECT: '00000000-0000-0000-0000-000000000000'
+      MAILING_PROVIDER_ROUTING_KEY: 'ci'
+    steps:
+      - uses: actions/checkout@v7
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          extensions: amqp, ctype, iconv, intl, pdo_mysql
+          coverage: none
+          ini-values: memory_limit=1G
+      - uses: ramsey/composer-install@v4
+      - run: php bin/console doctrine:schema:validate --skip-sync
+
+  # WAITING ROOM, and the one entry here whose fix is not in src/. It fails
+  # before reading any template: doctrine/doctrine-migrations-bundle registers a
+  # Twig namespace pointing at vendor/doctrine/doctrine-migrations-bundle/
+  # Resources/views, a directory it does not ship, and Twig's FilesystemLoader
+  # throws on the missing path. So this reports on the dependency set, not on
+  # templates/ - which is exactly why it is not in test.yml: gating on it would
+  # block every release on something a bundle upgrade has to fix. It graduates
+  # the day it goes green.
+  twig-lint:
+    name: Twig templates
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    env:
+      APP_ENV: prod
+      APP_SECRET: ci
+      DATABASE_URL: "mysql://root:root@127.0.0.1:3306/paysub?serverVersion=8.4&charset=utf8mb4"
+      MESSENGER_TRANSPORT_DSN: 'amqp://guest:guest@127.0.0.1:5672/%2f/messages'
+      MAILER_DSN: 'null://null'
+      JSON_HUB_PROJECT: '00000000-0000-0000-0000-000000000000'
+      MAILING_PROVIDER_ROUTING_KEY: 'ci'
+    steps:
+      - uses: actions/checkout@v7
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          extensions: amqp, ctype, iconv, intl, pdo_mysql
+          coverage: none
+          ini-values: memory_limit=1G
+      - uses: ramsey/composer-install@v4
+      - run: php bin/console lint:twig templates
+
+  # PERMANENT WATCHER. Goes red when a stranger publishes an advisory against a
+  # lockfile nobody touched, so it can never be held at zero and must never
+  # graduate into the gate.
+  #
+  # continue-on-error is neutral on a push or PR so unrelated work is not
+  # reddened, but *false* on the schedule: a scheduled run that swallows its own
+  # failure notifies nobody, which is the only reason the schedule exists.
+  #
+  # Note composer.json sets config.audit.block-insecure=false. That governs
+  # `composer install/update`, not this command - `composer audit` still exits
+  # non-zero on a finding, which is what makes it a usable signal here.
+  audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    continue-on-error: ${{ github.event_name != 'schedule' }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          extensions: amqp, ctype, iconv, intl, pdo_mysql
+          coverage: none
+      - uses: ramsey/composer-install@v4
+      - run: composer audit
+
+  # PERMANENT WATCHER. Red means an upstream maintainer released something, which
+  # is news about the world rather than a defect here. --direct keeps it to the
+  # packages composer.json actually names, so a transitive bump three levels down
+  # does not light this up; --strict is what turns "something is behind" into a
+  # non-zero exit.
+  #
+  # --minor-only is what keeps that exit code meaningful. Without it the command
+  # also counts major releases, and ~47 direct dependencies sit a major behind
+  # (Symfony 7.4 vs 8.1, PHPUnit 9 vs 13, DBAL 3 vs 4). None of those closes
+  # without a framework migration, so the job would fail on every single run and
+  # a watcher that is always red reports nothing at all. Scoped to
+  # semver-compatible releases it goes red only when there is a bump we can
+  # actually take, which is the whole point. Majors are still printed in the log
+  # for anyone reading it - they just do not set the exit code.
+  outdated:
+    name: Upstream freshness
+    runs-on: ubuntu-latest
+    continue-on-error: ${{ github.event_name != 'schedule' }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          extensions: amqp, ctype, iconv, intl, pdo_mysql
+          coverage: none
+      - uses: ramsey/composer-install@v4
+      - run: composer outdated --direct --strict --minor-only

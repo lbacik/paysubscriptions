@@ -8,12 +8,14 @@
 
 ################################################################################
 
-# The example below uses the PHP Apache image as the foundation for running the app.
-# By specifying the "8.3.6-apache" tag, it will also use whatever happens to be the
-# most recent version of that tag when you build your Dockerfile.
-# If reproducability is important, consider using a specific digest SHA, like
-# php@sha256:99cede493dfd88720b610eb8077c8688d3cca50003d76d1d539b0efc8cca72b4.
-FROM php:8.3.6-apache
+# The PHP Apache image is the production runtime; there is only one stage, so
+# release.yml needs no `target:`.
+#
+# Pinned to the 8.4 minor rather than a patch: it matches .php-version, the
+# PHP_VERSION that test.yml/quality.yml pin CI to, and the 8.4 the rest of the
+# suite runs. Keep those four in step - CI is only a gate if it runs the same
+# interpreter as production.
+FROM php:8.4-apache
 
 ENV COMPOSER_ALLOW_SUPERUSER=1
 

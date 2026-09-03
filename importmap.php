@@ -17,7 +17,13 @@ return [
         'entrypoint' => true,
     ],
     '@symfony/stimulus-bundle' => [
-        'path' => './vendor/symfony/stimulus-bundle/assets/dist/loader.js',
+        'path' => '@symfony/stimulus-bundle/loader.js',
+    ],
+    '@symfony/ux-chartjs' => [
+        'path' => '@symfony/ux-chartjs/controller.js',
+    ],
+    '@symfony/ux-turbo' => [
+        'path' => '@symfony/ux-turbo/turbo_controller.js',
     ],
     '@hotwired/stimulus' => [
         'version' => '3.2.2',
