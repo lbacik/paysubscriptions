@@ -105,11 +105,12 @@ RUN rm -f /opt/app/public/.htaccess \
     && chown -R www-data:www-data /opt/app/var /data /config
 
 # The base image healthchecks Caddy's admin API on :2019. Drop it rather than
-# inherit it: compose.prod.yaml runs the `worker` service from this same image
-# with `bin/console messenger:consume`, which starts no HTTP server at all, so
-# the inherited probe could never pass and `up --wait` would sit on an
-# unhealthy container until the deploy timed out. The web healthcheck that does
-# matter is declared in compose.prod.yaml, next to the service it guards.
+# inherit it, which also keeps php:8.4-apache's behaviour of shipping no probe at
+# all: health belongs in the compose files, next to the service it guards, and
+# compose.prod.yaml declares the one that matters for `up --wait`. Inheriting it
+# would additionally mark every one-shot `compose run ... web ./bin/console ...`
+# container unhealthy - the migration step in deploy.yml is one - since a console
+# command starts no server for the probe to reach.
 HEALTHCHECK NONE
 
 # Switch to a non-privileged user (defined in the base image) that the app will run under.
