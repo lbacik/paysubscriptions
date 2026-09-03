@@ -15,6 +15,9 @@ services:
       APP_ENV: "${APP_ENV}"
       APP_VERSION: "${TAG}"
       APP_URL: "${APP_URL}"
+      # Explicit for the same reason as in compose.prod.yaml: the FrankenPHP
+      # image exposes four ports, and only 80 is listening.
+      VIRTUAL_PORT: "80"
       VIRTUAL_HOST: "${DOMAIN}"
       LETSENCRYPT_HOST: "${DOMAIN}"
       DATABASE_URL: "${DATABASE_URL}"
