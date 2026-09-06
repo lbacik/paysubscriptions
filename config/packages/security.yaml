@@ -12,8 +12,18 @@ security:
                 property: email
     firewalls:
         dev:
-            # Ensure dev tools and static assets are always allowed
-            pattern: ^/(_profiler|_wdt|assets|build)/
+            # _profiler and _wdt routes are only registered when@dev (see
+            # config/routes/web_profiler.yaml), so this pattern is already
+            # unreachable outside dev regardless of the bypass below.
+            pattern: ^/(_profiler|_wdt)/
+            security: false
+        assets:
+            # Static assets must stay reachable for anonymous visitors in every
+            # environment, so this can't be limited to dev like the firewall
+            # above. Scoped to AssetMapper's public prefix only - `/build/` came
+            # from the symfony/security-bundle recipe update but this app never
+            # adopted Encore, so no such directory or route exists to protect.
+            pattern: ^/assets/
             security: false
         main:
             lazy: true

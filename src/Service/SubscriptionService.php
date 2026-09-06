@@ -7,10 +7,8 @@ namespace App\Service;
 use App\Entity\Subscription;
 use App\Repository\SubscriptionRepository;
 use App\Repository\UserRepository;
-use Symfony\Component\DependencyInjection\Attribute\Autoconfigure;
 use Symfony\Component\Security\Core\User\UserInterface;
 
-#[Autoconfigure(public: true)]
 class SubscriptionService
 {
     public function __construct(

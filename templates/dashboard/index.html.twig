@@ -11,6 +11,7 @@
                         class="p-5 mx-auto {% if fullWidth %} w-full {% else %} w-2/3 lg:w-1/2 {% endif %}"
                 >
                     {{ render_chart(chart, {
+                        'data-controller': 'chart-click',
                         'data-chart-click-url-value': path('app_dashboard', { 'chartType': 'monthly' }),
                     } ) }}
                 </div>

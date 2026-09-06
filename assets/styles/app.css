@@ -3,6 +3,14 @@
 
 @custom-variant backdrop (&::backdrop);
 
+/* No template or script toggles a `.dark` class or uses a `dark:` variant,
+   so there is nothing to bridge from the old `darkMode: 'class'` setting.
+   Tailwind v4's default `prefers-color-scheme` strategy is left in place. */
+
+/* The vendored Symfony Tailwind form theme (vendor/) is gitignored, so v4's
+   automatic source detection never scans it for classes it uses. */
+@source inline("text-red-700");
+
 @theme {
     --color-color-pri: #f7f7ff;
     --color-color-sec: #bdd5ea;
@@ -14,6 +22,13 @@
     --font-handwriting2: 'Indie Flower', cursive;
     --font-sans: Roboto, sans-serif;
     --font-serif: Merriweather, serif;
+
+    --animate-fade-in: fadeIn .5s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
 body {

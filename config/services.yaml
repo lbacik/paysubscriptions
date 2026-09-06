@@ -7,7 +7,7 @@
 # Put parameters here that don't need to change on each machine where the app is deployed
 # https://symfony.com/doc/current/best_practices.html#use-parameters-for-application-configuration
 parameters:
-    docsPath: '%kernel.project_dir%/docs/'
+    docsPath: '%kernel.project_dir%/resources/docs/'
     systemEmail: '%env(SYSTEM_EMAIL)%'
     contactEmail: '%env(CONTACT_EMAIL)%'
     mailingProviderRoutingKey: '%env(MAILING_PROVIDER_ROUTING_KEY)%'
@@ -30,6 +30,12 @@ services:
     # this creates a service per class whose id is the fully-qualified class name
     App\:
         resource: '../src/'
+        # Restored manually: symfony/framework-bundle's recipe no longer ships
+        # this exclude list, but we need it kept out of the container.
+        exclude:
+            - '../src/DependencyInjection/'
+            - '../src/Entity/'
+            - '../src/Kernel.php'
 
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
