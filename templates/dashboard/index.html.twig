@@ -6,24 +6,13 @@
 <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 space-y-8">
 
     <!-- Dashboard Header -->
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-            <h1 class="text-3xl font-extrabold text-slate-900 tracking-tight">
-                {{ "dashboard.title"|trans }}
-            </h1>
-            <p class="text-sm text-slate-500 mt-1">
-                {{ "dashboard.subtitle"|trans }}
-            </p>
-        </div>
-
-        {% if addSubscriptionDisabled == false %}
-            <a href="{{ path('app_subscription_new') }}"
-               data-turbo-frame="modal"
-               class="btn-primary text-sm py-2.5 px-5 self-start sm:self-auto inline-flex items-center gap-2 shadow-xs hover:shadow transition-all">
-                <i class="fa-solid fa-plus text-xs"></i>
-                <span>{{ "add_subscription"|trans }}</span>
-            </a>
-        {% endif %}
+    <div>
+        <h1 class="text-3xl font-extrabold text-slate-900 tracking-tight">
+            {{ "dashboard.title"|trans }}
+        </h1>
+        <p class="text-sm text-slate-500 mt-1">
+            {{ "dashboard.subtitle"|trans }}
+        </p>
     </div>
 
     <!-- Summary KPI Cards -->

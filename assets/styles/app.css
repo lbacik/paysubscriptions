@@ -70,19 +70,19 @@ body {
 }
 
 .btn-primary {
-    @apply inline-flex items-center justify-center bg-color-qua text-white font-semibold rounded-xl px-5 py-2.5 shadow-sm hover:bg-slate-800 hover:shadow transition-all duration-200;
+    @apply inline-flex items-center justify-center bg-color-ter text-white font-semibold rounded-full px-5 py-2.5 shadow-sm shadow-slate-400/20 hover:bg-[#465f80] hover:shadow transition-all duration-200 active:scale-[0.98];
 }
 
 .btn-secondary {
-    @apply inline-flex items-center justify-center bg-white text-color-qua font-semibold rounded-xl px-5 py-2.5 border border-slate-300 shadow-sm hover:bg-slate-50 hover:border-slate-400 transition-all duration-200;
+    @apply inline-flex items-center justify-center bg-white text-slate-700 font-semibold rounded-full px-5 py-2.5 border border-slate-300 shadow-xs hover:bg-slate-50 hover:text-slate-900 hover:border-slate-400 transition-all duration-200 active:scale-[0.98];
 }
 
 .btn-cta {
-    @apply inline-flex items-center justify-center bg-color-qui text-white font-bold rounded-xl px-7 py-3.5 shadow-md shadow-red-200 hover:bg-red-500 hover:shadow-lg hover:shadow-red-200 transition-all duration-200 transform hover:-translate-y-0.5 active:translate-y-0 text-base md:text-lg;
+    @apply inline-flex items-center justify-center bg-color-qui text-white font-bold rounded-full px-7 py-3.5 shadow-md shadow-red-200 hover:bg-red-500 hover:shadow-lg hover:shadow-red-200 transition-all duration-200 transform hover:-translate-y-0.5 active:translate-y-0 text-base md:text-lg;
 }
 
 .btn-delete {
-    @apply bg-red-600 text-white font-semibold hover:bg-red-700 rounded-xl px-4 py-2 transition-all duration-200;
+    @apply inline-flex items-center justify-center bg-rose-600 text-white font-semibold hover:bg-rose-700 rounded-full px-5 py-2.5 shadow-sm shadow-rose-500/20 transition-all duration-200 active:scale-[0.98];
 }
 
 .form {
