@@ -1,4 +1,4 @@
-{% props active = {type: 'bar', withCalculated: false, month: null} %}
+{% props active = {type: 'bar', withCalculated: false, month: null}, subscriptionsCount = null %}
 
 {% set isBarActive = active.type is not defined or active.type == 'bar' %}
 {% set isMonthlyActive = active.type is defined and active.type == 'monthly' %}
@@ -66,10 +66,26 @@
                 <span>{{ "dashboard.switch.with_calculated_yearly"|trans }}</span>
             </a>
         {% else %}
-            <div class="inline-flex items-center gap-1.5 text-xs text-slate-500 bg-slate-50 border border-slate-200/70 px-3 py-1.5 rounded-xl">
+            <div class="hidden sm:inline-flex items-center gap-1.5 text-xs text-slate-500 bg-slate-50 border border-slate-200/70 px-3 py-1.5 rounded-xl">
                 <i class="fa-regular fa-lightbulb text-amber-500"></i>
                 <span>{{ "dashboard.switch.click_hint"|trans }}</span>
             </div>
+
+            <button type="button"
+                    data-action="click->chart-legend#toggle"
+                    data-chart-legend-target="toggleBtn"
+                    aria-expanded="false"
+                    aria-label="{{ 'dashboard.legend.title'|trans }}"
+                    class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold border border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700 shadow-2xs hover:text-slate-900 transition-all cursor-pointer">
+                <i class="fa-solid fa-layer-group text-color-ter"></i>
+                <span>{{ "dashboard.legend.button"|trans }}</span>
+                <span data-chart-legend-target="badge"
+                      class="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-bold bg-slate-100 text-slate-600 rounded-full">
+                    {% if subscriptionsCount is defined and subscriptionsCount is not null %}
+                        {{ subscriptionsCount }}
+                    {% endif %}
+                </span>
+            </button>
         {% endif %}
     </div>
 </div>

@@ -117,14 +117,91 @@
     {% if subscriptions|length > 0 %}
         <div class="bg-white rounded-3xl border border-slate-200/80 shadow-xs p-6 md:p-8">
             <turbo-frame id="chart">
-                <twig:ChartSwitcher :active="active"/>
+                {% set isBarActive = active.type is not defined or active.type == 'bar' %}
+                <div {% if isBarActive %}data-controller="chart-legend"{% endif %} class="relative">
+                    <twig:ChartSwitcher :active="active" :subscriptionsCount="subscriptions|length"/>
 
-                <div id="chart-container"
-                     class="mt-6 mx-auto w-full {% if fullWidth %} h-[360px] md:h-[420px] {% else %} max-w-xl h-[340px] md:h-[380px] {% endif %} relative flex items-center justify-center">
-                    {{ render_chart(chart, {
-                        'data-controller': 'chart-click',
-                        'data-chart-click-url-value': path('app_dashboard', { 'chartType': 'monthly' }),
-                    } ) }}
+                    <div class="relative mt-6 overflow-hidden rounded-2xl">
+                        <div id="chart-container"
+                             class="mx-auto w-full {% if fullWidth %} h-[360px] md:h-[420px] {% else %} max-w-xl h-[340px] md:h-[380px] {% endif %} relative flex items-center justify-center">
+                            {{ render_chart(chart, {
+                                'data-controller': 'chart-click',
+                                'data-chart-click-url-value': path('app_dashboard', { 'chartType': 'monthly' }),
+                            } ) }}
+                        </div>
+
+                        {% if isBarActive %}
+                            <!-- Sliding Legend Card -->
+                            <div data-chart-legend-target="card"
+                                 class="absolute inset-y-0 right-0 w-full sm:w-80 md:w-92 bg-white/95 backdrop-blur-md border-l border-slate-200/90 shadow-2xl flex flex-col z-20 transform transition-all duration-300 ease-in-out translate-x-full opacity-0 pointer-events-none rounded-r-2xl">
+
+                                <!-- Header -->
+                                <div class="p-3.5 sm:p-4 border-b border-slate-100 flex items-center justify-between gap-2">
+                                    <div class="flex items-center gap-2.5">
+                                        <div class="w-8 h-8 rounded-xl bg-blue-50 text-color-ter flex items-center justify-center text-xs shadow-2xs">
+                                            <i class="fa-solid fa-layer-group"></i>
+                                        </div>
+                                        <div>
+                                            <h3 class="text-xs font-bold text-slate-900 tracking-tight">{{ "dashboard.legend.title"|trans }}</h3>
+                                            <span data-chart-legend-target="countBadge" class="text-[11px] text-slate-500 font-medium"></span>
+                                        </div>
+                                    </div>
+                                    <button type="button"
+                                            data-action="click->chart-legend#close"
+                                            class="w-7 h-7 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center transition-colors cursor-pointer"
+                                            title="{{ 'cancel'|trans }}">
+                                        <i class="fa-solid fa-xmark text-xs"></i>
+                                    </button>
+                                </div>
+
+                                <!-- Toolbar: Search + Quick Select All/None -->
+                                <div class="p-3 border-b border-slate-100 bg-slate-50/60 space-y-2">
+                                    <div class="relative">
+                                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-[11px] text-slate-400"></i>
+                                        <input type="text"
+                                               data-chart-legend-target="search"
+                                               data-action="input->chart-legend#filter"
+                                               placeholder="{{ 'dashboard.legend.search_placeholder'|trans }}"
+                                               class="w-full text-xs pl-8 pr-3 py-1.5 rounded-xl border border-slate-200 bg-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all">
+                                    </div>
+                                    <div class="flex items-center justify-between text-[11px] px-0.5">
+                                        <span class="text-slate-400 font-medium">{{ "dashboard.legend.quick_actions"|trans }}</span>
+                                        <div class="flex items-center gap-2">
+                                            <button type="button"
+                                                    data-action="click->chart-legend#showAll"
+                                                    class="font-semibold text-blue-600 hover:text-blue-700 hover:underline cursor-pointer">
+                                                {{ "dashboard.legend.show_all"|trans }}
+                                            </button>
+                                            <span class="text-slate-300">•</span>
+                                            <button type="button"
+                                                    data-action="click->chart-legend#hideAll"
+                                                    class="font-semibold text-slate-500 hover:text-slate-700 hover:underline cursor-pointer">
+                                                {{ "dashboard.legend.hide_all"|trans }}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Scrollable Items List -->
+                                <div class="flex-1 overflow-y-auto p-2 space-y-1"
+                                     data-chart-legend-target="list">
+                                    <!-- Populated dynamically from Chart datasets -->
+                                </div>
+
+                                <!-- Empty Search State -->
+                                <div data-chart-legend-target="emptyState" class="hidden p-6 text-center text-xs text-slate-400">
+                                    <i class="fa-regular fa-folder-open text-base mb-1 block"></i>
+                                    <span>{{ "dashboard.legend.no_results"|trans }}</span>
+                                </div>
+
+                                <!-- Footer Hint -->
+                                <div class="p-3 border-t border-slate-100 bg-slate-50/50 text-[11px] text-slate-400 flex items-center gap-1.5">
+                                    <i class="fa-regular fa-lightbulb text-amber-500 text-xs"></i>
+                                    <span>{{ "dashboard.legend.hint"|trans }}</span>
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
                 </div>
             </turbo-frame>
         </div>

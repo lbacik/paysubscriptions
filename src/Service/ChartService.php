@@ -280,11 +280,16 @@ class ChartService
     {
         $dataSets = [];
         foreach ($subscriptions as $index => $subscription) {
+            $amountFormatted = $subscription->getMonthly() !== null
+                ? number_format((float)$subscription->getMonthly(), 2, '.', ' ') . ' / mo'
+                : number_format((float)$subscription->getYearly(), 2, '.', ' ') . ' / yr';
+
             $dataSets[] = [
                 'label' => $subscription->getName(),
                 'data' => $this->createData($subscription),
                 'backgroundColor' => $this->getColorForSubscription($subscription->getName(), $index),
                 'borderRadius' => 4,
+                'amount' => $amountFormatted,
             ];
         }
 
