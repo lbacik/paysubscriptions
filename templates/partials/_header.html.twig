@@ -2,26 +2,21 @@
      data-controller="mobile-menu"
 >
     <div class="max-w-screen-xl flex flex-wrap items-center justify-between mx-auto p-4">
-        <div>
-            <a id="header-logo" href="{{ path('app_home') }}" class="flex items-center space-x-3 rtl:space-x-reverse">
-                <img src="{{ asset('images/paysubs-v3.png') }}" class="h-12" alt="PaySubscriptions Logo"/>
-                <span
-                        class="self-center text-2xl font-extralight tracking-wide whitespace-nowrap"
-                >{{ "service.name"|trans }}</span>
+        <div class="flex items-center space-x-3">
+            <a id="header-logo" href="{{ path('app_home') }}" class="flex items-center space-x-2.5">
+                <img src="{{ asset('images/paysubs-v3.png') }}" class="h-9 w-auto" alt="PaySubscriptions Logo"/>
+                <span class="self-center text-xl font-bold tracking-tight text-slate-900">{{ "service.name"|trans }}</span>
             </a>
-            <div class="flex justify-end -mt-2 font-mono text-color-ter font-thin">
-                <span class="px-4 rounded-xl text-xs">version {{ appVersion }}</span>
-            </div>
         </div>
 
         <div class="flex items-center md:order-2 space-x-3 md:space-x-0 rtl:space-x-reverse">
 
-            <div class="hidden lg:flex">
+            <div class="hidden lg:flex items-center space-x-2">
                 {% if is_granted('IS_AUTHENTICATED_FULLY') %}
                     {{ include('partials/_user_profile_menu.html.twig') }}
                 {% else %}
-                    <twig:Button class="mr-4" href="{{ path('app_login') }}">{{ 'user.login'|trans }}</twig:Button>
-                    <twig:Button href="{{ path('app_register') }}">{{ 'user.register'|trans }}</twig:Button>
+                    <a href="{{ path('app_login') }}" class="px-4 py-2 text-sm font-semibold text-slate-700 hover:text-slate-900 rounded-xl hover:bg-slate-100 transition-colors">{{ 'user.login'|trans }}</a>
+                    <a href="{{ path('app_register') }}" class="px-4 py-2 text-sm font-semibold text-white bg-color-qua hover:bg-slate-800 rounded-xl shadow-sm transition-all">{{ 'user.register'|trans }}</a>
                 {% endif %}
             </div>
 
