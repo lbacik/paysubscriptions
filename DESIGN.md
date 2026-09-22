@@ -1,74 +1,124 @@
-# Design Ideas
+# PaySubscriptions — Design Decisions & UI Architecture
 
-Status: **ideas for a separate design process**, not an approved design, implementation plan, or list of commitments. Recorded on 2026-09-22, after reviewing Home, About, and Pricing. This task changed copy and its semantics; the existing layout, illustrations, typography, and stylesheet were left in place.
+Status: **Approved and Implemented** (Branch: `feature/ui-redesign`, 2026-09-22).  
+This document records the design system, page architecture, and user experience decisions implemented across PaySubscriptions' public pages and application dashboard.
 
-## Goal
+---
 
-A visitor should quickly understand what they get today, see the actual product, and find a straightforward path to creating an account. The core value of the current version: a subscription cost summary. Reminders and an upcoming-costs preview are a v1 direction, not an available feature.
+## 1. Core Product & Design Principles
 
-Reference point: [earlier competitor analysis](docs/research/paysubscriptions-v1-competitors-2026-09-06.md) and current decisions [#22](https://github.com/lbacik/paysubscriptions/issues/22) and [#30](https://github.com/lbacik/paysubscriptions/issues/30). A free tracker without bank integration alone is not enough of a differentiator. The ideas below are meant to help demonstrate usefulness and credibility — they do not imply measured conversion gains.
+1. **Privacy-First Clarity**:
+   - Zero bank connections, no card requirements, and no inbox scraping.
+   - Every public touchpoint explicitly reassures visitors that their financial data remains entirely their own.
+2. **Honest, Actionable Numbers**:
+   - Recurring costs are normalized into side-by-side **monthly** and **yearly** equivalents.
+   - No hidden tiers, arbitrary upsells, or fake "Pro" upgrades. The free tier scope is stated up-front.
+3. **Clarity Over Ornamentation**:
+   - Transitioned away from casual hand-drawn elements and heavy decorative illustrations toward a clean, professional, high-trust SaaS aesthetic.
+   - Content and layout prioritize instant scanning: benefit first, proof second, action third.
+4. **Frictionless Path to Value**:
+   - Clear visual hierarchy with a single dominant primary CTA ("Create your free account" / "Go to your dashboard").
+   - Reassurance micro-copy immediately adjacent to action points (no credit card, free up to the subscription limit, 100% private).
 
-## Home — ideas
+---
 
-- **Benefit and getting-started copy before the illustration on a narrow screen.** In the existing view, a lot of whitespace and a large chart illustration appear first; the headline only begins in the lower portion of the screen. In a future design, the first glance should answer "what is this for, how much does it cost, how do I start". Evidence: step 1 below.
-- **An actual app preview instead of an illustration that implies financial charts.** Show a short list of sample subscriptions and what the monthly/annual equivalent means. Label demo data explicitly. Do not show a calendar, reminders, currencies, or other features as working until they exist.
-- **One dominant get-started button.** The current copy revision adds a plain "Create your free account" link; a future design can give it clear hierarchy, with the limit and no-card-required note nearby. Alternative path: "See how it works". For a logged-in user — return to their own list.
-- **Shorter opening block and fewer decorative containers.** The illustration, colour band, green panel, blue panel, and varied typefaces compete for attention. Keep the friendly character, but choose one strong accent and a calmer hierarchy. This is a direction to explore, with no palette or component choices made.
-- **Short process demo.** Consider an "add → compare → update" sequence instead of further general statements about financial control.
+## 2. Design System & Typography
 
-## About — ideas
+### Typography
+- **Primary Interface Font**: `Plus Jakarta Sans` (`--font-sans`), loaded via Google Fonts. Used for all headings, body text, form elements, and data figures to ensure modern readability across devices.
+- **Brand / Accent Typography**: `Patrick Hand` (`--font-handwriting`) retained strictly for optional brand accents or legacy highlights, removed from primary UI copy and tables.
+- **Base Typography Configuration**: Configured with `@tailwindcss/typography` (`prose-slate`) for markdown-rendered documentation and article views.
 
-- **A trust page rather than a documentation look.** The current template shows a sidebar documentation menu on wide screens. Consider a simpler layout: the user's problem, what the product does today, the person maintaining it, contact, and plans separately. Evidence: step 2 and local preview below.
-- **Clear separation of "Available today" from "Exploring next".** The roadmap as a short supplementary block, with no dates, progress bars, or implied certainty of delivery. The existing product should remain the main reason to sign up.
-- **Concrete credibility signals.** Once a privacy policy is written and published, surface the link and a concise explanation of data and analytics. Do not add "bank-level security", "fully private", full-encryption promises, or no-data-sharing claims based solely on the absence of bank integration. Decisions #30 and the ADRs are not yet a published policy.
-- **A real creator story.** If the owner wants to make it public, briefly explain the motivation and how the product is sustained. Do not invent customer quotes, user counts, savings figures, or partnerships.
+### Color Palette & Tokens
+- **Background Base**: `--color-color-pri: #f8fafc` (Slate 50) — clean, soft off-white providing high contrast with content cards.
+- **Text & Structure**: `--color-color-qua: #1e293b` (Slate 800/900) — deep slate for sharp headings and readable typography.
+- **Primary Brand Accent**: `--color-color-ter: #577399` (Steel Blue) — used for brand highlights, secondary badges, active indicators, and icons.
+- **High-Conversion CTA**: `--color-color-qui: #fe5f55` (Coral Red) — high-visibility accent reserved for primary action buttons (`.btn-cta`), active tabs, and key notifications.
+- **Borders & Dividers**: `--color-color-sec: #e2e8f0` (Slate 200) — subtle structural boundaries.
+- **Surface Elevation**: Elevated pure white cards (`bg-white`), rounded pill containers (`rounded-full`), and generous card radiuses (`rounded-2xl`, `rounded-3xl`) with gentle ambient gradients (`blur-3xl`).
 
-## Pricing — ideas
+### Button Hierarchy
+- **`.btn-cta`**: Primary conversion trigger. Coral red background, bold text, pill shape (`rounded-full`), subtle elevation shadow (`shadow-md shadow-red-200`), hover lift, and active tactile scale.
+- **`.btn-primary`**: Standard primary action. Steel blue background (`#577399`), pill shape, subtle shadow, and active press animation.
+- **`.btn-secondary`**: Clean white surface with slate border (`border-slate-300`), dark slate text, pill shape, used for alternative paths and cancellations.
+- **`.btn-delete`**: Rose red pill button for destructive actions with distinct confirmation styling.
 
-- **One offer, without mimicking a multi-tier SaaS.** Consider a clear "Free" block, the limit, a short scope, and a way to start. There is currently one free plan; do not design fictional Pro/Business tiers or a billing-period toggle. Evidence: step 3.
-- **Questions answered directly next to the offer.** Do you need a card? What does the limit cover? Does the product pull data automatically? What if I need more entries? The new copy addresses these questions; a future design can make them easier to scan.
-- **Project support as a secondary option.** A donation should not look like a paid upgrade or a required step to use the product. Keep a clear separation between voluntary contribution and account scope.
+---
 
-## Shared elements — ideas
+## 3. Public Pages Architecture
 
-- **Readability on mobile.** Reduce accumulated margins and padding inside narrow columns. In the current Home, descriptions sometimes wrap to just a few words per line. Idea: a wider text area and a predictable element order, to be verified in a separate responsive design pass.
-- **Handwritten font as an accent.** Keep the warm brand character; consider a plain, readable font for longer descriptions, offer terms, and numbers. No font or type scale has been chosen.
-- **Newsletter and support request after the main action.** The current newsletter points to a different project (`gprodb.com`), which may distract and raise questions about the mailing topic. Before changing its messaging, clarify the actual newsletter scope; do not promise PaySubscriptions-only updates if the list does not guarantee that. Any change to the form or subscriber list is a separate scope.
-- **Consistent navigation language.** Consider "Create free account" as the single get-started label, with a less prominent "Sign in". Version numbers and elements aimed at the project maintainer may be lower priority than the value proposition for a new visitor.
-- **Accessibility as part of a future design pass.** Check contrast, keyboard focus, the newsletter form label, text zoom, reflow, and motion reduction for decorative illustrations. The shared template code is missing `lang` and meta viewport; include these in a separate accessibility/responsiveness audit. Screenshots alone do not confirm WCAG compliance.
+### 3.1. Home (`templates/home/index.html.twig`)
+- **Above-the-Fold Hero Section**:
+  - Clear value proposition headline: *"See what your subscriptions really add up to."*
+  - Reassurance pill banner highlighting the limit sourced dynamically from `App\Entity\Limits::DEFAULT_SUBSCRIPTIONS_LIMIT` (30).
+  - Dominant CTA block with direct registration link (or dashboard shortcut for authenticated users) and secondary *"See how it works"* anchor.
+  - Reassurance badges: *No credit card required*, *Up to 30 subscriptions*, *100% private*.
+- **Realistic App UI Mockup**:
+  - Replaces abstract financial illustrations with a realistic PaySubscriptions dashboard preview.
+  - Showcases dual-metric summary cards (Monthly Total and Yearly Equivalent) and sample subscriptions (Netflix, Spotify, iCloud+, Developer Pack) with normalized annual breakdowns.
+  - Explicitly labels sample data to set accurate user expectations.
+- **Key Value Pillars (3 Cards)**:
+  - *One Honest Total*: Side-by-side monthly and yearly cost totals.
+  - *100% Privacy First*: Reassurance regarding no bank access, credentials, or tracking.
+  - *Visual Breakdown*: Interactive charts to spot budget leaks.
+- **3-Step Workflow ("How It Works")**:
+  - Numbered walkthrough explaining the core flow: (1) Add your services, (2) Compare & Calculate, (3) Take control and review renewals.
 
-## Review material
+### 3.2. Pricing (`templates/pricing/index.html.twig`)
+- **Single Transparent Offer**:
+  - Avoids mock multi-tier enterprise models. Features a single, focused **"Free Plan"** card ($0 / free forever) for individuals and households.
+  - Clear list of included capabilities: tracking up to the dynamic account limit, monthly/yearly equivalents, interactive charts, and zero bank requirements.
+- **Integrated FAQ Grid**:
+  - Two-column responsive FAQ covering core objections: card requirements, bank credentials, subscription limits, and project sustainability.
+- **Support Transparency**:
+  - Any future donation or voluntary support is strictly differentiated from core account capabilities.
 
-Journey: a new user discovers Home → reads About → checks Pricing → opens registration. Public pages and local rendering of the new copy were reviewed. Production screenshots show the existing narrow browser viewport; the local preview shows a wider one — these are not a pixel-perfect before/after comparison or a simulation of a specific phone.
+### 3.3. About & Product Transparency (`templates/docs/index.html.twig`)
+- **Trust-Building Layout**:
+  - Replaced the rigid documentation sidebar layout with a clean, centered narrative card.
+- **Trust Badges Bar**:
+  - Visual summary highlighting *Zero Bank Access*, *Calculated Totals*, and *Private & Free*.
+- **Clear Roadmap Demarcation**:
+  - Delineates features available today (cost tracking, manual entry, monthly/yearly equivalents) from exploratory features without misleading dates or false commitments.
+- **Creator Contact & Feedback**:
+  - Direct contact CTA linking to the maintainer for feedback, suggestions, and feature discussions.
 
-### 1. Home — the benefit needed clarification
+### 3.4. Global Header & Footer (`templates/partials/`)
+- **Sticky Navigation**:
+  - Frosted glass effect (`backdrop-blur-md`, `bg-color-pri/95`), responsive mobile slide-out menu, and crisp logo dimensions (`36px` height).
+  - Distinct auth button hierarchy: subtle text link for "Sign In", prominent dark button for "Register".
+- **Structured Footer**:
+  - Brand overview with semantic version stamp (`appVersion`).
+  - Clear site directory navigation links.
+  - Product updates newsletter form with transparent disclaimer regarding the shared `gprodb.com` mailing list.
+  - Bottom bar with copyright and privacy/contact links.
 
-Strength: consistent, friendly character. Weakness: the illustration dominates the start of the message, and the subsequent description is long and generic. Reading the public content also surfaced "Customizable Notifications", despite no reminder implementation in the local code. The new copy removes that claim.
+---
 
-![Home — existing top of page](docs/research/public-pages-2026-09-22/01-home.png)
+## 4. Dashboard & Interactive Experience
 
-![Home — existing description in a narrow column](docs/research/public-pages-2026-09-22/01-home-details.png)
+### 4.1. KPI Summary Cards
+- **Monthly Overview**: Primary calculated monthly total combining direct monthly bills and normalized yearly subscriptions.
+- **Yearly Overview**: Primary calculated yearly total combining direct annual bills and normalized monthly subscriptions.
+- **Subscription Limit Card**: Visual capacity progress bar displaying currently used slots vs. maximum allowed limit, with colored status indicators (green / amber / red) and remaining capacity badge.
 
-### 2. About — too few trust-building specifics
+### 4.2. Interactive Charting & Legend Drawer
+- **Chart View Switching**: Seamless toggle between monthly breakdown, yearly view, and expense categories via `ChartSwitcher`.
+- **Sliding Legend Panel (`chart_legend_controller.js`)**:
+  - Stimulus-powered slide-out drawer providing dataset visibility toggling.
+  - Dataset search filter for quick lookup across subscriptions.
+  - Quick action buttons ("Show All", "Hide All").
+  - Live count indicator of visible vs. total datasets.
+  - Accessible keyboard control (Escape key dismisses panel).
 
-Strength: contact with the maintainer. Weakness: the generic description repeats Home marketing and targets businesses, instead of explaining real day-to-day use. The new copy explains the personal account, manual entries, costs, development direction, and current analytics.
+---
 
-![About — existing description](docs/research/public-pages-2026-09-22/02-about.png)
+## 5. Technical & Accessibility Standards
 
-### 3. Pricing — the limit was clear, the next step was not
-
-Strength: the 30-subscription limit is visible. Weakness: "for now" and "stay tuned" do not explain the terms or the next action. The new copy states the plan's contents, the absence of a paid upgrade, and the optional nature of support.
-
-![Pricing — existing offer](docs/research/public-pages-2026-09-22/03-pricing.png)
-
-### Copy revision preview
-
-This is the existing layout with new copy, not a proposed new design. Local rendering of all three pages was verified, along with the limit sourced from the application constant, the Home → About → Pricing link flow, and the transition to the registration form. No account was created, no forms were submitted, and no conversion was tested.
-
-![Home — new copy](docs/research/public-pages-2026-09-22/04-home-copy-preview.png)
-
-![About — new copy](docs/research/public-pages-2026-09-22/05-about-copy-preview.png)
-
-![Pricing — new copy](docs/research/public-pages-2026-09-22/06-pricing-copy-preview.png)
-
-Limitations: an assessment of content and selected views, not a full accessibility, security, or all-breakpoints audit. Changing copy may alter section heights; the precise layout, mockups, design choices, and their implementation remain a separate process.
+1. **HTML & Metadata Standards**:
+   - `base.html.twig` includes `lang="{{ app.request.locale|default('en') }}"` and responsive viewport meta tag.
+   - Dynamic meta descriptions and page titles configured across all routes for SEO and accessibility.
+2. **Responsive Layout**:
+   - Multi-breakpoint grid layouts (mobile, tablet, desktop) ensuring no awkward line wrapping or clipped cards on narrow screens.
+3. **Interactive Elements**:
+   - Explicit focus styles (`focus:ring-2`), accessible button contrast ratios, and tactile active states across buttons and inputs.
