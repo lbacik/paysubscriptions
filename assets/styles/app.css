@@ -111,23 +111,7 @@ body {
     }
 }
 
-table#subscriptions-table {
-    th,td {
-        @apply px-4 py-2;
-    }
-}
 
-.calculated {
-    @apply font-thin text-gray-300;
-}
-
-.chart-switch-button {
-    @apply border border-color-sec rounded-xl px-4 min-w-44 flex justify-center items-center;
-
-    .chart-switch-link {
-        @apply text-sm;
-    }
-}
 
 h1 {
     @apply text-2xl font-thin text-color-ter;

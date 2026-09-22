@@ -31,6 +31,30 @@ class SubscriptionService
         return $subscriptions;
     }
 
+    /**
+     * @param array<Subscription> $subscriptions
+     * @return array{monthly: float, yearly: float, monthlyCalculated: float, yearlyCalculated: float, count: int}
+     */
+    public function getTotals(array $subscriptions): array
+    {
+        $totals = [
+            'monthly' => 0.0,
+            'yearly' => 0.0,
+            'monthlyCalculated' => 0.0,
+            'yearlyCalculated' => 0.0,
+            'count' => count($subscriptions),
+        ];
+
+        foreach ($subscriptions as $subscription) {
+            $totals['monthly'] += (float) ($subscription->getMonthly() ?? 0.0);
+            $totals['yearly'] += (float) ($subscription->getYearly() ?? 0.0);
+            $totals['monthlyCalculated'] += (float) ($subscription->getMonthlyCalculated() ?? 0.0);
+            $totals['yearlyCalculated'] += (float) ($subscription->getYearlyCalculated() ?? 0.0);
+        }
+
+        return $totals;
+    }
+
     public function add(Subscription $subscription): void
     {
         $this->canAddNewSubscription($subscription->getOwner());

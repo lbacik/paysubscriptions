@@ -1,34 +1,37 @@
 
 {% if addSubscriptionDisabled == true %}
-    <div
-            class="w-full text-end pb-2 text-red-500"
-    >
-        {{ "subscription.limit_reached"|trans }}.
-        <a
-                href="{{ path('app_contact') }}"
-                class="underline font-semibold"
-        >{{ "Contact me"|trans }}</a> {{ "if you need more!"|trans }}
+    <div class="mb-4 p-3.5 rounded-2xl bg-amber-50 border border-amber-200/80 flex items-center justify-between text-xs text-amber-800">
+        <div class="flex items-center gap-2">
+            <i class="fa-solid fa-triangle-exclamation text-amber-500"></i>
+            <span>{{ "subscription.limit_reached"|trans }}.</span>
+        </div>
+        <a href="{{ path('app_contact') }}"
+           class="font-semibold underline hover:text-amber-900 transition-colors">
+            {{ "Contact me"|trans }} {{ "if you need more!"|trans }}
+        </a>
     </div>
 {% endif %}
 
-
-<div class="flex justify-between">
-
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
     <div>
-        <h1 class="text-2xl font-light mb-4">Subscriptions</h1>
+        <h2 class="text-xl font-bold text-slate-900 tracking-tight">Your Subscriptions</h2>
+        <p class="text-xs text-slate-500 mt-0.5">List of all active recurring payments and their calculated costs</p>
     </div>
 
     <div>
         {% if addSubscriptionDisabled == false %}
-            <twig:Button
-                    data-turbo-frame="modal"
-                    href="{{ path('app_subscription_new') }}"
-            >
-                {{ "add_subscription"|trans }}
-            </twig:Button>
+            <a href="{{ path('app_subscription_new') }}"
+               data-turbo-frame="modal"
+               class="btn-primary text-xs py-2 px-4 inline-flex items-center gap-2 shadow-xs hover:shadow transition-all">
+                <i class="fa-solid fa-plus text-xs"></i>
+                <span>{{ "add_subscription"|trans }}</span>
+            </a>
         {% else %}
-            <twig:Button disabled="true">{{ "add_subscription"|trans }}</twig:Button>
+            <button disabled
+                    class="btn-secondary text-xs py-2 px-4 opacity-50 cursor-not-allowed inline-flex items-center gap-2">
+                <i class="fa-solid fa-lock text-xs text-slate-400"></i>
+                <span>{{ "add_subscription"|trans }}</span>
+            </button>
         {% endif %}
     </div>
-
 </div>

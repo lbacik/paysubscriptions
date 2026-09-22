@@ -1,25 +1,139 @@
 {% extends 'base.html.twig' %}
 
-{% block body %}
-    <twig:ContentCenter class="mt-6 md:my-10" width="w-full md:w-2/3">
-        {% if subscriptions|length > 0 %}
-            <turbo-frame id="chart">
-                <twig:ChartSwitcher class="mb-5 px-5 md:px-0" :active="active"/>
+{% block title %}{{ "dashboard.title"|trans }} — {{ "service.name"|trans }}{% endblock %}
 
-                <div
-                        id="chart-container"
-                        class="p-5 mx-auto {% if fullWidth %} w-full {% else %} w-2/3 lg:w-1/2 {% endif %}"
-                >
+{% block body %}
+<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 space-y-8">
+
+    <!-- Dashboard Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+            <h1 class="text-3xl font-extrabold text-slate-900 tracking-tight">
+                {{ "dashboard.title"|trans }}
+            </h1>
+            <p class="text-sm text-slate-500 mt-1">
+                {{ "dashboard.subtitle"|trans }}
+            </p>
+        </div>
+
+        {% if addSubscriptionDisabled == false %}
+            <a href="{{ path('app_subscription_new') }}"
+               data-turbo-frame="modal"
+               class="btn-primary text-sm py-2.5 px-5 self-start sm:self-auto inline-flex items-center gap-2 shadow-xs hover:shadow transition-all">
+                <i class="fa-solid fa-plus text-xs"></i>
+                <span>{{ "add_subscription"|trans }}</span>
+            </a>
+        {% endif %}
+    </div>
+
+    <!-- Summary KPI Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <!-- Monthly Spending Card -->
+        <div class="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-2xs hover:shadow-xs transition-shadow">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">{{ "dashboard.kpi.monthly_title"|trans }}</span>
+                <div class="w-9 h-9 rounded-xl bg-blue-50 text-color-ter flex items-center justify-center text-sm">
+                    <i class="fa-solid fa-calendar-day"></i>
+                </div>
+            </div>
+            <div class="mt-3">
+                <div class="text-3xl font-extrabold text-slate-900 tracking-tight">
+                    {{ totals.monthlyCalculated|number_format(2, '.', ' ') }}
+                    <span class="text-sm font-normal text-slate-400">/ mo</span>
+                </div>
+                <div class="mt-2 text-xs text-slate-500 flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <span class="inline-flex items-center gap-1 font-medium text-slate-700">
+                        {{ totals.monthly|number_format(2, '.', ' ') }}
+                    </span>
+                    <span class="text-slate-400">{{ "dashboard.kpi.monthly_direct"|trans }}</span>
+                    {% set monthlyFromYearly = totals.monthlyCalculated - totals.monthly %}
+                    {% if monthlyFromYearly > 0.01 %}
+                        <span class="text-slate-300">•</span>
+                        <span class="text-slate-500">+{{ monthlyFromYearly|number_format(2, '.', ' ') }} {{ "dashboard.kpi.monthly_normalized"|trans }}</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Yearly Spending Card -->
+        <div class="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-2xs hover:shadow-xs transition-shadow">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">{{ "dashboard.kpi.yearly_title"|trans }}</span>
+                <div class="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center text-sm">
+                    <i class="fa-solid fa-calendar-check"></i>
+                </div>
+            </div>
+            <div class="mt-3">
+                <div class="text-3xl font-extrabold text-slate-900 tracking-tight">
+                    {{ totals.yearlyCalculated|number_format(2, '.', ' ') }}
+                    <span class="text-sm font-normal text-slate-400">/ yr</span>
+                </div>
+                <div class="mt-2 text-xs text-slate-500 flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <span class="inline-flex items-center gap-1 font-medium text-slate-700">
+                        {{ totals.yearly|number_format(2, '.', ' ') }}
+                    </span>
+                    <span class="text-slate-400">{{ "dashboard.kpi.yearly_direct"|trans }}</span>
+                    {% set yearlyFromMonthly = totals.yearlyCalculated - totals.yearly %}
+                    {% if yearlyFromMonthly > 0.01 %}
+                        <span class="text-slate-300">•</span>
+                        <span class="text-slate-500">+{{ yearlyFromMonthly|number_format(2, '.', ' ') }} {{ "dashboard.kpi.yearly_normalized"|trans }}</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Subscriptions Count / Limits Card -->
+        <div class="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-2xs hover:shadow-xs transition-shadow">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">{{ "dashboard.kpi.limit_title"|trans }}</span>
+                <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-sm">
+                    <i class="fa-solid fa-receipt"></i>
+                </div>
+            </div>
+            <div class="mt-3">
+                <div class="text-3xl font-extrabold text-slate-900 tracking-tight">
+                    {{ totals.count }}
+                    <span class="text-sm font-normal text-slate-400">/ {{ subscriptionLimit }}</span>
+                </div>
+                <div class="mt-3">
+                    <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                        <div class="h-full rounded-full transition-all duration-500 {% if limitPercentage >= 100 %}bg-red-500{% elseif limitPercentage >= 80 %}bg-amber-500{% else %}bg-emerald-500{% endif %}"
+                             style="width: {{ limitPercentage }}%"></div>
+                    </div>
+                    <div class="mt-1.5 flex items-center justify-between text-[11px] text-slate-500">
+                        <span>{{ "dashboard.kpi.slots_used"|trans({'%count%': totals.count, '%limit%': subscriptionLimit}) }}</span>
+                        {% if addSubscriptionDisabled %}
+                            <span class="text-red-500 font-semibold">{{ "subscription.limit_reached"|trans }}</span>
+                        {% else %}
+                            <span class="text-emerald-600 font-medium">{{ subscriptionLimit - totals.count }} remaining</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart Section Card -->
+    {% if subscriptions|length > 0 %}
+        <div class="bg-white rounded-3xl border border-slate-200/80 shadow-xs p-6 md:p-8">
+            <turbo-frame id="chart">
+                <twig:ChartSwitcher :active="active"/>
+
+                <div id="chart-container"
+                     class="mt-6 mx-auto w-full {% if fullWidth %} h-[360px] md:h-[420px] {% else %} max-w-xl h-[340px] md:h-[380px] {% endif %} relative flex items-center justify-center">
                     {{ render_chart(chart, {
                         'data-controller': 'chart-click',
                         'data-chart-click-url-value': path('app_dashboard', { 'chartType': 'monthly' }),
                     } ) }}
                 </div>
             </turbo-frame>
-        {% endif %}
-
-        <div class="my-20">
-            {{ include('dashboard/_table.html.twig') }}
         </div>
-    </twig:ContentCenter>
+    {% endif %}
+
+    <!-- Subscriptions Table Card -->
+    <div class="bg-white rounded-3xl border border-slate-200/80 shadow-xs p-6 md:p-8">
+        {{ include('dashboard/_table.html.twig') }}
+    </div>
+
+</div>
 {% endblock %}

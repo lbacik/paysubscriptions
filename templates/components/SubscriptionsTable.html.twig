@@ -1,53 +1,55 @@
-<table id="subscriptions-table" class="table-auto w-full rounded-xl border border-separate border-color-sec">
-    <thead>
-    <tr class="bg-zinc-200">
-        <th scope="col" class="w-auto rounded-tl-xl">#</th>
-        <th scope="col" class="w-auto">
-            <twig:SortableColumn field="name">Subscription</twig:SortableColumn>
-        </th>
-        <th scope="col" class="w-auto">
-            <twig:SortableColumn field="monthly">Monthly</twig:SortableColumn>
-        </th>
-        <th scope="col" class="w-auto">
-            <twig:SortableColumn field="yearly">Yearly</twig:SortableColumn>
-        </th>
-        <th scope="col" class="md:w-56 rounded-tr-xl">Actions</th>
-    </tr>
-    </thead>
-    <tbody class="divide-y divide-gray-200">
+<div class="overflow-x-auto">
+    <table id="subscriptions-table" class="w-full text-left text-sm">
+        <thead>
+        <tr class="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 uppercase tracking-wider">
+            <th scope="col" class="py-3 px-4 w-12 text-slate-400">#</th>
+            <th scope="col" class="py-3 px-4">
+                <twig:SortableColumn field="name">Subscription</twig:SortableColumn>
+            </th>
+            <th scope="col" class="py-3 px-4 text-end">
+                <twig:SortableColumn field="monthly">Monthly</twig:SortableColumn>
+            </th>
+            <th scope="col" class="py-3 px-4 text-end">
+                <twig:SortableColumn field="yearly">Yearly</twig:SortableColumn>
+            </th>
+            <th scope="col" class="py-3 px-4 text-end md:w-48">Actions</th>
+        </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
 
-    {% for subscription in this.subscriptions %}
-        {{ include('dashboard/_row.html.twig', {subscription: subscription}) }}
-    {% endfor %}
+        {% for subscription in this.subscriptions %}
+            {{ include('dashboard/_row.html.twig', {subscription: subscription}) }}
+        {% endfor %}
 
-    </tbody>
-    <tfoot>
+        </tbody>
+        <tfoot>
 
-    {% set total = this.total %}
+        {% set total = this.total %}
 
-    <tr class="bg-color-pri">
-        <td></td>
-        <td class="font-bold">
-            <div>Total</div>
-            <div class="font-thin">included calculated</div>
-        </td>
-        <td class="font-bold text-end">
-            <div>
-                {{ total.monthly|number_format(2, '.', ' ') }}
-            </div>
-            <div class="font-thin">
-                {{ total.monthlyCalculated|number_format(2, '.', ' ') }}
-            </div>
-        </td>
-        <td class="font-bold text-end">
-            <div>
-                {{ total.yearly|number_format(2, '.', ' ') }}
-            </div>
-            <div class="font-thin">
-                {{ total.yearlyCalculated|number_format(2, '.', ' ') }}
-            </div>
-        </td>
-        <td></td>
-    </tr>
-    </tfoot>
-</table>
+        <tr class="bg-slate-50/80 border-t-2 border-slate-200 text-slate-900">
+            <td></td>
+            <td class="py-4 px-4 font-bold">
+                <div>Total</div>
+                <div class="text-xs text-slate-500 font-normal">incl. normalized equivalents</div>
+            </td>
+            <td class="py-4 px-4 font-bold text-end">
+                <div class="text-base text-slate-900">
+                    {{ total.monthlyCalculated|number_format(2, '.', ' ') }}
+                </div>
+                <div class="text-xs text-slate-500 font-normal">
+                    ({{ total.monthly|number_format(2, '.', ' ') }} direct)
+                </div>
+            </td>
+            <td class="py-4 px-4 font-bold text-end">
+                <div class="text-base text-slate-900">
+                    {{ total.yearlyCalculated|number_format(2, '.', ' ') }}
+                </div>
+                <div class="text-xs text-slate-500 font-normal">
+                    ({{ total.yearly|number_format(2, '.', ' ') }} direct)
+                </div>
+            </td>
+            <td></td>
+        </tr>
+        </tfoot>
+    </table>
+</div>
