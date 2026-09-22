@@ -4,7 +4,7 @@
     <div class="max-w-screen-xl flex flex-wrap items-center justify-between mx-auto p-4">
         <div class="flex items-center space-x-3">
             <a id="header-logo" href="{{ path('app_home') }}" class="flex items-center space-x-2.5">
-                <img src="{{ asset('images/paysubs-v3.png') }}" class="h-9 w-auto" alt="PaySubscriptions Logo"/>
+                <img src="{{ asset('images/paysubs-v3.png') }}" height="36" width="36" style="height: 36px; width: auto;" class="h-9 w-auto" alt="PaySubscriptions Logo"/>
                 <span class="self-center text-xl font-bold tracking-tight text-slate-900">{{ "service.name"|trans }}</span>
             </a>
         </div>
@@ -16,7 +16,7 @@
                     {{ include('partials/_user_profile_menu.html.twig') }}
                 {% else %}
                     <a href="{{ path('app_login') }}" class="px-4 py-2 text-sm font-semibold text-slate-700 hover:text-slate-900 rounded-xl hover:bg-slate-100 transition-colors">{{ 'user.login'|trans }}</a>
-                    <a href="{{ path('app_register') }}" class="px-4 py-2 text-sm font-semibold text-white bg-color-qua hover:bg-slate-800 rounded-xl shadow-sm transition-all">{{ 'user.register'|trans }}</a>
+                    <a href="{{ path('app_register') }}" class="px-4 py-2 text-sm font-semibold text-white bg-slate-900 hover:bg-slate-800 rounded-xl shadow-sm transition-all">{{ 'user.register'|trans }}</a>
                 {% endif %}
             </div>
 
