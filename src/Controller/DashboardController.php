@@ -37,11 +37,24 @@ class DashboardController extends AbstractController
             default => $this->chartService->createBarChart($subscriptions),
         };
 
+        $user = $this->getUser();
+        $totals = $this->subscriptionService->getTotals($subscriptions);
+        $subscriptionLimit = $user instanceof \App\Entity\User
+            ? $user->getSubscriptionsLimit()
+            : \App\Entity\Limits::DEFAULT_SUBSCRIPTIONS_LIMIT;
+        $count = count($subscriptions);
+        $limitPercentage = $subscriptionLimit > 0
+            ? min(100, (int) round(($count / $subscriptionLimit) * 100))
+            : 0;
+
         return $this->render('dashboard/index.html.twig', [
             'subscriptions' => $subscriptions,
             'chart' => $chart,
             'fullWidth' => $chartType === 'bar',
             'active' => ['type' => $chartType, 'withCalculated' => $withCalculated, 'month' => $month],
+            'totals' => $totals,
+            'subscriptionLimit' => $subscriptionLimit,
+            'limitPercentage' => $limitPercentage,
             'addSubscriptionDisabled' => ! $this->subscriptionService->isAbleToAddSubscription($this->getUser()),
         ]);
     }

@@ -1,38 +1,91 @@
-{% props active = {type: 'bar', withCalculated: false} %}
+{% props active = {type: 'bar', withCalculated: false, month: null}, subscriptionsCount = null %}
 
-<div {{ attributes.defaults({ class: "flex flex-row space-x-2 justify-end"}) }}>
-    <div class="flex flex-col space-y-1">
-        <twig:ChartSwitchElement
-                href="{{ path('app_dashboard', {chartType: 'bar'}) }}"
-                active="{{ active.type is not defined or active.type == 'bar' }}"
-        >{{ "dashboard.switch.by_month"|trans }}</twig:ChartSwitchElement>
-        <twig:ChartSwitchElement
-                href="{{ path('app_dashboard', {chartType: 'monthly', month: active.month or 1}) }}"
-                active="{{ active.type == 'monthly' and active.month }}"
-                :select="['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec']"
-                :selected="active.month" />
+{% set isBarActive = active.type is not defined or active.type == 'bar' %}
+{% set isMonthlyActive = active.type is defined and active.type == 'monthly' %}
+{% set isYearlyActive = active.type is defined and active.type == 'yearly' %}
+
+<div {{ attributes.defaults({ class: "flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-4 border-b border-slate-100" }) }}>
+    <!-- Primary View Switcher (Segmented Control) -->
+    <div class="inline-flex p-1 bg-slate-100/90 rounded-2xl border border-slate-200/80 shadow-2xs self-start">
+        <a href="{{ path('app_dashboard', {chartType: 'bar'}) }}"
+           class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all duration-150 {{ isBarActive ? 'bg-white text-slate-900 shadow-xs border border-slate-200/60' : 'text-slate-600 hover:text-slate-900' }}">
+            <i class="fa-solid fa-chart-column text-xs text-color-ter"></i>
+            <span>{{ "dashboard.switch.by_month"|trans }}</span>
+        </a>
+
+        <a href="{{ path('app_dashboard', {chartType: 'monthly', withCalculated: active.withCalculated ? 1 : 0}) }}"
+           class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all duration-150 {{ isMonthlyActive ? 'bg-white text-slate-900 shadow-xs border border-slate-200/60' : 'text-slate-600 hover:text-slate-900' }}">
+            <i class="fa-solid fa-chart-pie text-xs text-color-ter"></i>
+            <span>{{ "dashboard.switch.per_month"|trans }}</span>
+        </a>
+
+        <a href="{{ path('app_dashboard', {chartType: 'yearly', withCalculated: active.withCalculated ? 1 : 0}) }}"
+           class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all duration-150 {{ isYearlyActive ? 'bg-white text-slate-900 shadow-xs border border-slate-200/60' : 'text-slate-600 hover:text-slate-900' }}">
+            <i class="fa-solid fa-chart-simple text-xs text-color-ter"></i>
+            <span>{{ "dashboard.switch.per_year"|trans }}</span>
+        </a>
     </div>
 
-    <div class="flex flex-col space-y-1">
-        <twig:ChartSwitchElement
-                href="{{ path('app_dashboard', {chartType: 'monthly'}) }}"
-                active="{{ active.type == 'monthly' and active.month is null }}"
-        >{{ "dashboard.switch.per_month"|trans }}</twig:ChartSwitchElement>
-        <twig:ChartSwitchElement
-                href="{{ path('app_dashboard', {chartType: 'monthly', withCalculated: true}) }}"
-                active="{{ active.type == 'monthly' and active.withCalculated }}"
-        >{{ "dashboard.switch.with_calculated"|trans }}</twig:ChartSwitchElement>
-    </div>
+    <!-- Secondary Contextual Controls -->
+    <div class="flex flex-wrap items-center gap-3">
+        {% if isMonthlyActive %}
+            <div class="flex items-center gap-2">
+                <span class="text-xs font-medium text-slate-500">{{ "dashboard.switch.filter_month"|trans }}</span>
+                <twig:Select
+                    :options="['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec']"
+                    :selected="active.month ? active.month - 1 : 0"
+                    :url="path('app_dashboard', {chartType: 'monthly', withCalculated: active.withCalculated ? 1 : 0})"
+                />
+                {% if active.month %}
+                    <a href="{{ path('app_dashboard', {chartType: 'monthly', withCalculated: active.withCalculated ? 1 : 0}) }}"
+                       class="inline-flex items-center justify-center w-6 h-6 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                       title="{{ 'dashboard.switch.all_months'|trans }}">
+                        <i class="fa-solid fa-xmark text-xs"></i>
+                    </a>
+                {% endif %}
+            </div>
 
-    <div class="flex flex-col space-y-1">
-        <twig:ChartSwitchElement
-                href="{{ path('app_dashboard', {chartType: 'yearly'}) }}"
-                active="{{ active.type == 'yearly' }}"
-        >{{ "dashboard.switch.per_year"|trans }}</twig:ChartSwitchElement>
-        <twig:ChartSwitchElement
-                href="{{ path('app_dashboard', {chartType: 'yearly', withCalculated: true}) }}"
-                active="{{ active.type == 'yearly' and active.withCalculated }}"
-        >{{ "dashboard.switch.with_calculated"|trans }}</twig:ChartSwitchElement>
+            {% set toggleMonthlyCalcUrl = path('app_dashboard', {
+                chartType: 'monthly',
+                month: active.month,
+                withCalculated: active.withCalculated ? 0 : 1
+            }) %}
+            <a href="{{ toggleMonthlyCalcUrl }}"
+               class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium border transition-all duration-150 {{ active.withCalculated ? 'bg-slate-900 text-white border-slate-900 shadow-xs' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50 hover:text-slate-900' }}">
+                <i class="fa-solid {{ active.withCalculated ? 'fa-circle-check text-emerald-400' : 'fa-circle text-slate-300' }}"></i>
+                <span>{{ "dashboard.switch.with_calculated_monthly"|trans }}</span>
+            </a>
+        {% elseif isYearlyActive %}
+            {% set toggleYearlyCalcUrl = path('app_dashboard', {
+                chartType: 'yearly',
+                withCalculated: active.withCalculated ? 0 : 1
+            }) %}
+            <a href="{{ toggleYearlyCalcUrl }}"
+               class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium border transition-all duration-150 {{ active.withCalculated ? 'bg-slate-900 text-white border-slate-900 shadow-xs' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50 hover:text-slate-900' }}">
+                <i class="fa-solid {{ active.withCalculated ? 'fa-circle-check text-emerald-400' : 'fa-circle text-slate-300' }}"></i>
+                <span>{{ "dashboard.switch.with_calculated_yearly"|trans }}</span>
+            </a>
+        {% else %}
+            <div class="hidden sm:inline-flex items-center gap-1.5 text-xs text-slate-500 bg-slate-50 border border-slate-200/70 px-3 py-1.5 rounded-xl">
+                <i class="fa-regular fa-lightbulb text-amber-500"></i>
+                <span>{{ "dashboard.switch.click_hint"|trans }}</span>
+            </div>
 
+            <button type="button"
+                    data-action="click->chart-legend#toggle"
+                    data-chart-legend-target="toggleBtn"
+                    aria-expanded="false"
+                    aria-label="{{ 'dashboard.legend.title'|trans }}"
+                    class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold border border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700 shadow-2xs hover:text-slate-900 transition-all cursor-pointer">
+                <i class="fa-solid fa-layer-group text-color-ter"></i>
+                <span>{{ "dashboard.legend.button"|trans }}</span>
+                <span data-chart-legend-target="badge"
+                      class="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-bold bg-slate-100 text-slate-600 rounded-full">
+                    {% if subscriptionsCount is defined and subscriptionsCount is not null %}
+                        {{ subscriptionsCount }}
+                    {% endif %}
+                </span>
+            </button>
+        {% endif %}
     </div>
 </div>

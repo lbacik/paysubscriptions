@@ -29,21 +29,6 @@ final class SubscriptionsTable
 
     public function getTotal(): array
     {
-        $subscriptions = $this->getSubscriptions();
-        $totals = [
-            'monthly' => 0.0,
-            'yearly' => 0.0,
-            'monthlyCalculated' => 0.0,
-            'yearlyCalculated' => 0.0,
-        ];
-
-        foreach ($subscriptions as $subscription) {
-            $totals['monthly'] += $subscription->getMonthly();
-            $totals['yearly'] += $subscription->getYearly();
-            $totals['monthlyCalculated'] += $subscription->getMonthlyCalculated();
-            $totals['yearlyCalculated'] += $subscription->getYearlyCalculated();
-        }
-
-        return $totals;
+        return $this->subscriptionService->getTotals($this->getSubscriptions());
     }
 }

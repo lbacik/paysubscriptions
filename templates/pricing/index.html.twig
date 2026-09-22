@@ -7,45 +7,156 @@
 {% endblock %}
 
 {% block body %}
+<div class="relative overflow-hidden py-12 md:py-20">
+    <!-- Subtle gradient background highlight -->
+    <div class="absolute -top-40 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-blue-100/50 rounded-full blur-3xl pointer-events-none"></div>
 
-    <div class="flex flex-col w-4/5 md:w-1/2 mx-auto mt-20 mb-10 font-handwriting2 text-xl text-color-qua space-y-10">
-        <h1><span class="px-3 bg-yellow-100 font-bold">A clear view of your subscriptions. For free.</span></h1>
-
-        <div class="mx-10 px-10 py-5 rounded-xl bg-purple-200 font-handwriting text-2xl text-color-ter">
-            <span class="font-bold">Free plan</span>: Track up to {{ constant('App\\Entity\\Limits::DEFAULT_SUBSCRIPTIONS_LIMIT') }} subscriptions per account. No payment card required.
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        <!-- Header -->
+        <div class="text-center max-w-2xl mx-auto">
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-700 mb-4">
+                <i class="fa-solid fa-tag text-color-ter"></i>
+                Transparent &amp; Free
+            </span>
+            <h1 class="text-4xl sm:text-5xl font-extrabold text-slate-900 tracking-tight">
+                A clear view of your subscriptions. <span class="text-color-ter">For free.</span>
+            </h1>
+            <p class="mt-4 text-lg text-slate-600">
+                Track personal and household recurring costs with no credit card, no subscription fees, and no surprise charges.
+            </p>
         </div>
 
-        <p>
-            Add, edit and remove subscriptions, compare monthly and yearly costs, and view charts
-            of the amounts you enter. All of these features are included.
-        </p>
+        <!-- Featured Pricing Card -->
+        <div class="mt-12 max-w-lg mx-auto bg-white rounded-3xl border border-slate-200/90 shadow-xl overflow-hidden">
+            <div class="p-8 sm:p-10">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-2xl font-bold text-slate-900">Free Plan</h2>
+                        <p class="text-sm text-slate-500 mt-1">For individuals and households</p>
+                    </div>
+                    <span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 uppercase tracking-wide">
+                        Available Today
+                    </span>
+                </div>
 
-        <p class="font-handwriting2">
-            {% if app.user %}
-                <a href="{{ path('app_dashboard') }}" class="underline">View your subscriptions</a>.
-            {% else %}
-                <a href="{{ path('app_register') }}" class="underline">Create your free account</a> and add your first subscription.
-            {% endif %}
-        </p>
+                <div class="mt-6 flex items-baseline">
+                    <span class="text-5xl font-extrabold text-slate-900">$0</span>
+                    <span class="ml-2 text-slate-500 font-medium">/ free forever</span>
+                </div>
 
-        <p>
-            You enter and update your subscriptions yourself. Renewal reminders are not available yet.
-            <a href="{{ path('app_docs') }}" class="underline">See what is available today and what we are exploring</a>.
-        </p>
+                <p class="mt-4 text-sm text-slate-600 leading-relaxed">
+                    Add, edit, and organize up to {{ constant('App\\Entity\\Limits::DEFAULT_SUBSCRIPTIONS_LIMIT') }} subscriptions, compare equivalents, and view charts.
+                </p>
 
-        <p>
-            Need to track more than {{ constant('App\\Entity\\Limits::DEFAULT_SUBSCRIPTIONS_LIMIT') }} subscriptions?
-            <a href="{{ path('app_contact') }}" class="underline">Tell us what you need</a>.
-            There is no paid upgrade available today.
-        </p>
+                <div class="mt-8">
+                    {% if app.user %}
+                        <a href="{{ path('app_dashboard') }}" class="btn-cta w-full text-center">
+                            View your subscriptions
+                        </a>
+                    {% else %}
+                        <a href="{{ path('app_register') }}" class="btn-cta w-full text-center">
+                            Create your free account
+                            <i class="fa-solid fa-arrow-right ml-2 text-sm"></i>
+                        </a>
+                    {% endif %}
+                </div>
 
-        <div class="flex flex-col mx-auto w-fit text-center border border-green-400 rounded-xl bg-green-50 px-5 py-5">
-            <span class="font-bold bg-green-100 py-1 font-sans">Want to support the project?</span>
-            <div class="my-5 flex items-center justify-center">
-                <a href="https://www.buymeacoffee.com/lbacik" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>
+                <!-- Included Features -->
+                <div class="mt-8 pt-8 border-t border-slate-100">
+                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Everything included:</h3>
+                    <ul class="space-y-3.5 text-sm text-slate-700">
+                        <li class="flex items-start">
+                            <i class="fa-solid fa-check text-emerald-600 mt-1 mr-3 shrink-0"></i>
+                            <span>Track up to <strong>{{ constant('App\\Entity\\Limits::DEFAULT_SUBSCRIPTIONS_LIMIT') }} subscriptions</strong> per account</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fa-solid fa-check text-emerald-600 mt-1 mr-3 shrink-0"></i>
+                            <span>Automatic <strong>monthly &amp; yearly cost equivalents</strong></span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fa-solid fa-check text-emerald-600 mt-1 mr-3 shrink-0"></i>
+                            <span>Interactive cost breakdown charts</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fa-solid fa-check text-emerald-600 mt-1 mr-3 shrink-0"></i>
+                            <span><strong>No bank credentials</strong> required — 100% privacy</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fa-solid fa-check text-emerald-600 mt-1 mr-3 shrink-0"></i>
+                            <span>No payment card needed — never charged</span>
+                        </li>
+                    </ul>
+                </div>
             </div>
-            Contributions are optional. They do not change your account limit or unlock extra features.
+        </div>
+
+        <!-- FAQ Grid -->
+        <div class="mt-20">
+            <div class="text-center max-w-xl mx-auto mb-10">
+                <h2 class="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">Frequently Asked Questions</h2>
+                <p class="mt-2 text-slate-600 text-sm">Honest answers to common questions about PaySubscriptions.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Question 1 -->
+                <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs">
+                    <h3 class="text-base font-bold text-slate-900 mb-2 flex items-center gap-2">
+                        <i class="fa-solid fa-credit-card text-color-ter"></i>
+                        Do I need to provide a payment card?
+                    </h3>
+                    <p class="text-sm text-slate-600 leading-relaxed">
+                        No. You will never be asked for credit card details. Creating an account and using the service up to the limit is completely free.
+                    </p>
+                </div>
+
+                <!-- Question 2 -->
+                <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs">
+                    <h3 class="text-base font-bold text-slate-900 mb-2 flex items-center gap-2">
+                        <i class="fa-solid fa-building-columns text-emerald-600"></i>
+                        Does PaySubscriptions connect to my bank?
+                    </h3>
+                    <p class="text-sm text-slate-600 leading-relaxed">
+                        No. We do not connect to bank accounts or automatically import transactions. You enter subscription details yourself, keeping full control over your financial privacy.
+                    </p>
+                </div>
+
+                <!-- Question 3 -->
+                <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs">
+                    <h3 class="text-base font-bold text-slate-900 mb-2 flex items-center gap-2">
+                        <i class="fa-solid fa-layer-group text-indigo-500"></i>
+                        What if I need more than {{ constant('App\\Entity\\Limits::DEFAULT_SUBSCRIPTIONS_LIMIT') }} subscriptions?
+                    </h3>
+                    <p class="text-sm text-slate-600 leading-relaxed">
+                        There is currently no paid tier or higher limit plan available. If you need more entries, please <a href="{{ path('app_contact') }}" class="text-color-ter font-semibold underline">tell us what you need</a> so we can consider it for future updates.
+                    </p>
+                </div>
+
+                <!-- Question 4 -->
+                <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs">
+                    <h3 class="text-base font-bold text-slate-900 mb-2 flex items-center gap-2">
+                        <i class="fa-solid fa-bell text-amber-500"></i>
+                        Are renewal reminders available?
+                    </h3>
+                    <p class="text-sm text-slate-600 leading-relaxed">
+                        Not today. Renewal reminders and upcoming-costs alerts are in research and planning. <a href="{{ path('app_docs') }}" class="text-color-ter font-semibold underline">See what is available today vs. what we are exploring</a>.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Optional Support (Buy Me a Coffee) -->
+        <div class="mt-16 bg-white rounded-2xl border border-slate-200/80 p-8 text-center max-w-xl mx-auto shadow-xs">
+            <span class="text-xs font-bold text-color-ter uppercase tracking-wider">Project Independence</span>
+            <h3 class="text-xl font-bold text-slate-900 mt-1 mb-2">Want to support the project?</h3>
+            <p class="text-sm text-slate-600 leading-relaxed mb-6">
+                PaySubscriptions is independently maintained. Voluntary contributions help cover hosting and domain costs. They are completely optional and do not change your account limits.
+            </p>
+            <div class="flex items-center justify-center">
+                <a href="https://www.buymeacoffee.com/lbacik" target="_blank" rel="noopener noreferrer" class="inline-block transform hover:scale-105 transition-transform duration-200">
+                    <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 48px !important; width: 174px !important;">
+                </a>
+            </div>
         </div>
     </div>
-
+</div>
 {% endblock %}

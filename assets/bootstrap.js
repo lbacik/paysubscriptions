@@ -6,6 +6,9 @@ const app = startStimulusApp();
 import ChartClickController from './controllers/chart_click_controller.js';
 app.register('chart-click', ChartClickController);
 
+import ChartLegendController from './controllers/chart_legend_controller.js';
+app.register('chart-legend', ChartLegendController);
+
 import SelectMonthController from './controllers/select_month_controller.js';
 app.register('select-month', SelectMonthController);
 
