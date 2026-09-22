@@ -1,5 +1,11 @@
 {% extends 'base.html.twig' %}
 
+{% block title %}PaySubscriptions — See what your subscriptions add up to{% endblock %}
+
+{% block metaheaders %}
+    <meta name="description" content="Track your subscriptions in one place and compare monthly and yearly costs. Free for up to {{ constant('App\\Entity\\Limits::DEFAULT_SUBSCRIPTIONS_LIMIT') }} subscriptions. No bank connection or payment card required.">
+{% endblock %}
+
 {% block body %}
     <div class="relative">
         <div class="absolute w-screen top-20 block h-56 bg-color-ter z-0"></div>
@@ -7,52 +13,51 @@
     <div class="flex flex-col w-2/3 m-auto py-20">
         <div class="flex flex-col md:flex-row">
             <div class="w-full md:w-1/3 p-4 flex items-center justify-center">
-                <img src="{{ asset('images/chart02.png') }}" alt="cartoon chart" class="w-96 hover:scale-110 transition duration-500 z-10"/>
+                <img src="{{ asset('images/chart02.png') }}" alt="" class="w-96 hover:scale-110 transition duration-500 z-10"/>
             </div>
             <div class="flex flex-col items-center justify-center w-full md:w-2/3 text-xl text-color-qua font-handwriting2 space-y-12 pt-2">
-                <p class="pl-10 pr-5 font-handwriting md:text-color-pri text-4xl z-10">
-                    Are you tired of losing track of your <span class="underline">subscriptions</span> and being surprised by payment <span class="text-color-qui">deadlines</span>?
-                </p>
+                <h1 class="pl-10 pr-5 z-10">
+                    <span class="font-handwriting md:text-color-pri text-4xl">See what your <span class="underline">subscriptions</span> add up to.</span>
+                </h1>
                 <div class="px-5 md:px-20 z-20">
                     <p class="bg-color-pri py-4 px-8 rounded-xl shadow-xl hover:shadow-purple-400 transition duration-500 bg-lime-50 hover:bg-lime-200">
-                        Reassure yourself with <strong>PaySubscriptions</strong> - the ultimate subscription management tool that puts you back in
-                        control.
+                        Keep your subscriptions in one place with <strong>PaySubscriptions</strong>.
+                        Add your costs and compare monthly and yearly totals — no bank connection needed.
                     </p>
                 </div>
-{#                <p class="px-5">#}
-{#                    Say goodbye to the hassle of juggling multiple payment dates and forgotten renewals. With#}
-{#                    our intuitive interface, you can easily store and monitor all your subscriptions in one centralized#}
-{#                    location.#}
-{#                </p>#}
+                <p class="px-5 z-20">
+                    {% if app.user %}
+                        <a href="{{ path('app_dashboard') }}" class="underline">View your subscriptions</a>
+                    {% else %}
+                        <a href="{{ path('app_register') }}" class="underline">Create your free account</a>
+                    {% endif %}
+                    — up to {{ constant('App\\Entity\\Limits::DEFAULT_SUBSCRIPTIONS_LIMIT') }} subscriptions. No payment card required.
+                </p>
             </div>
         </div>
 
         <div class="mt-10 md:mr-10 p-10 px-20 font-handwriting text-2xl font-thin bg-blue-100 rounded-xl shadow-xl hover:shadow-purple-400 transition duration-500 text-color-ter">
             <p>
-                Manage your subscription details, including payment amounts, intervals, and following due dates. Plus,
-                generate comprehensive reports to gain valuable insights into your monthly and annual subscription
-                spending, empowering you to make smart financial decisions.
+                From streaming to software, small subscriptions add up. See their costs together
+                and decide which ones are still worth keeping.
             </p>
         </div>
 
         <div class="mt-10 flex flex-col md:flex-row">
             <div class="flex items-center w-full md:w-2/3 p-4 font-handwriting2 text-xl text-color-qua">
                 <div>
-                    <h3 class="text-3xl mb-5 underline">Key Features:</h3>
+                    <h2 class="text-3xl mb-5 underline">What you can do today</h2>
                     <ul class="list-disc list-inside">
-                        <li class="ml-5">Centralized subscription management</li>
-                        <li class="ml-5">Monthly and annual subscription spending reports</li>
-                        <li class="ml-5">Intuitive User Interface</li>
-                        <li class="ml-5">Customizable Notifications</li>
-{#                        <li class="ml-5"><span class="font-semibold font-handwriting">Centralized subscription management</span> - consolidate all your subscriptions into a single dashboard. No more jumping between different services to keep track of your payments.</li>#}
-{#                        <li class="ml-5"><span class="font-semibold font-handwriting">Monthly and annual subscription spending reports</span> - generate detailed reports - understand where your money goes and make informed decisions.</li>#}
-{#                        <li class="ml-5"><span class="font-semibold font-handwriting">Intuitive User Interface</span> - the user-friendly interface makes it easy to add, edit, and manage your subscriptions. Spend less time managing and more time focusing on what matters.</li>#}
-{#                        <li class="ml-5"><span class="font-semibold font-handwriting">Customizable Notifications</span> - set up notifications and reminders for upcoming payments and renewals. Customize these alerts to suit your preferences and stay ahead of your bills.</li>#}
+                        <li class="ml-5">Keep a list of your personal and household subscriptions</li>
+                        <li class="ml-5">Add monthly or yearly amounts and compare their equivalents</li>
+                        <li class="ml-5">Explore your subscription costs in charts</li>
+                        <li class="ml-5">Update your list as your subscriptions change</li>
                     </ul>
+                    <p><a href="{{ path('app_docs') }}" class="underline">How PaySubscriptions works</a></p>
                 </div>
             </div>
             <div class="w-full md:w-1/3 p-8 mr-8 flex items-center justify-center">
-               <img src="{{ asset('images/chart04.png') }}" class="w-64 hover:scale-110 transition duration-500"/>
+               <img src="{{ asset('images/chart04.png') }}" alt="" class="w-64 hover:scale-110 transition duration-500"/>
             </div>
 
         </div>

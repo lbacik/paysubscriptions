@@ -1,31 +1,33 @@
-# About
+# About PaySubscriptions
 
-## Introduction
-**Simplify Your Subscription Management**
+## Know what your subscriptions add up to
 
-Managing multiple subscriptions can be a daunting task, especially when dealing with different billing cycles and payment methods. 
-PaySubscriptions is designed to streamline and simplify your subscription management. Our service centralizes all your subscriptions in one place, 
-providing you with a clear overview and control over your spending. Whether you have personal subscriptions or manage subscriptions for a business, 
-PaySubscriptions ensures you never lose track of your expenses.
+A streaming service here, a software subscription there — it is easy to lose sight of the total. PaySubscriptions brings the costs you enter into one place, so you can review what you pay for and decide what is worth keeping.
 
+It is a free subscription tracker for individuals and households. Each account belongs to one person: you can track subscriptions used by the people you live with, but there is no shared account or access for other household members.
 
-[//]: # (## How It Works)
+## How it works today
 
-[//]: # ()
-[//]: # (Getting started with PaySubscriptions is quick and straightforward. Simply [sign up]&#40;/register&#41; and add your subscriptions )
+1. Create an account and verify your email.
+2. Add a subscription's name, first-payment date and monthly or yearly amount.
+3. Compare costs in your list and charts, and update the details when something changes.
 
-[//]: # (&#40;more about that at [dashboard]&#40;/docs/dashboard&#41; section where you can also find **the credentials for the demo account**&#41;. )
+Monthly and yearly equivalents help you compare subscriptions with different payment cycles. For example, a yearly subscription costing 120 has a monthly equivalent of 10. These figures are calculated from your entries, not imported transactions or confirmation that a payment was made.
 
-[//]: # (The system tracks due dates and provides insightful analytics to help you optimize your spending.)
+[Create your free account](/register) or [check the free plan and its limit](/pricing).
 
-[//]: # (*dashboard graphic*)
-[//]: # ()
-[//]: # (<div class="warning">)
-[//]: # (*Warning*)
-[//]: # (</div>)
+## You choose what to track
 
-## Contact Me
-**I'm Here to Help**
+PaySubscriptions does not connect to your bank, scan your inbox or automatically discover subscriptions. You enter the details yourself and keep them up to date. Removing an entry from your list does not cancel the service with its provider.
 
-Have questions or need assistance? Visit [contact page](/contact)! 
-Whether you have inquiries about the service or need help with your account.
+Your account and subscription details are stored on the service's servers, so you can access your list through a browser. The website uses Umami Cloud for page-view analytics.
+
+## Where the project is heading
+
+PaySubscriptions is an independently maintained project. The next version is being planned around helping you act before subscriptions renew, including renewal reminders and clearer information about upcoming costs.
+
+These features are not available today. The scope is still being worked out, and there are no announced release dates. This page will distinguish new features from plans as the project develops.
+
+## Help shape PaySubscriptions
+
+What would make it easier to keep your subscriptions under control? [Send feedback or ask for help](/contact). Real examples of how you track subscriptions help guide what gets built next.

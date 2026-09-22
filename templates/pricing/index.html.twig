@@ -1,27 +1,50 @@
 {% extends 'base.html.twig' %}
 
+{% block title %}Pricing — PaySubscriptions{% endblock %}
+
+{% block metaheaders %}
+    <meta name="description" content="PaySubscriptions is free for up to {{ constant('App\\Entity\\Limits::DEFAULT_SUBSCRIPTIONS_LIMIT') }} subscriptions per account. Track monthly and yearly costs with no payment card required.">
+{% endblock %}
+
 {% block body %}
 
     <div class="flex flex-col w-4/5 md:w-1/2 mx-auto mt-20 mb-10 font-handwriting2 text-xl text-color-qua space-y-10">
-        <p>
-            <span class="px-3 bg-yellow-100 font-bold">Enjoy the Service for Free</span>
-            For now, take advantage of PaySubscriptions’ comprehensive free plan and manage your subscriptions effortlessly!
-        </p>
+        <h1><span class="px-3 bg-yellow-100 font-bold">A clear view of your subscriptions. For free.</span></h1>
 
         <div class="mx-10 px-10 py-5 rounded-xl bg-purple-200 font-handwriting text-2xl text-color-ter">
-            <span class="font-bold">Subscription Limit</span>: The free plan allows you to add up to 30 subscriptions to your account.
+            <span class="font-bold">Free plan</span>: Track up to {{ constant('App\\Entity\\Limits::DEFAULT_SUBSCRIPTIONS_LIMIT') }} subscriptions per account. No payment card required.
         </div>
 
+        <p>
+            Add, edit and remove subscriptions, compare monthly and yearly costs, and view charts
+            of the amounts you enter. All of these features are included.
+        </p>
+
         <p class="font-handwriting2">
-            If you find that you need to manage more than 30 subscriptions, <span class="font-bold px-2 bg-red-200">stay tuned!</span>
+            {% if app.user %}
+                <a href="{{ path('app_dashboard') }}" class="underline">View your subscriptions</a>.
+            {% else %}
+                <a href="{{ path('app_register') }}" class="underline">Create your free account</a> and add your first subscription.
+            {% endif %}
+        </p>
+
+        <p>
+            You enter and update your subscriptions yourself. Renewal reminders are not available yet.
+            <a href="{{ path('app_docs') }}" class="underline">See what is available today and what we are exploring</a>.
+        </p>
+
+        <p>
+            Need to track more than {{ constant('App\\Entity\\Limits::DEFAULT_SUBSCRIPTIONS_LIMIT') }} subscriptions?
+            <a href="{{ path('app_contact') }}" class="underline">Tell us what you need</a>.
+            There is no paid upgrade available today.
         </p>
 
         <div class="flex flex-col mx-auto w-fit text-center border border-green-400 rounded-xl bg-green-50 px-5 py-5">
-            <span class="font-bold bg-green-100 py-1 font-sans">Enjoying PaySubscriptions?</span>
+            <span class="font-bold bg-green-100 py-1 font-sans">Want to support the project?</span>
             <div class="my-5 flex items-center justify-center">
                 <a href="https://www.buymeacoffee.com/lbacik" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>
             </div>
-            Thank you for your support and for using PaySubscriptions!
+            Contributions are optional. They do not change your account limit or unlock extra features.
         </div>
     </div>
 

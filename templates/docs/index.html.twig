@@ -1,5 +1,13 @@
 {% extends 'base.html.twig' %}
 
+{% block title %}{{ show }} — PaySubscriptions{% endblock %}
+
+{% block metaheaders %}
+    {% if show == 'About' %}
+        <meta name="description" content="Learn how PaySubscriptions helps you track personal and household subscriptions, what is available today, and where the project is heading.">
+    {% endif %}
+{% endblock %}
+
 {% block body %}
     <div>
         <twig:ContentCenter>
