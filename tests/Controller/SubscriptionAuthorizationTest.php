@@ -22,12 +22,29 @@ final class SubscriptionAuthorizationTest extends WebTestCase
     use ResetDatabase;
     use Factories;
 
+    /**
+     * Boot with debug disabled so error pages render as they do in
+     * production: a generic page with no stack traces that could echo the
+     * denied record's details back.
+     */
     private static function createTestClient(): KernelBrowser
     {
-        return static::createClient();
+        return static::createClient(['debug' => false]);
     }
 
+    public static function setUpBeforeClass(): void
+    {
+        parent::setUpBeforeClass();
 
+        // Non-debug kernels never refresh their container, so drop any frozen
+        // build: without this, wiring changes (new voters, tags, services)
+        // would silently test stale code until someone clears var/cache by hand.
+        foreach (glob(\dirname(__DIR__, 2).'/var/cache/test/App_KernelTestContainer*') ?: [] as $path) {
+            if (\is_file($path)) {
+                unlink($path);
+            }
+        }
+    }
 
     public function testOwnerCanOpenEditForm(): void
     {
