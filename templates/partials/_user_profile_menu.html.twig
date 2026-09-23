@@ -8,7 +8,7 @@
             data-action="user-menu#toggle"
     >
         <span class="sr-only">Open user menu</span>
-        <img class="w-16 h-16 rounded-full" src="https://robohash.org/{{ app.user.email }}?set=set1" alt="avatar">
+        <span class="flex w-16 h-16 items-center justify-center rounded-full bg-color-sec text-2xl font-bold text-white" aria-hidden="true">{{ app.user.email|first|upper }}</span>
     </button>
 
     <!-- Dropdown menu -->
