@@ -125,13 +125,65 @@ jobs:
       # releases for something this repository cannot fix. It is parked in
       # quality.yml instead, where its red is visible without being fatal.
 
-      # Runs an empty suite today - tests/ contains only bootstrap.php, and
-      # PHPUnit exits 0 on "No tests executed!". Kept in the gate so that the
-      # first real test is enforced the moment it lands, rather than the gate
-      # being wired up after the fact.
-      - name: Run PHPUnit
+      # PHPUnit has its own job (`phpunit`) below: the test suite now contains
+      # functional tests that need a database, so it cannot run here where no
+      # service container is available. The separation keeps this job fast and
+      # dependency-free.
+
+  # Functional tests (WebTestCase, ResetDatabase) need a real database to run
+  # against. Shares the MySQL service definition with `migrations` below for the
+  # same reason documented there: the DSN matches production's serverVersion and
+  # the AMQP scheme avoids the Doctrine transport factory's option validation.
+  phpunit:
+    name: PHPUnit
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:9
         env:
-          APP_ENV: test
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: paysub
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      APP_ENV: test
+      APP_SECRET: ci
+      DATABASE_URL: "mysql://root:root@127.0.0.1:3306/paysub?serverVersion=8.4&charset=utf8mb4"
+      MESSENGER_TRANSPORT_DSN: 'amqp://guest:guest@127.0.0.1:5672/%2f/messages'
+      MAILER_DSN: 'null://null'
+      JSON_HUB_PROJECT: '00000000-0000-0000-0000-000000000000'
+      MAILING_PROVIDER_ROUTING_KEY: 'ci'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up PHP ${{ env.PHP_VERSION }}
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          extensions: amqp, ctype, iconv, intl, pdo_mysql
+          coverage: none
+          ini-values: memory_limit=1G
+
+      - name: Install dependencies
+        uses: ramsey/composer-install@v4
+
+      # base.html.twig fails to render without this: the Tailwind bundle looks
+      # for a pre-built CSS file and does not compile it on the fly here the
+      # way a dev-server request does. Same command the Dockerfile runs before
+      # a production image is built.
+      - name: Build Tailwind CSS
+        run: php bin/console tailwind:build
+
+      - name: Run PHPUnit
         run: vendor/bin/phpunit
 
   # Its own job because it needs a database, and the checks above do not - the
