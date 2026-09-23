@@ -46,6 +46,10 @@
     .wf-a .preview-caption { display: flex; align-items: center; gap: .65rem; padding: .8rem .2rem 0; font-size: .78rem; color: var(--muted); }
     .wf-a .three { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-top: 2rem; }
     .wf-a .number { font-weight: 800; color: var(--coral); margin-bottom: .8rem; }
+    .wf-a .trust { background: #fffdf9; border-block: 1px solid var(--line); }
+    .wf-a .trust-grid { display: grid; grid-template-columns: .9fr 1.1fr; gap: 4rem; align-items: center; }
+    .wf-a .trust-points { display: grid; gap: 1rem; }
+    .wf-a .trust-points p { margin-top: .5rem; }
     .wf-a .truth { background: #eaf0f3; }
     .wf-a .truth-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 1.8rem; }
     .wf-a .closing { text-align: center; padding-block: 5rem; }
@@ -92,7 +96,7 @@
     .wf-switch strong { min-width: 10.5rem; text-align: center; }
 
     @media (max-width: 800px) {
-        .wf-a .hero, .wf-b .hero-grid, .wf-b .path, .wf-c .pledge-grid { grid-template-columns: 1fr; gap: 2.5rem; }
+        .wf-a .hero, .wf-a .trust-grid, .wf-b .hero-grid, .wf-b .path, .wf-c .pledge-grid { grid-template-columns: 1fr; gap: 2.5rem; }
         .wf-a .three, .wf-b .truth-grid { grid-template-columns: 1fr; }
         .wf-a .truth-grid, .wf-c .comparison { grid-template-columns: 1fr; gap: 1rem; }
         .wf-home .section { padding-block: 3.5rem; }
@@ -148,6 +152,7 @@
                 <div class="card"><div class="number">03</div><h3>Decide in time</h3><p>Keep the upcoming list in view. Turn on email reminders if you want an extra nudge before the next charge.</p></div>
             </div>
         </section>
+        <section class="trust section"><div class="wrap trust-grid"><div><span class="eyebrow">How your data is handled</span><h2>Clear boundaries for what you enter.</h2><p class="lede" style="margin-top:1rem;">You choose which recurring costs to track. The v1.0 plan includes a plain-language policy and a way to delete your account yourself.</p></div><div class="trust-points"><div class="card"><span class="status">Available now</span><h3>Manual entry, with no bank or inbox connection</h3><p>PaySubscriptions uses the details you add rather than importing transactions or scanning email.</p></div><div class="card"><span class="status planned">Planned for v1.0</span><h3>A published data-handling policy and account deletion</h3><p>The policy must explain hosted page-view analytics, storage practices and the data-sharing exception. Self-service account deletion is a release goal.</p></div></div></div></section>
         <section class="truth section"><div class="wrap"><span class="eyebrow">Build status</span><h2>What exists, and what this design proposes.</h2>
             <div class="truth-grid"><div class="card"><span class="status">Available now</span><h3>A manual subscription tracker</h3><p>Track monthly or yearly amounts and compare monthly and annual equivalents in a single-owner account.</p></div><div class="card"><span class="status planned">Planned for v1.0</span><h3>Renewal clarity and data control</h3><p>Upcoming dates, optional reminders, categories, a published privacy policy and self-service account deletion are release goals, pending implementation and verification.</p></div></div>
         </div></section>
