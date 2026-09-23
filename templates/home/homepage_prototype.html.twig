@@ -1,0 +1,188 @@
+{# Throwaway homepage prototype: three variants on /?variant=A|B|C in dev only. #}
+{% extends 'base.html.twig' %}
+
+{% block title %}Homepage prototype {{ variant }} — PaySubscriptions{% endblock %}
+
+{% block stylesheets %}
+<style>
+    .wf-home { --ink: #172334; --muted: #526073; --line: #dce3e8; --blue: #577399; --coral: #ef7669; --paper: #f8fafc; color: var(--ink); }
+    .wf-home * { box-sizing: border-box; }
+    .wf-home h1, .wf-home h2, .wf-home h3, .wf-home p { margin: 0; color: inherit; }
+    .wf-home h1 { font-size: clamp(2.55rem, 5.5vw, 5.4rem); line-height: 1.06; letter-spacing: -.055em; font-weight: 800; }
+    .wf-home h2 { font-size: clamp(1.8rem, 3vw, 2.8rem); line-height: 1.18; letter-spacing: -.035em; font-weight: 800; }
+    .wf-home h3 { font-size: 1.13rem; line-height: 1.3; font-weight: 750; }
+    .wf-home p { line-height: 1.65; }
+    .wf-home a { text-decoration: none; }
+    .wf-home .wrap { width: min(1150px, calc(100% - 2.5rem)); margin-inline: auto; }
+    .wf-home .eyebrow { display: inline-block; font-size: .72rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--blue); }
+    .wf-home .lede { font-size: clamp(1.05rem, 1.55vw, 1.25rem); color: var(--muted); max-width: 40rem; }
+    .wf-home .small { font-size: .88rem; color: var(--muted); }
+    .wf-home .cta { display: inline-flex; justify-content: center; align-items: center; min-height: 3.25rem; padding: .8rem 1.4rem; border-radius: 999px; background: var(--ink); color: white; font-weight: 750; box-shadow: 0 8px 24px #17233422; }
+    .wf-home .cta:hover { background: #344b66; }
+    .wf-home .text-link { color: #355b83; font-weight: 750; text-decoration: underline; text-underline-offset: 4px; }
+    .wf-home .cta-row { display: flex; gap: 1.1rem; align-items: center; flex-wrap: wrap; }
+    .wf-home .status { display: inline-block; padding: .32rem .65rem; border-radius: 999px; background: #e7eee9; color: #2a5f45; font-size: .73rem; font-weight: 800; white-space: nowrap; }
+    .wf-home .status.planned { background: #fff0e9; color: #9c4c32; }
+    .wf-home .prototype-note { background: #1b2a3c; color: #f8fafc; font-size: .86rem; padding: .8rem 1.25rem; text-align: center; }
+    .wf-home .prototype-note strong { color: #ffd4ca; }
+    .wf-home .sample { background: white; border: 1px solid var(--line); border-radius: 1.3rem; box-shadow: 0 24px 65px #17233419; overflow: hidden; }
+    .wf-home .sample-head { display: flex; justify-content: space-between; gap: 1rem; align-items: center; padding: .95rem 1.2rem; background: #f3f6f8; border-bottom: 1px solid var(--line); font-size: .77rem; font-weight: 800; }
+    .wf-home .sample-body { padding: 1.3rem; }
+    .wf-home .sample-row { display: flex; justify-content: space-between; align-items: center; gap: 1rem; border-top: 1px solid var(--line); padding: .85rem 0; font-size: .92rem; }
+    .wf-home .sample-row strong { font-weight: 800; }
+    .wf-home .sample-row span { color: var(--muted); }
+    .wf-home .sample-stat { font-size: 2rem; font-weight: 800; letter-spacing: -.05em; }
+    .wf-home .rule { border-top: 1px solid var(--line); }
+    .wf-home .section { padding-block: 5rem; }
+    .wf-home .card { background: white; border: 1px solid var(--line); border-radius: 1.2rem; padding: 1.5rem; }
+    .wf-home .card p { color: var(--muted); margin-top: .7rem; }
+    .wf-home .card .status { margin-bottom: .9rem; }
+
+    .wf-a { background: #f7f9fa; }
+    .wf-a .hero { padding-block: 5rem 5.5rem; display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr); gap: 4.5rem; align-items: center; }
+    .wf-a .hero h1 { margin: 1.15rem 0 1.3rem; }
+    .wf-a .hero .cta-row { margin-top: 2rem; }
+    .wf-a .hero .small { margin-top: 1rem; }
+    .wf-a .preview-caption { display: flex; align-items: center; gap: .65rem; padding: .8rem .2rem 0; font-size: .78rem; color: var(--muted); }
+    .wf-a .three { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-top: 2rem; }
+    .wf-a .number { font-weight: 800; color: var(--coral); margin-bottom: .8rem; }
+    .wf-a .truth { background: #eaf0f3; }
+    .wf-a .truth-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 1.8rem; }
+    .wf-a .closing { text-align: center; padding-block: 5rem; }
+    .wf-a .closing .cta-row { justify-content: center; margin-top: 1.7rem; }
+
+    .wf-b { background: #fcfbf7; }
+    .wf-b .hero { background: #20384e; color: white; padding-block: 4.5rem 5rem; }
+    .wf-b .hero .eyebrow, .wf-b .hero .lede { color: #d9e8ef; }
+    .wf-b .hero-grid { display: grid; grid-template-columns: .93fr 1.07fr; align-items: center; gap: 4rem; }
+    .wf-b .hero h1 { margin: 1rem 0 1.3rem; }
+    .wf-b .hero .cta { background: #f5a091; color: #20384e; box-shadow: none; }
+    .wf-b .hero .cta-row { margin-top: 1.7rem; }
+    .wf-b .hero .text-link { color: white; }
+    .wf-b .timeline { padding: 1.7rem; border-radius: 1.3rem; background: #f8fbfd; color: var(--ink); transform: rotate(1.5deg); box-shadow: 0 25px 60px #0b1a29a0; }
+    .wf-b .timeline p { color: var(--muted); }
+    .wf-b .time-row { display: grid; grid-template-columns: 3.6rem 1fr auto; gap: .9rem; align-items: center; border-top: 1px solid var(--line); padding: 1rem 0; font-size: .9rem; }
+    .wf-b .time-row b { background: #eaf0f3; border-radius: .6rem; padding: .45rem .2rem; text-align: center; }
+    .wf-b .time-row span { font-weight: 800; }
+    .wf-b .path { display: grid; grid-template-columns: 1fr 1fr; gap: 4rem; align-items: start; }
+    .wf-b .path-steps { border-left: 3px solid #f5a091; padding-left: 1.7rem; }
+    .wf-b .path-steps > div { margin-bottom: 2rem; }
+    .wf-b .path-steps p { color: var(--muted); margin-top: .5rem; }
+    .wf-b .truth { background: white; }
+    .wf-b .truth-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-top: 2rem; }
+    .wf-b .closing { background: #e9eff1; padding-block: 4rem; }
+
+    .wf-c { background: #fffdf9; }
+    .wf-c .hero { padding-block: 4.5rem 5.5rem; }
+    .wf-c .hero h1 { max-width: 940px; margin: 1rem 0 1.4rem; }
+    .wf-c .hero h1 em { color: #b8554d; font-style: normal; }
+    .wf-c .hero .cta-row { margin-top: 1.9rem; }
+    .wf-c .pledge { background: #eef3f1; border-top: 1px solid #d4e3dc; border-bottom: 1px solid #d4e3dc; }
+    .wf-c .pledge-grid { display: grid; grid-template-columns: .85fr 1.15fr; gap: 4rem; }
+    .wf-c .pledge-list { display: grid; gap: 1rem; }
+    .wf-c .pledge-list > div { border-bottom: 1px solid #d4e3dc; padding-bottom: 1rem; }
+    .wf-c .pledge-list p { color: var(--muted); margin-top: .3rem; }
+    .wf-c .comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 1.4rem; margin-top: 2rem; }
+    .wf-c .comparison .card { min-height: 15rem; }
+    .wf-c .closing { padding-block: 5rem; border-top: 1px solid var(--line); }
+
+    body nav.wf-switch { position: fixed; z-index: 100; top: auto; bottom: 3.5rem; left: 50%; width: max-content; height: auto; transform: translateX(-50%); display: flex; flex-direction: row; align-items: center; gap: .65rem; padding: .45rem .6rem; background: #132336; color: white; border: 1px solid #405269; border-radius: 999px; box-shadow: 0 18px 45px #17233470; font-size: .8rem; white-space: nowrap; }
+    .wf-switch a { display: grid; place-items: center; width: 2.1rem; height: 2.1rem; border-radius: 50%; color: white; font-size: 1.2rem; }
+    .wf-switch a:hover, .wf-switch a:focus-visible { background: #3f5874; }
+    .wf-switch strong { min-width: 10.5rem; text-align: center; }
+
+    @media (max-width: 800px) {
+        .wf-a .hero, .wf-b .hero-grid, .wf-b .path, .wf-c .pledge-grid { grid-template-columns: 1fr; gap: 2.5rem; }
+        .wf-a .three, .wf-b .truth-grid { grid-template-columns: 1fr; }
+        .wf-a .truth-grid, .wf-c .comparison { grid-template-columns: 1fr; gap: 1rem; }
+        .wf-home .section { padding-block: 3.5rem; }
+        .wf-b .timeline { transform: none; }
+    }
+    @media (max-width: 480px) {
+        .wf-home .wrap { width: min(100% - 2rem, 1150px); }
+        .wf-a .hero, .wf-b .hero, .wf-c .hero { padding-block: 3rem; }
+        .wf-home .cta-row { align-items: stretch; flex-direction: column; }
+        .wf-home .cta-row .cta { width: 100%; }
+        .wf-b .time-row { grid-template-columns: 3.3rem 1fr; }
+        .wf-b .time-row > span { grid-column: 2; }
+        body nav.wf-switch { bottom: 3.5rem; }
+    }
+</style>
+{% endblock %}
+
+{% block body %}
+{% set primary_href = app.user ? path('app_dashboard') : path('app_register') %}
+{% set primary_label = app.user ? 'Go to your dashboard' : 'Create a free account' %}
+<main class="wf-home wf-{{ variant|lower }}">
+    <div class="prototype-note"><strong>Prototype {{ variant }} · planned v1.0 concept.</strong> This is a design review, not a description of what the live product already does.</div>
+
+    {% if variant == 'A' %}
+        <section class="wrap hero" aria-labelledby="wf-a-title">
+            <div>
+                <span class="eyebrow">A clearer view of recurring costs</span>
+                <h1 id="wf-a-title">Know what you pay. See what renews next.</h1>
+                <p class="lede">Keep subscriptions and household bills in one place. See the next charges, understand your totals, and choose whether to get a reminder before renewal. No bank connection needed.</p>
+                <div class="cta-row"><a class="cta" href="{{ primary_href }}">{{ primary_label }}</a><a class="text-link" href="#wf-a-how">See how it works</a></div>
+                <p class="small">One account for one person · Use it on phone or desktop · No payment card to start</p>
+            </div>
+            <div>
+                <div class="sample" aria-label="Illustrative v1.0 upcoming renewals preview">
+                    <div class="sample-head"><span>Upcoming renewals</span><span>Illustrative v1.0 view</span></div>
+                    <div class="sample-body">
+                        <p class="small">Next 30 days</p><div class="sample-stat">3 charges</div>
+                        <div class="sample-row"><strong>Music plan</strong><span>Oct 4 · €12.00</span></div>
+                        <div class="sample-row"><strong>Home internet</strong><span>Oct 9 · €35.00</span></div>
+                        <div class="sample-row"><strong>Cloud storage</strong><span>Oct 21 · €3.00</span></div>
+                        <p class="small">Example entries and dates. Future dashboard design is still to be built.</p>
+                    </div>
+                </div>
+                <div class="preview-caption"><span class="status planned">Planned for v1.0</span> Upcoming renewals and optional email reminders</div>
+            </div>
+        </section>
+        <div class="rule"></div>
+        <section class="wrap section" id="wf-a-how">
+            <span class="eyebrow">How it works</span><h2>From scattered renewals to one useful overview.</h2>
+            <div class="three">
+                <div class="card"><div class="number">01</div><h3>Add what you pay for</h3><p>Enter a name, amount, currency and monthly or yearly cycle. Group it with a category that makes sense to you.</p></div>
+                <div class="card"><div class="number">02</div><h3>See the dates and totals</h3><p>Review upcoming renewals and compare recurring spend in your main currency. Enter your own converted amount when currencies differ.</p></div>
+                <div class="card"><div class="number">03</div><h3>Decide in time</h3><p>Keep the upcoming list in view. Turn on email reminders if you want an extra nudge before the next charge.</p></div>
+            </div>
+        </section>
+        <section class="truth section"><div class="wrap"><span class="eyebrow">Build status</span><h2>What exists, and what this design proposes.</h2>
+            <div class="truth-grid"><div class="card"><span class="status">Available now</span><h3>A manual subscription tracker</h3><p>Track monthly or yearly amounts and compare monthly and annual equivalents in a single-owner account.</p></div><div class="card"><span class="status planned">Planned for v1.0</span><h3>Renewal clarity and data control</h3><p>Upcoming dates, optional reminders, categories, a published privacy policy and self-service account deletion are release goals, pending implementation and verification.</p></div></div>
+        </div></section>
+        <section class="wrap closing"><h2>Start with a clearer picture.</h2><p class="lede" style="margin: 1rem auto 0;">A focused, free way to keep recurring costs visible without connecting a bank.</p><div class="cta-row"><a class="cta" href="{{ primary_href }}">{{ primary_label }}</a><a class="text-link" href="{{ path('app_docs') }}">About PaySubscriptions</a></div></section>
+    {% elseif variant == 'B' %}
+        <section class="hero"><div class="wrap hero-grid"><div><span class="eyebrow">For the charges that keep coming back</span><h1>See the next bill before it surprises you.</h1><p class="lede">PaySubscriptions brings household subscriptions and recurring bills into one simple view. Add them yourself, see what's due, and opt into a reminder when it helps.</p><div class="cta-row"><a class="cta" href="{{ primary_href }}">{{ app.user ? primary_label : 'Start tracking free' }}</a><a class="text-link" href="#wf-b-path">Explore the flow</a></div><p class="small" style="color:#d9e8ef;margin-top:1rem;">For one person managing their own or shared household costs. No bank link.</p></div>
+            <div class="timeline" aria-label="Illustrative v1.0 renewal timeline"><span class="status planned">Illustrative v1.0 view</span><h3 style="font-size:1.5rem;margin:.7rem 0 .3rem;">On your horizon</h3><p>Dates and amounts you entered yourself</p><div class="time-row"><b>04<br>Oct</b><strong>Music plan</strong><span>€12.00</span></div><div class="time-row"><b>09<br>Oct</b><strong>Home internet</strong><span>€35.00</span></div><div class="time-row"><b>21<br>Oct</b><strong>Cloud storage</strong><span>€3.00</span></div><p class="small">Optional email reminder: 3 days before renewal</p></div>
+        </div></section>
+        <section class="wrap section path" id="wf-b-path"><div><span class="eyebrow">The recurring-cost loop</span><h2>One small habit. More time to choose.</h2><p class="lede" style="margin-top:1rem;">A manual-first flow designed to make the next renewal easy to find.</p></div><div class="path-steps"><div><h3>1 · Add a recurring cost</h3><p>Record its amount, currency, monthly or yearly cycle, and your own category.</p></div><div><h3>2 · Check what's coming</h3><p>Review upcoming renewals and totals from your phone or desktop.</p></div><div><h3>3 · Get an optional nudge</h3><p>Choose email reminders or keep everything in-app. You stay in control of the setting.</p></div></div></section>
+        <section class="truth section"><div class="wrap"><span class="eyebrow">Honest progress</span><h2>A roadmap, not a feature claim.</h2><div class="truth-grid"><div class="card"><span class="status">Available now</span><h3>Manual tracking</h3><p>A single-owner subscription list and monthly/yearly cost equivalents.</p></div><div class="card"><span class="status planned">For v1.0</span><h3>Know what is coming due</h3><p>Upcoming renewals, optional email reminders, flexible categories and account deletion are planned release work.</p></div><div class="card"><span class="status planned">Exploring later</span><h3>Make it easier to keep current</h3><p>Import and self-service export are possible future directions, not delivery promises.</p></div></div></div></section>
+        <section class="closing"><div class="wrap"><h2>Put the recurring charges in view.</h2><p class="lede" style="margin:.8rem 0 1.5rem;">Free, manual-first, and built for everyday household decisions.</p><div class="cta-row"><a class="cta" href="{{ primary_href }}">{{ primary_label }}</a><a class="text-link" href="{{ path('app_docs') }}">How we handle data</a></div></div></section>
+    {% else %}
+        <section class="wrap hero"><span class="eyebrow">A simple tracker, with clear boundaries</span><h1>Keep your recurring costs visible. <em>Keep the choice yours.</em></h1><p class="lede">PaySubscriptions helps one person organize subscriptions and household bills, understand recurring spend, and act before a renewal. You add the details yourself. We do not connect to your bank or scan your email.</p><div class="cta-row"><a class="cta" href="{{ primary_href }}">{{ primary_label }}</a><a class="text-link" href="#wf-c-data">How your data is handled</a></div><p class="small" style="margin-top:1rem;">Free to start · One account per person · Available in a browser on phone and desktop</p></section>
+        <section class="pledge section" id="wf-c-data"><div class="wrap pledge-grid"><div><span class="eyebrow">The trust story</span><h2>Plain answers before you sign up.</h2><p class="lede" style="margin-top:1rem;">Our v1.0 goal is a published policy that describes these practices clearly. Until it is published and verified, these are planned commitments.</p></div><div class="pledge-list"><div><span class="status planned">Planned for v1.0</span><h3 style="margin-top:.65rem;">No bank or inbox access</h3><p>Manual entry keeps bank and email integrations outside this product.</p></div><div><span class="status planned">Planned disclosure</span><h3 style="margin-top:.65rem;">Clear sharing and storage terms</h3><p>The policy will explain hosted Umami page-view analytics and that fields are not individually encrypted at rest. The no-selling promise will state the disclosed analytics exception.</p></div><div><span class="status planned">Planned for v1.0</span><h3 style="margin-top:.65rem;">Delete your account yourself</h3><p>Self-service deletion is planned. Data export will be handled by email request for v1.0.</p></div></div></div></section>
+        <section class="wrap section"><span class="eyebrow">A practical everyday view</span><h2>See what's yours today and what's coming next.</h2><div class="comparison"><div class="card"><span class="status">Available now</span><h3>Track and compare</h3><p>Enter subscriptions manually. Review your list and compare monthly and annual cost equivalents.</p></div><div class="card"><span class="status planned">Planned for v1.0</span><h3>Prepare for renewal</h3><p>See upcoming dates, set optional email reminders, group recurring bills by your own categories, and review totals in your main currency.</p></div></div></section>
+        <section class="wrap closing"><span class="eyebrow">Start simply</span><h2>A small place to see the whole picture.</h2><p class="lede" style="margin:1rem 0 1.7rem;">No bank connection, no payment card, no shared-account setup.</p><div class="cta-row"><a class="cta" href="{{ primary_href }}">{{ primary_label }}</a><a class="text-link" href="{{ path('app_docs') }}">Read about the project</a></div></section>
+    {% endif %}
+</main>
+
+{% if app.environment == 'dev' %}
+    {% set names = {'A': 'Outcome + preview', 'B': 'Renewal timeline', 'C': 'Trust first'} %}
+    {% set previous = variant == 'A' ? 'C' : (variant == 'B' ? 'A' : 'B') %}
+    {% set next = variant == 'A' ? 'B' : (variant == 'B' ? 'C' : 'A') %}
+    <nav class="wf-switch" aria-label="Prototype variants" data-prototype-switcher>
+        <a href="{{ path('app_home', {variant: previous}) }}" aria-label="Previous variant" data-previous>←</a>
+        <strong>{{ variant }} · {{ names[variant] }}</strong>
+        <a href="{{ path('app_home', {variant: next}) }}" aria-label="Next variant" data-next>→</a>
+    </nav>
+    <script>
+        document.addEventListener('keydown', (event) => {
+            if (!['ArrowLeft', 'ArrowRight'].includes(event.key) || event.altKey || event.ctrlKey || event.metaKey) return;
+            if (event.target instanceof Element && event.target.closest('input, textarea, select, [contenteditable]')) return;
+            const selector = event.key === 'ArrowLeft' ? '[data-previous]' : '[data-next]';
+            window.location.assign(document.querySelector('[data-prototype-switcher] ' + selector).href);
+        });
+    </script>
+{% endif %}
+{% endblock %}
