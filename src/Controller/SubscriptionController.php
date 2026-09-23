@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Entity\Subscription;
+use App\Entity\User;
 use App\Form\SubscriptionType;
 use App\Security\SubscriptionVoter;
+use App\Service\ExpenseCategoryService;
 use App\Service\SubscriptionService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -21,17 +23,25 @@ class SubscriptionController extends AbstractController
 {
     public function __construct(
         private SubscriptionService $subscriptionService,
+        private ExpenseCategoryService $categoryService,
     ) {
     }
 
     #[Route('/new', name: 'app_subscription_new', methods: ['GET', 'POST'])]
     public function new(Request $request): Response
     {
+        $user = $this->getUser();
+        \assert($user instanceof User);
+
         $subscription = new Subscription();
+        $subscription->setCategory($this->categoryService->ensureDefaultCategory($user));
         $form = $this->createForm(
             SubscriptionType::class,
             $subscription,
-            ['action' => $this->generateUrl('app_subscription_new')]
+            [
+                'action' => $this->generateUrl('app_subscription_new'),
+                'user' => $user,
+            ]
         );
         $form->handleRequest($request);
 
@@ -66,23 +76,36 @@ class SubscriptionController extends AbstractController
     {
         $this->denyAccessUnlessGranted(SubscriptionVoter::EDIT, $subscription);
 
+        $user = $this->getUser();
+        \assert($user instanceof User);
+
         $form = $this->createForm(
             SubscriptionType::class,
             $subscription,
-            ['action' => $this->generateUrl('app_subscription_edit', ['id' => $subscription->getId()])]
+            [
+                'action' => $this->generateUrl('app_subscription_edit', ['id' => $subscription->getId()]),
+                'user' => $user,
+            ]
         );
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $this->subscriptionService->update($subscription);
+            try {
+                $this->subscriptionService->update($subscription);
 
-            $this->addFlash('success', 'Subscription updated successfully');
+                $this->addFlash('success', 'Subscription updated successfully');
 
-            if ($request->isXmlHttpRequest() || $request->headers->get('Turbo-Frame')) {
-                return $this->streamResponse();
+                if ($request->isXmlHttpRequest() || $request->headers->get('Turbo-Frame')) {
+                    return $this->streamResponse();
+                }
+
+                return $this->redirectToRoute('app_dashboard', [], Response::HTTP_SEE_OTHER);
+
+            } catch (\LogicException $exception) {
+                $this->addFlash('danger', $exception->getMessage());
+
+                return $this->redirectToRoute('app_dashboard', [], Response::HTTP_SEE_OTHER);
             }
-
-            return $this->redirectToRoute('app_dashboard', [], Response::HTTP_SEE_OTHER);
         }
 
         return $this->render('subscription/edit.html.twig', [

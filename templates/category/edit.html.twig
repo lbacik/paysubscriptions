@@ -1,0 +1,14 @@
+{% extends 'modalBase.html.twig' %}
+
+{% block body %}
+    <twig:ContentCenter :inModal="app.request.headers.get('turbo-frame') == 'modal'"
+                        class="mt-20"
+                        width="w-full px-10 md:px-0 md:w-1/4">
+
+        <h1 class="mb-10 font-thin text-lg text-color-ter text-right border-b border-gray-200">
+            {{ 'category.edit'|trans }}
+        </h1>
+
+        {{ include('category/_form.html.twig') }}
+    </twig:ContentCenter>
+{% endblock %}

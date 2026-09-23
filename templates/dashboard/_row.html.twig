@@ -10,6 +10,15 @@
             </div>
         {% endif %}
     </td>
+    <td class="py-3.5 px-4">
+        {% if subscription.category %}
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-slate-600 bg-slate-50 border border-slate-200 rounded-full whitespace-nowrap">
+                <span class="inline-block w-2.5 h-2.5 rounded-full border border-slate-200"
+                      style="background-color: {{ subscription.category.color }}"></span>
+                {{ subscription.category.name }}
+            </span>
+        {% endif %}
+    </td>
     <td class="py-3.5 px-4 text-end">
         {% if subscription.monthly %}
             <span class="font-bold text-slate-900">{{ subscription.monthly|number_format(2, '.', ' ') }}</span>

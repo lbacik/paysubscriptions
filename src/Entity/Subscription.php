@@ -48,6 +48,10 @@ class Subscription
     #[ORM\JoinColumn(nullable: false)]
     private ?User $owner = null;
 
+    #[ORM\ManyToOne(targetEntity: ExpenseCategory::class, inversedBy: 'subscriptions', cascade: ['persist'])]
+    #[ORM\JoinColumn(nullable: false)]
+    private ?ExpenseCategory $category = null;
+
     #[Gedmo\Timestampable(on: 'create')]
     #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: false, options: ["default" => "CURRENT_TIMESTAMP"])]
     protected $createdAt;
@@ -123,6 +127,18 @@ class Subscription
     public function setOwner(?User $owner): static
     {
         $this->owner = $owner;
+
+        return $this;
+    }
+
+    public function getCategory(): ?ExpenseCategory
+    {
+        return $this->category;
+    }
+
+    public function setCategory(?ExpenseCategory $category): static
+    {
+        $this->category = $category;
 
         return $this;
     }

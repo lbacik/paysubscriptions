@@ -55,6 +55,12 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\OneToMany(targetEntity: Subscription::class, mappedBy: 'owner', orphanRemoval: true)]
     private Collection $subscriptions;
 
+    /**
+     * @var Collection<int, ExpenseCategory>
+     */
+    #[ORM\OneToMany(targetEntity: ExpenseCategory::class, mappedBy: 'owner', cascade: ['persist'], orphanRemoval: true)]
+    private Collection $expenseCategories;
+
     #[ORM\OneToOne(mappedBy: 'user', cascade: ['persist', 'remove'])]
     private ?Limits $limits = null;
 
@@ -72,6 +78,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->updatedAt = new DateTime();
 
         $this->subscriptions = new ArrayCollection();
+        $this->expenseCategories = new ArrayCollection();
     }
 
     public function getId(): ?Uuid
@@ -190,6 +197,36 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
             // set the owning side to null (unless already changed)
             if ($subscription->getOwner() === $this) {
                 $subscription->setOwner(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, ExpenseCategory>
+     */
+    public function getExpenseCategories(): Collection
+    {
+        return $this->expenseCategories;
+    }
+
+    public function addExpenseCategory(ExpenseCategory $category): static
+    {
+        if (!$this->expenseCategories->contains($category)) {
+            $this->expenseCategories->add($category);
+            $category->setOwner($this);
+        }
+
+        return $this;
+    }
+
+    public function removeExpenseCategory(ExpenseCategory $category): static
+    {
+        if ($this->expenseCategories->removeElement($category)) {
+            // set the owning side to null (unless already changed)
+            if ($category->getOwner() === $this) {
+                $category->setOwner(null);
             }
         }
 

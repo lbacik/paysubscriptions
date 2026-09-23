@@ -18,7 +18,12 @@
         <p class="text-xs text-slate-500 mt-0.5">List of all active recurring payments and their calculated costs</p>
     </div>
 
-    <div>
+    <div class="flex items-center gap-2">
+        <a href="{{ path('app_category_index') }}"
+           class="btn-secondary text-xs py-2 px-4 inline-flex items-center gap-2">
+            <i class="fa-solid fa-tags text-xs"></i>
+            <span>{{ 'category.manage'|trans }}</span>
+        </a>
         {% if addSubscriptionDisabled == false %}
             <a href="{{ path('app_subscription_new') }}"
                data-turbo-frame="modal"

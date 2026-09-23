@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service;
 
 use App\Entity\Subscription;
+use App\Entity\User;
 use App\Repository\SubscriptionRepository;
 use App\Repository\UserRepository;
 use Symfony\Component\Security\Core\User\UserInterface;
@@ -14,6 +15,7 @@ class SubscriptionService
     public function __construct(
         private readonly SubscriptionRepository $subscriptionRepository,
         private readonly UserRepository $userRepository,
+        private readonly ExpenseCategoryService $categoryService,
     ) {
     }
 
@@ -59,12 +61,37 @@ class SubscriptionService
     {
         $this->canAddNewSubscription($subscription->getOwner());
 
+        $owner = $subscription->getOwner();
+        if ($owner instanceof User && null === $subscription->getCategory()) {
+            $subscription->setCategory($this->categoryService->ensureDefaultCategory($owner));
+        }
+        $this->assertCategoryOwnership($subscription);
+
         $this->subscriptionRepository->save($subscription);
     }
 
     public function update(Subscription $subscription): void
     {
+        $this->assertCategoryOwnership($subscription);
+
         $this->subscriptionRepository->save($subscription);
+    }
+
+    /**
+     * @throws \LogicException when the assigned category belongs to another User
+     */
+    public function assertCategoryOwnership(Subscription $subscription): void
+    {
+        $owner = $subscription->getOwner();
+        $category = $subscription->getCategory();
+
+        if (null === $owner || null === $category) {
+            return;
+        }
+
+        if ($owner instanceof User && !$category->isOwnedBy($owner)) {
+            throw new \LogicException('The selected category does not belong to this account.');
+        }
     }
 
     public function canAddNewSubscription(UserInterface $user): void
