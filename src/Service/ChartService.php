@@ -127,21 +127,21 @@ class ChartService
         $withYearly ?
             $data = array_map(
                 fn(Subscription $subscription) => [
-                    'm' => $subscription->getMonthly() ?? ($subscription->getYearly() / 12),
+                    'm' => $subscription->getMonthlyCalculated(),
                     'l' => $subscription->getName()
                 ],
                 $subscriptions
             )
             : $data = array_map(
                 fn(Subscription $subscription) => [
-                    'm' => $subscription->getMonthly() ?? $subscription->getYearly(),
+                    'm' => $subscription->getAmount(),
                     'l' => $subscription->getName()
                 ],
                 array_filter(
                     $subscriptions,
                     fn(Subscription $subscription) => $month === null
-                        ? $subscription->getMonthly() !== null
-                        : $subscription->getMonthly() !== null || $subscription->getFirstPayment()->format('n') === (string) $month
+                        ? $subscription->isMonthly()
+                        : $subscription->isMonthly() || $subscription->getNextPayment()->format('n') === (string) $month
                 )
             );
 
@@ -209,14 +209,14 @@ class ChartService
         $withMonthly ?
             $data = array_map(
                 fn(Subscription $subscription) => [
-                    'm' => $subscription->getYearly() ?? $subscription->getMonthly() * 12,
+                    'm' => $subscription->getYearlyCalculated(),
                     'l' => $subscription->getName()
                 ],
                 $subscriptions
             )
             : $data = array_map(
-            fn(Subscription $subscription) => ['m' => $subscription->getYearly(), 'l' => $subscription->getName()],
-            array_filter($subscriptions, fn(Subscription $subscription) => $subscription->getYearly() !== null)
+            fn(Subscription $subscription) => ['m' => $subscription->getAmount(), 'l' => $subscription->getName()],
+            array_filter($subscriptions, fn(Subscription $subscription) => $subscription->isYearly())
         );
 
         $data = array_values($data);
@@ -280,9 +280,9 @@ class ChartService
     {
         $dataSets = [];
         foreach ($subscriptions as $index => $subscription) {
-            $amountFormatted = $subscription->getMonthly() !== null
-                ? number_format((float)$subscription->getMonthly(), 2, '.', ' ') . ' / mo'
-                : number_format((float)$subscription->getYearly(), 2, '.', ' ') . ' / yr';
+            $amountFormatted = $subscription->isMonthly()
+                ? number_format((float)$subscription->getAmount(), 2, '.', ' ') . ' / mo'
+                : number_format((float)$subscription->getAmount(), 2, '.', ' ') . ' / yr';
 
             $dataSets[] = [
                 'label' => $subscription->getName(),
@@ -319,10 +319,10 @@ class ChartService
         $total = 0.0;
 
         foreach ($subscriptions as $subscription) {
-            if ($subscription->getMonthly() !== null) {
-                $total += $subscription->getMonthly();
-            } elseif ((int)$subscription->getFirstPayment()->format('n') === ($month + 1)) {
-                $total += $subscription->getYearly();
+            if ($subscription->isMonthly()) {
+                $total += $subscription->getAmount();
+            } elseif ((int)$subscription->getNextPayment()->format('n') === ($month + 1)) {
+                $total += $subscription->getAmount();
             }
         }
 

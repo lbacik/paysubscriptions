@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Form;
 
 use App\Entity\Subscription;
+use App\Enum\BillingCycle;
 use Symfony\Component\Form\AbstractType;
+use Symfony\Component\Form\Extension\Core\Type\EnumType;
 use Symfony\Component\Form\Extension\Core\Type\NumberType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
@@ -23,24 +25,22 @@ class SubscriptionType extends AbstractType
                 ],
 
             ])
-            ->add('firstPayment', null, [
+            ->add('billingCycle', EnumType::class, [
+                'class' => BillingCycle::class,
+                'label' => 'subscription.billing_cycle',
+                'choice_label' => fn(BillingCycle $cycle) => 'subscription.billing_cycle_'.$cycle->value,
+            ])
+            ->add('amount', NumberType::class, [
+                'label' => 'subscription.amount',
+                'html5' => true,
+                'attr' => [
+                    'step' => 0.01,
+                    'min' => 0,
+                ],
+            ])
+            ->add('nextPayment', null, [
                 'widget' => 'single_text',
-            ])
-            ->add('monthly', NumberType::class, [
-                'required' => false,
-                'html5' => true,
-                'attr' => [
-                    'step' => 0.01,
-                    'min' => 0,
-                ],
-            ])
-            ->add('yearly', NumberType::class, [
-                'required' => false,
-                'html5' => true,
-                'attr' => [
-                    'step' => 0.01,
-                    'min' => 0,
-                ],
+                'label' => 'subscription.next_payment',
             ])
         ;
     }

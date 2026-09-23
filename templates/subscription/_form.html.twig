@@ -5,12 +5,13 @@
     {{ form_errors(form) }}
 
     {{ form_row(form.name) }}
-    {{ form_row(form.firstPayment) }}
 
     <div class="flex flex-row justify-between space-x-2">
-        {{ form_row(form.monthly) }}
-        {{ form_row(form.yearly) }}
+        {{ form_row(form.billingCycle) }}
+        {{ form_row(form.amount) }}
     </div>
+
+    {{ form_row(form.nextPayment) }}
 
     <div class="flex flex-row items-center justify-end space-x-2 pt-5">
         <twig:Button styleType="secondary" href="{{ path('app_dashboard') }}">{{ 'cancel'|trans }}</twig:Button>
