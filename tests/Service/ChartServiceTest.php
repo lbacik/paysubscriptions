@@ -12,11 +12,17 @@ use Symfony\UX\Chartjs\Builder\ChartBuilder;
 
 final class ChartServiceTest extends TestCase
 {
+    private ChartService $chartService;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->chartService = new ChartService(new ChartBuilder());
+    }
+
     public function testCreateBarChartBuildsDatasetsWithAmountAndLabels(): void
     {
-        $chartBuilder = new ChartBuilder();
-        $chartService = new ChartService($chartBuilder);
-
         $subscription1 = new Subscription();
         $subscription1->setName('Netflix');
         $subscription1->setBillingCycle(BillingCycle::Monthly);
@@ -29,7 +35,7 @@ final class ChartServiceTest extends TestCase
         $subscription2->setAmount(139.00);
         $subscription2->setNextPayment(new \DateTime('2024-05-01'));
 
-        $chart = $chartService->createBarChart([$subscription1, $subscription2]);
+        $chart = $this->chartService->createBarChart([$subscription1, $subscription2]);
 
         $data = $chart->getData();
         self::assertCount(2, $data['datasets']);
