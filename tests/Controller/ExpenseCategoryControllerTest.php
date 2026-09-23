@@ -90,7 +90,7 @@ final class ExpenseCategoryControllerTest extends DatabaseTestCase
         self::assertStringContainsString('Streaming', $crawler->text());
 
         // Rename + recolor.
-        $crawler = $this->client->request('GET', '/category' . $category->getId() . '/edit');
+        $crawler = $this->client->request('GET', '/category/' . $category->getId() . '/edit');
         self::assertResponseIsSuccessful();
         $this->client->submit($crawler->filter('form')->form([
             'expense_category[name]' => 'Video',
@@ -104,12 +104,18 @@ final class ExpenseCategoryControllerTest extends DatabaseTestCase
         self::assertSame('#654321', $renamed->getColor());
 
         // Delete (unused).
-        $crawler = $this->client->request('GET', '/category' . $category->getId());
+        $crawler = $this->client->request('GET', '/category/' . $category->getId());
         self::assertResponseIsSuccessful();
         $form = $crawler->filter('form')->form();
         $this->client->submit($form);
         self::assertResponseRedirects('/category');
-        self::assertNull($repository->find($category->getId()));
+        // Assert at the database level: the functional client reboots the
+        // kernel between requests, so any repository fetched earlier reads
+        // from a stale entity manager.
+        self::assertSame(0, (int) $this->em->getConnection()->fetchOne(
+            'SELECT COUNT(*) FROM expense_category WHERE id = ?',
+            [$category->getId()->toBinary()]
+        ));
     }
 
     public function testDeleteUsedCategoryIsRefusedWithoutReassignment(): void
@@ -120,14 +126,17 @@ final class ExpenseCategoryControllerTest extends DatabaseTestCase
         $subscription = (new Subscription())
             ->setName('Netflix')
             ->setFirstPayment(new \DateTimeImmutable('2024-01-15'))
-            ->setMonthly(15.99)
-            ->setOwner($user)
-            ->setCategory($category);
+            ->setMonthly(15.99);
+        // Maintain both sides: the first HTTP request reuses this test's
+        // entity manager, so an owning-side-only link would leave the
+        // inverse collections initialized-but-empty in memory.
+        $user->addSubscription($subscription);
+        $category->addSubscription($subscription);
         $this->em->persist($subscription);
         $this->em->flush();
 
         $this->client->loginUser($user);
-        $crawler = $this->client->request('GET', '/category' . $category->getId());
+        $crawler = $this->client->request('GET', '/category/' . $category->getId());
         self::assertResponseIsSuccessful();
         self::assertStringContainsString('Reassign them before deleting', $crawler->text());
 
@@ -151,10 +160,10 @@ final class ExpenseCategoryControllerTest extends DatabaseTestCase
 
         $this->client->loginUser($intruder);
 
-        $this->client->request('GET', '/category' . $category->getId() . '/edit');
+        $this->client->request('GET', '/category/' . $category->getId() . '/edit');
         self::assertResponseStatusCodeSame(403);
 
-        $this->client->request('GET', '/category' . $category->getId());
+        $this->client->request('GET', '/category/' . $category->getId());
         self::assertResponseStatusCodeSame(403);
     }
 
