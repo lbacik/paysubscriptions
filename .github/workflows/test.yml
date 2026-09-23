@@ -66,10 +66,25 @@ jobs:
     name: Checks
     runs-on: ubuntu-latest
 
+    services:
+      mysql:
+        # Same image as the `migrations` job below: the behavioral suite runs
+        # against the 9 series that rum provisions in production.
+        image: mysql:9
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: paysub
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
     # Real environment variables win over .env/.env.local, so these pin what the
     # checks resolve instead of inheriting the dev defaults committed in .env
-    # (a postgres DATABASE_URL, an empty APP_SECRET). Nothing here connects to a
-    # database - the value only has to parse.
+    # (a postgres DATABASE_URL, an empty APP_SECRET).
     env:
       APP_ENV: prod
       APP_DEBUG: '0'
@@ -79,6 +94,10 @@ jobs:
       MAILER_DSN: 'null://null'
       JSON_HUB_PROJECT: '00000000-0000-0000-0000-000000000000'
       MAILING_PROVIDER_ROUTING_KEY: 'ci'
+      # Dummy only: the suite replaces the client with a fake before verifying,
+      # but merely rendering /contact instantiates it, which requires a secret.
+      GOOGLE_RECAPTCHA_SITE_KEY: 'ci'
+      GOOGLE_RECAPTCHA_SECRET: 'ci'
 
     steps:
       - name: Checkout
@@ -125,20 +144,35 @@ jobs:
       # releases for something this repository cannot fix. It is parked in
       # quality.yml instead, where its red is visible without being fatal.
 
-      # Runs an empty suite today - tests/ contains only bootstrap.php, and
-      # PHPUnit exits 0 on "No tests executed!". Kept in the gate so that the
-      # first real test is enforced the moment it lands, rather than the gate
-      # being wired up after the fact.
+      # The behavioral suite (tests/) needs a database: `when@test` appends
+      # `_test` to the database name, so this provisions `paysub_test` and
+      # replays the migrations into it, which additionally proves the
+      # migrations apply cleanly before a single test boots. Each test then
+      # rebuilds its own schema from the entity metadata, so tests stay
+      # isolated from each other regardless of this step.
+      - name: Prepare the test database
+        env:
+          APP_ENV: test
+        run: |
+          php bin/console doctrine:database:create --if-not-exists
+          php bin/console doctrine:migrations:migrate --no-interaction --all-or-nothing --allow-no-migration
+
+      # The gate's behavioral core: registration, authentication, contact,
+      # newsletter, subscription CRUD with two-user isolation, limits, totals
+      # and charts. No continue-on-error anywhere in this file: a red suite
+      # blocks the push, the tag build in release.yml, and therefore the
+      # deploy.
       - name: Run PHPUnit
         env:
           APP_ENV: test
         run: vendor/bin/phpunit
 
-  # Its own job because it needs a database, and the checks above do not - the
-  # suite builds nothing from mappings, so this is the only thing that proves the
-  # migrations actually apply. Replays the exact command deploy.yml runs against
-  # production, then loads the fixtures on top, which is what proves the migrated
-  # schema still matches the entity mappings well enough to insert into.
+  # Its own job because it replays production, not the test setup: the checks
+  # above migrate a `paysub_test` database under APP_ENV=test for the
+  # behavioral suite, while this job runs the byte-for-byte deploy.yml command
+  # under APP_ENV=prod and then loads the fixtures on top, which is what
+  # proves the migrated schema still matches the entity mappings well enough
+  # to insert into.
   #
   # Why MESSENGER_TRANSPORT_DSN below is an amqp:// URL for a broker that is not
   # running, rather than the doctrine:// one the rest of this file used to carry.

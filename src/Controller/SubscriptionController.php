@@ -63,6 +63,8 @@ class SubscriptionController extends AbstractController
     #[Route('/{id}/edit', name: 'app_subscription_edit', methods: ['GET', 'POST'])]
     public function edit(Request $request, Subscription $subscription): Response
     {
+        $this->denyAccessUnlessOwned($subscription);
+
         $form = $this->createForm(
             SubscriptionType::class,
             $subscription,
@@ -94,6 +96,8 @@ class SubscriptionController extends AbstractController
         Subscription $subscription,
         EntityManagerInterface $entityManager
     ): Response {
+        $this->denyAccessUnlessOwned($subscription);
+
         if ($this->isCsrfTokenValid('delete' . $subscription->getId(), $request->getPayload()->get('_token'))) {
             $entityManager->remove($subscription);
             $entityManager->flush();
@@ -121,5 +125,21 @@ class SubscriptionController extends AbstractController
             'order' => 'asc',
             'sort' => 'name',
         ], new Response('', 200, ['Content-Type' => 'text/vnd.turbo-stream.html']));
+    }
+
+    /**
+     * Every subscription belongs to exactly one User. A foreign id must look
+     * identical to a missing one (404, not 403) so ids cannot be probed, and
+     * the check runs before any form handling or CSRF validation so an
+     * unauthenticated-for-this-row request learns nothing either way.
+     */
+    private function denyAccessUnlessOwned(Subscription $subscription): void
+    {
+        $owner = $subscription->getOwner();
+        $user = $this->getUser();
+
+        if (null === $owner || null === $user || (string) $owner->getId() !== (string) $user->getId()) {
+            throw $this->createNotFoundException('Subscription not found.');
+        }
     }
 }
