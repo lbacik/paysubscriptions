@@ -107,6 +107,8 @@ dashboard:
     empty_title: "No upcoming renewals yet"
     empty_body: "Add your first subscription to see its upcoming renewal forecast here."
     add_first: "Add subscription"
+  chart:
+    summary: "Chart of subscription costs. The same figures are listed in the subscriptions table below."
 add_subscription: "Add Subscription"
 edit: "Edit"
 delete: "Delete"

@@ -10,10 +10,19 @@ export default class extends Controller {
   }
 
   toggle() {
-    this.menuTarget.classList.toggle('hidden');
+    const isHidden = this.menuTarget.classList.toggle('hidden');
+    this._syncExpanded(!isHidden);
   }
 
   clickOutside(event) {
     this.menuTarget.classList.add('hidden');
+    this._syncExpanded(false);
+  }
+
+  _syncExpanded(isOpen) {
+    const button = this.element.querySelector('[aria-expanded]');
+    if (button) {
+      button.setAttribute('aria-expanded', String(isOpen));
+    }
   }
 }

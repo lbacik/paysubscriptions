@@ -56,7 +56,7 @@
         <!-- Monthly Spending Card -->
         <div class="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-2xs hover:shadow-xs transition-shadow">
             <div class="flex items-center justify-between">
-                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">{{ "dashboard.kpi.monthly_title"|trans }}</span>
+                <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">{{ "dashboard.kpi.monthly_title"|trans }}</span>
                 <div class="w-9 h-9 rounded-xl bg-blue-50 text-color-ter flex items-center justify-center text-sm">
                     <i class="fa-solid fa-calendar-day"></i>
                 </div>
@@ -64,16 +64,16 @@
             <div class="mt-3">
                 <div class="text-3xl font-extrabold text-slate-900 tracking-tight">
                     {{ totals.monthlyCalculated|number_format(2, '.', ' ') }}
-                    <span class="text-sm font-normal text-slate-400">{% if totals.currency %}{{ totals.currency }} {% endif %}/ mo</span>
+                    <span class="text-sm font-normal text-slate-500">{% if totals.currency %}{{ totals.currency }} {% endif %}/ mo</span>
                 </div>
                 <div class="mt-2 text-xs text-slate-500 flex flex-wrap items-center gap-x-2 gap-y-1">
                     <span class="inline-flex items-center gap-1 font-medium text-slate-700">
                         {{ totals.monthly|number_format(2, '.', ' ') }}
                     </span>
-                    <span class="text-slate-400">{{ "dashboard.kpi.monthly_direct"|trans }}</span>
+                    <span class="text-slate-500">{{ "dashboard.kpi.monthly_direct"|trans }}</span>
                     {% set monthlyFromYearly = totals.monthlyCalculated - totals.monthly %}
                     {% if monthlyFromYearly > 0.01 %}
-                        <span class="text-slate-300">•</span>
+                        <span class="text-slate-500" aria-hidden="true">•</span>
                         <span class="text-slate-500">+{{ monthlyFromYearly|number_format(2, '.', ' ') }} {{ "dashboard.kpi.monthly_normalized"|trans }}</span>
                     {% endif %}
                 </div>
@@ -93,7 +93,7 @@
         <!-- Yearly Spending Card -->
         <div class="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-2xs hover:shadow-xs transition-shadow">
             <div class="flex items-center justify-between">
-                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">{{ "dashboard.kpi.yearly_title"|trans }}</span>
+                <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">{{ "dashboard.kpi.yearly_title"|trans }}</span>
                 <div class="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center text-sm">
                     <i class="fa-solid fa-calendar-check"></i>
                 </div>
@@ -101,16 +101,16 @@
             <div class="mt-3">
                 <div class="text-3xl font-extrabold text-slate-900 tracking-tight">
                     {{ totals.yearlyCalculated|number_format(2, '.', ' ') }}
-                    <span class="text-sm font-normal text-slate-400">{% if totals.currency %}{{ totals.currency }} {% endif %}/ yr</span>
+                    <span class="text-sm font-normal text-slate-500">{% if totals.currency %}{{ totals.currency }} {% endif %}/ yr</span>
                 </div>
                 <div class="mt-2 text-xs text-slate-500 flex flex-wrap items-center gap-x-2 gap-y-1">
                     <span class="inline-flex items-center gap-1 font-medium text-slate-700">
                         {{ totals.yearly|number_format(2, '.', ' ') }}
                     </span>
-                    <span class="text-slate-400">{{ "dashboard.kpi.yearly_direct"|trans }}</span>
+                    <span class="text-slate-500">{{ "dashboard.kpi.yearly_direct"|trans }}</span>
                     {% set yearlyFromMonthly = totals.yearlyCalculated - totals.yearly %}
                     {% if yearlyFromMonthly > 0.01 %}
-                        <span class="text-slate-300">•</span>
+                        <span class="text-slate-500" aria-hidden="true">•</span>
                         <span class="text-slate-500">+{{ yearlyFromMonthly|number_format(2, '.', ' ') }} {{ "dashboard.kpi.yearly_normalized"|trans }}</span>
                     {% endif %}
                 </div>
@@ -130,7 +130,7 @@
         <!-- Subscriptions Count / Limits Card -->
         <div class="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-2xs hover:shadow-xs transition-shadow">
             <div class="flex items-center justify-between">
-                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">{{ "dashboard.kpi.limit_title"|trans }}</span>
+                <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">{{ "dashboard.kpi.limit_title"|trans }}</span>
                 <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-sm">
                     <i class="fa-solid fa-receipt"></i>
                 </div>
@@ -138,7 +138,7 @@
             <div class="mt-3">
                 <div class="text-3xl font-extrabold text-slate-900 tracking-tight">
                     {{ totals.count }}
-                    <span class="text-sm font-normal text-slate-400">/ {{ subscriptionLimit }}</span>
+                    <span class="text-sm font-normal text-slate-500">/ {{ subscriptionLimit }}</span>
                 </div>
                 <div class="mt-3">
                     <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
@@ -148,9 +148,9 @@
                     <div class="mt-1.5 flex items-center justify-between text-[11px] text-slate-500">
                         <span>{{ "dashboard.kpi.slots_used"|trans({'%count%': totals.count, '%limit%': subscriptionLimit}) }}</span>
                         {% if addSubscriptionDisabled %}
-                            <span class="text-red-500 font-semibold">{{ "subscription.limit_reached"|trans }}</span>
+                            <span class="text-red-600 font-semibold">{{ "subscription.limit_reached"|trans }}</span>
                         {% else %}
-                            <span class="text-emerald-600 font-medium">{{ subscriptionLimit - totals.count }} remaining</span>
+                            <span class="text-emerald-700 font-medium">{{ subscriptionLimit - totals.count }} remaining</span>
                         {% endif %}
                     </div>
                 </div>
@@ -208,6 +208,8 @@
 
                     <div class="relative mt-6 overflow-hidden rounded-2xl">
                         <div id="chart-container"
+                             role="img"
+                             aria-label="{{ 'dashboard.chart.summary'|trans }}"
                              class="mx-auto w-full {% if fullWidth %} h-[360px] md:h-[420px] {% else %} max-w-xl h-[340px] md:h-[380px] {% endif %} relative flex items-center justify-center">
                             {{ render_chart(chart, {
                                 'data-controller': 'chart-click',
@@ -234,8 +236,9 @@
                                     <button type="button"
                                             data-action="click->chart-legend#close"
                                             class="w-7 h-7 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center transition-colors cursor-pointer"
-                                            title="{{ 'cancel'|trans }}">
-                                        <i class="fa-solid fa-xmark text-xs"></i>
+                                            title="{{ 'cancel'|trans }}"
+                                            aria-label="{{ 'cancel'|trans }}">
+                                        <i class="fa-solid fa-xmark text-xs" aria-hidden="true"></i>
                                     </button>
                                 </div>
 
@@ -247,17 +250,18 @@
                                                data-chart-legend-target="search"
                                                data-action="input->chart-legend#filter"
                                                placeholder="{{ 'dashboard.legend.search_placeholder'|trans }}"
+                                               aria-label="{{ 'dashboard.legend.search_placeholder'|trans }}"
                                                class="w-full text-xs pl-8 pr-3 py-1.5 rounded-xl border border-slate-200 bg-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all">
                                     </div>
                                     <div class="flex items-center justify-between text-[11px] px-0.5">
-                                        <span class="text-slate-400 font-medium">{{ "dashboard.legend.quick_actions"|trans }}</span>
+                                        <span class="text-slate-500 font-medium">{{ "dashboard.legend.quick_actions"|trans }}</span>
                                         <div class="flex items-center gap-2">
                                             <button type="button"
                                                     data-action="click->chart-legend#showAll"
                                                     class="font-semibold text-blue-600 hover:text-blue-700 hover:underline cursor-pointer">
                                                 {{ "dashboard.legend.show_all"|trans }}
                                             </button>
-                                            <span class="text-slate-300">•</span>
+                                            <span class="text-slate-500" aria-hidden="true">•</span>
                                             <button type="button"
                                                     data-action="click->chart-legend#hideAll"
                                                     class="font-semibold text-slate-500 hover:text-slate-700 hover:underline cursor-pointer">
@@ -274,13 +278,13 @@
                                 </div>
 
                                 <!-- Empty Search State -->
-                                <div data-chart-legend-target="emptyState" class="hidden p-6 text-center text-xs text-slate-400">
+                                <div data-chart-legend-target="emptyState" class="hidden p-6 text-center text-xs text-slate-500">
                                     <i class="fa-regular fa-folder-open text-base mb-1 block"></i>
                                     <span>{{ "dashboard.legend.no_results"|trans }}</span>
                                 </div>
 
                                 <!-- Footer Hint -->
-                                <div class="p-3 border-t border-slate-100 bg-slate-50/50 text-[11px] text-slate-400 flex items-center gap-1.5">
+                                <div class="p-3 border-t border-slate-100 bg-slate-50/50 text-[11px] text-slate-500 flex items-center gap-1.5">
                                     <i class="fa-regular fa-lightbulb text-amber-500 text-xs"></i>
                                     <span>{{ "dashboard.legend.hint"|trans }}</span>
                                 </div>

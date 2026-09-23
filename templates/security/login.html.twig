@@ -5,7 +5,7 @@
 
         <form method="post">
             {% if error %}
-                <div class="text-red-600">{{ error.messageKey|trans(error.messageData, 'security')|raw }}</div>
+                <div class="text-red-600" role="alert">{{ error.messageKey|trans(error.messageData, 'security')|raw }}</div>
             {% endif %}
 
             {% if app.user %}
@@ -45,7 +45,7 @@
                         >
                     </div>
                     <div class="w-full text-end">
-                        <a href="{{ path('app_forgot_password_request') }}" class="text-green-500 text-sm">{{ 'user.forgot_password'|trans }}</a>
+                        <a href="{{ path('app_forgot_password_request') }}" class="text-green-700 text-sm">{{ 'user.forgot_password'|trans }}</a>
                     </div>
                 </div>
 
@@ -54,8 +54,8 @@
                 >
 
                 <div>
-                    <label class="text-color-ter">
-                        <input type="checkbox" name="_remember_me" class="p-2 mr-2"> {{ 'user.remember_me'|trans }}
+                    <label for="rememberMe" class="text-color-ter">
+                        <input type="checkbox" name="_remember_me" id="rememberMe" class="p-2 mr-2"> {{ 'user.remember_me'|trans }}
                     </label>
                 </div>
                 <div class="text-center">

@@ -125,13 +125,15 @@ export default class extends Controller {
   }
 
   createRowElement(dataset, index, isVisible) {
-    const row = document.createElement('div');
-    row.className = `flex items-center justify-between p-2 rounded-xl transition-all cursor-pointer select-none group hover:bg-slate-100/70 ${
+    const row = document.createElement('button');
+    row.type = 'button';
+    row.className = `w-full text-left flex items-center justify-between p-2 rounded-xl transition-all cursor-pointer select-none group hover:bg-slate-100/70 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-slate-900 ${
       isVisible ? '' : 'opacity-50'
     }`;
     row.dataset.index = index;
     row.dataset.label = (dataset.label || '').toLowerCase();
     row.dataset.action = 'click->chart-legend#toggleDataset';
+    row.setAttribute('aria-pressed', String(isVisible));
 
     const color = dataset.backgroundColor || '#64748b';
     const label = dataset.label || `Item ${index + 1}`;
@@ -143,11 +145,11 @@ export default class extends Controller {
           isVisible ? 'opacity-100' : 'opacity-30'
         }" style="background-color: ${color}"></span>
         <span class="label-text text-xs font-medium truncate group-hover:text-slate-900 transition-colors ${
-          isVisible ? 'text-slate-800' : 'text-slate-400 line-through'
+          isVisible ? 'text-slate-800' : 'text-slate-500 line-through'
         }">${this.escapeHtml(label)}</span>
         ${
           amount
-            ? `<span class="text-[10px] text-slate-400 font-medium ml-auto shrink-0">${this.escapeHtml(amount)}</span>`
+            ? `<span class="text-[10px] text-slate-500 font-medium ml-auto shrink-0">${this.escapeHtml(amount)}</span>`
             : ''
         }
       </div>
@@ -224,6 +226,8 @@ export default class extends Controller {
     const labelText = row.querySelector('.label-text');
     const checkBox = row.querySelector('.check-box');
 
+    row.setAttribute('aria-pressed', String(isVisible));
+
     if (isVisible) {
       row.classList.remove('opacity-50');
       if (colorDot) {
@@ -231,7 +235,7 @@ export default class extends Controller {
         colorDot.classList.add('opacity-100');
       }
       if (labelText) {
-        labelText.classList.remove('text-slate-400', 'line-through');
+        labelText.classList.remove('text-slate-500', 'line-through');
         labelText.classList.add('text-slate-800');
       }
       if (checkBox) {
@@ -246,7 +250,7 @@ export default class extends Controller {
       }
       if (labelText) {
         labelText.classList.remove('text-slate-800');
-        labelText.classList.add('text-slate-400', 'line-through');
+        labelText.classList.add('text-slate-500', 'line-through');
       }
       if (checkBox) {
         checkBox.classList.remove('bg-blue-600', 'border-blue-600', 'text-white');

@@ -1,0 +1,15 @@
+{
+  "name": "paysub-accessibility",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Automated axe WCAG 2.1 AA scan for PaySubscriptions (issue #52).",
+  "scripts": {
+    "scan": "node scan.mjs"
+  },
+  "license": "UNLICENSED",
+  "dependencies": {
+    "@axe-core/playwright": "4.10.1",
+    "playwright": "1.49.1"
+  }
+}
