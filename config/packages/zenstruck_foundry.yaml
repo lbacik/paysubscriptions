@@ -5,4 +5,16 @@ when@dev: &dev
             # Flush only once per call of `PersistentObjectFactory::create()`
             flush_once: true
 
-when@test: *dev
+when@test:
+    zenstruck_foundry:
+        persistence:
+            # Flush only once per call of `PersistentObjectFactory::create()`
+            flush_once: true
+        orm:
+            reset:
+                # Schema mode runs doctrine:schema:update, which is broken in
+                # this repo: the messenger doctrine transports register a
+                # schema listener requiring a DBAL 4.5+ API while DBAL 3 is
+                # installed. Migrate mode replays doctrine:migrations:migrate
+                # instead, which is also what CI verifies against production.
+                mode: migrate

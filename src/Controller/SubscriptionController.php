@@ -6,6 +6,7 @@ namespace App\Controller;
 
 use App\Entity\Subscription;
 use App\Form\SubscriptionType;
+use App\Security\SubscriptionVoter;
 use App\Service\SubscriptionService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -63,6 +64,8 @@ class SubscriptionController extends AbstractController
     #[Route('/{id}/edit', name: 'app_subscription_edit', methods: ['GET', 'POST'])]
     public function edit(Request $request, Subscription $subscription): Response
     {
+        $this->denyAccessUnlessGranted(SubscriptionVoter::EDIT, $subscription);
+
         $form = $this->createForm(
             SubscriptionType::class,
             $subscription,
@@ -94,6 +97,8 @@ class SubscriptionController extends AbstractController
         Subscription $subscription,
         EntityManagerInterface $entityManager
     ): Response {
+        $this->denyAccessUnlessGranted(SubscriptionVoter::DELETE, $subscription);
+
         if ($this->isCsrfTokenValid('delete' . $subscription->getId(), $request->getPayload()->get('_token'))) {
             $entityManager->remove($subscription);
             $entityManager->flush();
