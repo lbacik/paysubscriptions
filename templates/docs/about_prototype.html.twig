@@ -35,15 +35,6 @@
     .wf-a .hero-card { border-left:5px solid var(--warm); box-shadow:0 18px 48px #17263816; }
     .wf-a .hero-card p { margin-top:.5rem; }
     .wf-a .hero-card .separate { border-top:1px solid var(--line); padding-top:1rem; margin-top:1.2rem; }
-    .wf-a .principles { background:#fffdfa; border-block:1px solid var(--line); }
-    .wf-a .principles-grid { display:grid; grid-template-columns:.8fr 1.2fr; gap:4rem; }
-    .wf-a .principles-list { display:grid; gap:1rem; }
-    .wf-a .principles-list > div { border-bottom:1px solid var(--line); padding-bottom:1rem; }
-    .wf-a .principles-list p { margin-top:.4rem; color:var(--muted); }
-    .wf-a .roadmap-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:1rem; margin-top:2rem; }
-    .wf-a .roadmap-grid .panel:first-child { border-top:4px solid #6d907a; }
-    .wf-a .roadmap-grid .panel:nth-child(2) { border-top:4px solid #c47a65; }
-    .wf-a .roadmap-grid .panel:nth-child(3) { border-top:4px solid #728ba7; }
 
     .wf-b { background:#fbfaf6; }
     .wf-b .hero { background:#1e374c; color:white; padding-block:4.8rem; }
@@ -54,10 +45,10 @@
     .wf-b .step { display:grid; grid-template-columns:4.2rem 1fr; gap:1rem; border-top:1px solid var(--line); padding-top:1rem; }
     .wf-b .step strong { color:var(--warm); font-size:1.3rem; }
     .wf-b .step p { color:var(--muted); }
-    .wf-b .roadmap { display:grid; grid-template-columns:17rem 1fr; gap:3rem; }
-    .wf-b .roadmap-list { border-left:3px solid #e9b4a5; padding-left:1.5rem; }
-    .wf-b .roadmap-list > div { padding-bottom:1.6rem; }
-    .wf-b .roadmap-list p { margin-top:.4rem; color:var(--muted); }
+    .wf-a .roadmap,.wf-b .roadmap { display:grid; grid-template-columns:17rem 1fr; gap:3rem; }
+    .wf-a .roadmap-list,.wf-b .roadmap-list { border-left:3px solid #e9b4a5; padding-left:1.5rem; }
+    .wf-a .roadmap-list > div,.wf-b .roadmap-list > div { padding-bottom:1.6rem; }
+    .wf-a .roadmap-list p,.wf-b .roadmap-list p { margin-top:.4rem; color:var(--muted); }
     .wf-b .truth { background:#edf2f3; border-block:1px solid var(--line); }
     .wf-b .truth-grid { display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-top:1.8rem; }
 
@@ -67,11 +58,11 @@
     .wf-c .hero h1 em { font-style:normal; color:#ae5c53; }
     .wf-c .answer-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:1rem; margin-top:2rem; }
     .wf-c .answer-grid .panel { min-height:12rem; }
-    .wf-c .boundary { background:#edf3ef; border-block:1px solid #d5e4dc; }
-    .wf-c .boundary-grid { display:grid; grid-template-columns:.8fr 1.2fr; gap:4rem; }
-    .wf-c .boundary-list { display:grid; gap:1rem; }
-    .wf-c .boundary-list > div { padding-bottom:1rem; border-bottom:1px solid #d5e4dc; }
-    .wf-c .boundary-list p { color:var(--muted); margin-top:.4rem; }
+    .wf-a .boundary,.wf-c .boundary { background:#edf3ef; border-block:1px solid #d5e4dc; }
+    .wf-a .boundary-grid,.wf-c .boundary-grid { display:grid; grid-template-columns:.8fr 1.2fr; gap:4rem; }
+    .wf-a .boundary-list,.wf-c .boundary-list { display:grid; gap:1rem; }
+    .wf-a .boundary-list > div,.wf-c .boundary-list > div { padding-bottom:1rem; border-bottom:1px solid #d5e4dc; }
+    .wf-a .boundary-list p,.wf-c .boundary-list p { color:var(--muted); margin-top:.4rem; }
     .wf-c .roadmap-row { display:grid; grid-template-columns:7rem 1fr; gap:1rem; border-top:1px solid var(--line); padding:1.1rem 0; }
     .wf-c .roadmap-row p { color:var(--muted); }
 
@@ -80,8 +71,8 @@
     .wf-about-switch a:hover,.wf-about-switch a:focus-visible { background:#3f5874; }
     .wf-about-switch strong { min-width:12rem; text-align:center; }
     @media (max-width:800px) {
-        .wf-a .hero,.wf-a .principles-grid,.wf-b .hero-grid,.wf-b .roadmap,.wf-c .boundary-grid { grid-template-columns:1fr; gap:2rem; }
-        .wf-a .roadmap-grid,.wf-b .truth-grid,.wf-c .answer-grid { grid-template-columns:1fr; }
+        .wf-a .hero,.wf-a .boundary-grid,.wf-a .roadmap,.wf-b .hero-grid,.wf-b .roadmap,.wf-c .boundary-grid { grid-template-columns:1fr; gap:2rem; }
+        .wf-b .truth-grid,.wf-c .answer-grid { grid-template-columns:1fr; }
         .wf-about .section { padding-block:3rem; }
         .wf-b .hero .panel { transform:none; }
     }
@@ -101,8 +92,8 @@
             <div><span class="eyebrow">About PaySubscriptions</span><h1>A clearer view of the costs that come back.</h1><p class="lede">PaySubscriptions is a free, manual-first tracker for one person managing their own subscriptions and household recurring costs. It is being shaped around a simple question: what will renew next, and can you act in time?</p></div>
             <div class="panel hero-card"><span class="tag">Available now</span><h3>Start with what exists</h3><p>Enter subscriptions yourself and review a list with monthly and yearly cost equivalents. One person owns each account.</p><div class="separate"><span class="tag plan">Planned for v1.0</span><p>Renewal dates, optional reminders, categories, a published privacy policy, and self-service account deletion still need to be built and verified.</p></div></div>
         </section>
-        <section class="principles section"><div class="wrap principles-grid"><div><span class="eyebrow">How we earn trust</span><h2>Clear choices and clear disclosures.</h2><p class="lede">You decide what to record. We should be just as clear about what the service does with it.</p></div><div class="principles-list"><div><span class="tag">Available now</span><h3>No bank or inbox connection</h3><p>Records are entered manually; PaySubscriptions does not read transactions or email.</p></div><div><span class="tag plan">Planned for v1.0</span><h3>A policy you can actually check</h3><p>The policy will disclose hosted Umami page-view analytics, storage without field-level encryption at rest, and the scope of the no-selling and no-sharing promise.</p></div><div><span class="tag plan">Planned for v1.0</span><h3>Control over your account</h3><p>Self-service deletion is planned. Data export will be available by email request rather than a self-service tool at v1.0.</p></div></div></div></section>
-        <section class="wrap section"><span class="eyebrow">Proposed public roadmap at v1.0 launch</span><h2>Where the work is headed.</h2><p class="lede">The Now stage below describes the release goal, not today's shipped product.</p><div class="roadmap-grid"><div class="panel"><span class="tag plan">Now · v1.0 goal</span><h3>Know what is coming due</h3><p>Organize recurring costs, see renewals and totals, choose optional reminders, and understand and control account data.</p></div><div class="panel"><span class="tag future">Next · explore</span><h3>Keep records current</h3><p>Explore low-friction import and self-service export after learning from real use.</p></div><div class="panel"><span class="tag future">Later · explore</span><h3>Plan further ahead</h3><p>Explore automatic currency conversion and change history if they prove useful.</p></div></div><p class="roadmap-note">Next and Later are directions to investigate, without dates or delivery guarantees. There is no bank, inbox, or provider integration in the v1.0 plan.</p></section>
+        <section class="boundary section"><div class="wrap boundary-grid"><div><span class="eyebrow">Data handling</span><h2>Trust needs specifics.</h2><p class="lede">The published privacy policy is a v1.0 release goal. These disclosures belong in it before the product makes a broad trust claim.</p></div><div class="boundary-list"><div><h3>Manual entry, no integrations</h3><p>The product does not ingest bank transactions, messages, or provider accounts.</p></div><div><h3>Hosted page-view analytics</h3><p>Hosted Umami is used today. The planned policy must name it and explain the analytics exception to the no-third-party-sharing promise.</p></div><div><h3>Storage and control</h3><p>Subscription fields are not individually encrypted at rest. The planned policy must say so plainly, alongside account deletion and email-request export.</p></div></div></div></section>
+        <section class="wrap section roadmap"><div><span class="eyebrow">Public roadmap concept</span><h2>Progress by outcome.</h2><p class="roadmap-note">This Now / Next / Later sequence is proposed for publication with v1.0. Now is not a claim about the current product.</p></div><div class="roadmap-list"><div><span class="tag plan">Now · v1.0 goal</span><h3>Know what is coming due</h3><p>Manual organization, renewal dates, totals, optional reminders, and account-data control.</p></div><div><span class="tag future">Next · explore</span><h3>Make records easier to keep current</h3><p>Possible import and self-service export, subject to feedback.</p></div><div><span class="tag future">Later · explore</span><h3>Make longer-range planning easier</h3><p>Possible automatic currency conversion and change history.</p></div><p class="roadmap-note">No dates, guaranteed sequence, or bank, email, and provider integrations.</p></div></section>
     {% elseif variant == 'B' %}
         <section class="hero"><div class="wrap hero-grid"><div><span class="eyebrow">About the project</span><h1>Build a useful habit around recurring costs.</h1><p class="lede">One owner, manual entry, and a focused path from knowing what you pay to knowing when it returns. No bank connection or shared household account.</p></div><div class="panel"><span class="tag plan">Proposed v1.0 journey</span><div class="steps"><div class="step"><strong>01</strong><div><h3>Record it</h3><p>Add a recurring cost and a cycle.</p></div></div><div class="step"><strong>02</strong><div><h3>See it coming</h3><p>Review upcoming renewals and totals.</p></div></div><div class="step"><strong>03</strong><div><h3>Choose a reminder</h3><p>Opt into email reminders or keep the overview in-app.</p></div></div></div><p class="tiny">Steps 2 and 3 describe planned work, not current behavior.</p></div></div></section>
         <section class="wrap section roadmap"><div><span class="eyebrow">Public roadmap concept</span><h2>Progress by outcome.</h2><p class="roadmap-note">This Now / Next / Later sequence is proposed for publication with v1.0. Now is not a claim about the current product.</p></div><div class="roadmap-list"><div><span class="tag plan">Now · v1.0 goal</span><h3>Know what is coming due</h3><p>Manual organization, renewal dates, totals, optional reminders, and account-data control.</p></div><div><span class="tag future">Next · explore</span><h3>Make records easier to keep current</h3><p>Possible import and self-service export, subject to feedback.</p></div><div><span class="tag future">Later · explore</span><h3>Make longer-range planning easier</h3><p>Possible automatic currency conversion and change history.</p></div><p class="roadmap-note">No dates, guaranteed sequence, or bank, email, and provider integrations.</p></div></section>
@@ -115,7 +106,7 @@
     <section class="closing section"><div class="wrap"><h2>A focused, free tracker for recurring costs.</h2><p class="lede" style="margin-inline:auto;">The homepage explains the product experience. This prototype shows the About-page story and the boundaries behind it.</p><a class="link" href="{{ path('app_home') }}">Explore PaySubscriptions</a></div></section>
 </main>
 {% if app.environment == 'dev' %}
-    {% set names = {'A':'Story + disclosures','B':'Journey + roadmap','C':'Questions + answers'} %}
+    {% set names = {'A':'Story + data + roadmap','B':'Journey + roadmap','C':'Questions + answers'} %}
     {% set previous = variant == 'A' ? 'C' : (variant == 'B' ? 'A' : 'B') %}
     {% set next = variant == 'A' ? 'B' : (variant == 'B' ? 'C' : 'A') %}
     <nav class="wf-about-switch" aria-label="About prototype variants" data-prototype-switcher>
