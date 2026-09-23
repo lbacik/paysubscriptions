@@ -29,6 +29,13 @@ final class SubscriptionsTable
 
     public function getTotal(): array
     {
-        return $this->subscriptionService->getTotals($this->getSubscriptions());
+        return $this->subscriptionService->getTotals($this->getSubscriptions(), $this->getMainCurrency());
+    }
+
+    public function getMainCurrency(): ?string
+    {
+        $user = $this->security->getUser();
+
+        return $user instanceof \App\Entity\User ? $user->getMainCurrency() : null;
     }
 }

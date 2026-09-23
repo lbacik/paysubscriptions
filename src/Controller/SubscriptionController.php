@@ -12,6 +12,7 @@ use App\Service\ExpenseCategoryService;
 use App\Service\SubscriptionService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\Form\FormError;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -35,18 +36,30 @@ class SubscriptionController extends AbstractController
 
         $subscription = new Subscription();
         $subscription->setCategory($this->categoryService->ensureDefaultCategory($user));
+        $mainCurrency = $this->getMainCurrency();
         $form = $this->createForm(
             SubscriptionType::class,
             $subscription,
             [
                 'action' => $this->generateUrl('app_subscription_new'),
                 'user' => $user,
+                'main_currency' => $mainCurrency,
             ]
         );
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
             $subscription->setOwner($this->getUser());
+            try {
+                $this->assertConvertedInput($form, $subscription, $mainCurrency);
+            } catch (\InvalidArgumentException) {
+                return $this->render('subscription/new.html.twig', [
+                    'subscription' => $subscription,
+                    'form' => $form,
+                    'mainCurrency' => $mainCurrency,
+                ]);
+            }
+
             try {
                 $this->subscriptionService->add($subscription);
 
@@ -68,6 +81,7 @@ class SubscriptionController extends AbstractController
         return $this->render('subscription/new.html.twig', [
             'subscription' => $subscription,
             'form' => $form,
+            'mainCurrency' => $mainCurrency,
         ]);
     }
 
@@ -79,17 +93,38 @@ class SubscriptionController extends AbstractController
         $user = $this->getUser();
         \assert($user instanceof User);
 
+        $mainCurrency = $this->getMainCurrency();
+        $originalConverted = $subscription->getConvertedAmount();
+
         $form = $this->createForm(
             SubscriptionType::class,
             $subscription,
             [
                 'action' => $this->generateUrl('app_subscription_edit', ['id' => $subscription->getId()]),
                 'user' => $user,
+                'main_currency' => $mainCurrency,
             ]
         );
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
+            // Re-entering the converted amount reviews it: stamp the current
+            // main currency. Untouched stale amounts keep their old stamp and
+            // stay excluded from totals until reviewed.
+            if ($subscription->getConvertedAmount() !== $originalConverted) {
+                $subscription->setConvertedCurrency($mainCurrency);
+            }
+
+            try {
+                $this->assertConvertedInput($form, $subscription, $mainCurrency);
+            } catch (\InvalidArgumentException) {
+                return $this->render('subscription/edit.html.twig', [
+                    'subscription' => $subscription,
+                    'form' => $form,
+                    'mainCurrency' => $mainCurrency,
+                ]);
+            }
+
             try {
                 // Defense-in-depth: the form's category choice list is
                 // already scoped to the user's own categories, so a cross-
@@ -116,6 +151,7 @@ class SubscriptionController extends AbstractController
         return $this->render('subscription/edit.html.twig', [
             'subscription' => $subscription,
             'form' => $form,
+            'mainCurrency' => $mainCurrency,
         ]);
     }
 
@@ -143,6 +179,29 @@ class SubscriptionController extends AbstractController
         return $this->render('subscription/delete.html.twig', [
             'subscription' => $subscription,
         ]);
+    }
+
+    private function getMainCurrency(): ?string
+    {
+        $user = $this->getUser();
+
+        return $user instanceof User ? $user->getMainCurrency() : null;
+    }
+
+    private function assertConvertedInput(mixed $form, Subscription $subscription, ?string $mainCurrency): void
+    {
+        // Save-blocking validation only: a stale converted amount stays
+        // saveable (aggregates exclude it) while banners and form warnings
+        // guide the User to review it.
+        $violations = $subscription->validateConverted($mainCurrency, true);
+
+        foreach ($violations as $violation) {
+            $form->addError(new FormError($violation));
+        }
+
+        if ($violations !== []) {
+            throw new \InvalidArgumentException(implode(' ', $violations));
+        }
     }
 
     private function streamResponse(): Response

@@ -3,8 +3,10 @@
 namespace App\Form;
 
 use App\Entity\User;
+use App\Service\CurrencyService;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
+use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\HiddenType;
 use Symfony\Component\Form\Extension\Core\Type\PasswordType;
 use Symfony\Component\Form\Extension\Core\Type\RepeatedType;
@@ -19,6 +21,11 @@ use Symfony\Component\Validator\Constraints\PasswordStrengthValidator;
 
 class RegistrationFormType extends AbstractType
 {
+    public function __construct(
+        private readonly CurrencyService $currencies,
+    ) {
+    }
+
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
@@ -28,6 +35,15 @@ class RegistrationFormType extends AbstractType
                 // or invalid, in which case UTC is stored explicitly instead.
                 'mapped' => false,
                 'required' => false,
+            ])
+            ->add('mainCurrency', ChoiceType::class, [
+                'choices' => $this->currencies->getChoices(),
+                'label' => 'Main currency',
+                'help' => 'Totals are reported in this currency. You can change it later in your profile.',
+                'data' => 'USD',
+                'constraints' => [
+                    new NotBlank(message: 'Please select your main currency.'),
+                ],
             ])
             ->add('agreeTerms', CheckboxType::class, [
                 'mapped' => false,

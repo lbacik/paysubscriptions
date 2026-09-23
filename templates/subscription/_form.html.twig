@@ -6,6 +6,7 @@
 
     {{ form_row(form.name) }}
     {{ form_row(form.category) }}
+    {{ form_row(form.currency) }}
 
     <div class="flex flex-row justify-between space-x-2">
         {{ form_row(form.billingCycle) }}
@@ -13,6 +14,24 @@
     </div>
 
     {{ form_row(form.nextPayment) }}
+
+    {% if mainCurrency is defined and mainCurrency %}
+        <div class="flex flex-row justify-between space-x-2">
+            {{ form_row(form.convertedAmount) }}
+        </div>
+    {% else %}
+        <div class="hidden">
+            {{ form_row(form.convertedAmount) }}
+        </div>
+    {% endif %}
+
+    {% if subscription is defined and subscription and mainCurrency is defined and mainCurrency
+        and subscription.needsConvertedReview(mainCurrency) %}
+        <div class="mb-4 p-3.5 rounded-2xl bg-amber-50 border border-amber-200/80 text-xs text-amber-800 flex items-start gap-2">
+            <i class="fa-solid fa-triangle-exclamation text-amber-500 mt-0.5"></i>
+            <span>{{ 'subscription.converted_review_needed'|trans({'%old%': subscription.convertedCurrency, '%new%': mainCurrency}) }}</span>
+        </div>
+    {% endif %}
 
     <div class="flex flex-row items-center justify-end space-x-2 pt-5">
         <twig:Button styleType="secondary" href="{{ path('app_dashboard') }}">{{ 'cancel'|trans }}</twig:Button>
