@@ -8,6 +8,7 @@ use App\Entity\RenewalReminder;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\ReminderStatus;
+use Doctrine\DBAL\Exception\ForeignKeyConstraintViolationException;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
@@ -78,7 +79,9 @@ final class RenewalReminderService
 
     /**
      * Lists due renewals without claiming or sending anything. Identifiers
-     * and dates only: safe for console output and dry runs.
+     * and dates only: safe for console output and dry runs. Renewals already
+     * handled (sent or awaiting review) are not due again, so they are
+     * excluded — the preview mirrors what a live run would attempt.
      *
      * @return list<array{subscription_id: string, renewal_date: string}>
      */
@@ -91,16 +94,40 @@ final class RenewalReminderService
             foreach ($this->subscriptionsOf($user) as $subscription) {
                 $renewalDate = $this->planner->dueRenewalDate($subscription, $user, $now);
 
-                if (null !== $renewalDate) {
-                    $due[] = [
-                        'subscription_id' => $subscription->getId()->toRfc4122(),
-                        'renewal_date' => $renewalDate->format('Y-m-d'),
-                    ];
+                if (null === $renewalDate) {
+                    continue;
                 }
+
+                $existing = $this->em->getRepository(RenewalReminder::class)
+                    ->findForSubscriptionOnDate($subscription, $renewalDate);
+
+                if (null !== $existing && ReminderStatus::Pending !== $existing->getStatus()) {
+                    continue;
+                }
+
+                $due[] = [
+                    'subscription_id' => $subscription->getId()->toRfc4122(),
+                    'renewal_date' => $renewalDate->format('Y-m-d'),
+                ];
             }
         }
 
         return $due;
+    }
+
+    /**
+     * Identifiers of reminders awaiting manual review, oldest first.
+     * Identifiers only — no Subscription details — so the list is safe for
+     * console output and log correlation.
+     *
+     * @return list<string>
+     */
+    public function needsReviewIds(): array
+    {
+        return array_map(
+            static fn (RenewalReminder $reminder): string => (string) $reminder->getId()->toRfc4122(),
+            $this->em->getRepository(RenewalReminder::class)->findNeedingReview()
+        );
     }
 
     /**
@@ -237,7 +264,10 @@ final class RenewalReminderService
      * manager), then resolves the managed row.
      *
      * Returns null when the renewal was already handled or belongs to a live
-     * concurrent worker.
+     * concurrent worker. A dangling identity (the Subscription or its owner
+     * disappeared between listing and claiming) is also a skip: there is
+     * nothing to remind about, and a foreign-key failure must never abort
+     * the whole run.
      */
     private function claim(
         Subscription $subscription,
@@ -257,6 +287,8 @@ final class RenewalReminderService
                 'created_at' => $stamp,
                 'updated_at' => $stamp,
             ]);
+        } catch (ForeignKeyConstraintViolationException) {
+            return null;
         } catch (UniqueConstraintViolationException) {
             return $this->reclaimIfStale($subscription, $due, $now);
         }

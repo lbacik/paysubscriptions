@@ -138,6 +138,26 @@ final class RenewalReminderServiceTest extends DatabaseTestCase
         self::assertCount(0, $this->em->getRepository(RenewalReminder::class)->findAll());
     }
 
+    public function testDeletedSubscriptionProducesNoMailAndLeavesNoStaleRows(): void
+    {
+        $user = $this->optedUser('gone@example.com', true, 3);
+        $subscription = $this->createSubscription($user, 'Netflix', BillingCycle::Monthly, 15.99, new \DateTime('2024-03-13'));
+
+        // A claim from an earlier run, then the User deletes the Subscription:
+        // the identity cascades away and the run must stay quiet, not crash.
+        $this->claim($subscription, '2024-03-13', ReminderStatus::Pending);
+        $this->em->remove($subscription);
+        $this->em->flush();
+        $this->em->clear();
+
+        $outcome = $this->reminders->sendDueReminders($this->now);
+
+        self::assertSame(0, $outcome->sent);
+        self::assertSame(0, $outcome->needsReview);
+        self::assertEmailCount(0);
+        self::assertCount(0, $this->em->getRepository(RenewalReminder::class)->findAll());
+    }
+
     public function testOptOutAfterClaimPreventsMailAndReOptInRetries(): void
     {
         $user = $this->optedUser('race@example.com', true, 3);
@@ -225,6 +245,36 @@ final class RenewalReminderServiceTest extends DatabaseTestCase
         self::assertSame(0, $retry->needsReview);
         self::assertEmailCount(0);
         self::assertCount(1, $this->em->getRepository(RenewalReminder::class)->findAll());
+    }
+
+    public function testPreviewExcludesAlreadyHandledRenewals(): void
+    {
+        $user = $this->optedUser('preview@example.com', true, 3);
+        $this->createSubscription($user, 'Netflix', BillingCycle::Monthly, 15.99, new \DateTime('2024-03-13'));
+
+        self::assertCount(1, $this->reminders->previewDueReminders($this->now));
+
+        $this->reminders->sendDueReminders($this->now);
+
+        // Sent identities are never due again — the dry run mirrors the live run.
+        self::assertSame([], $this->reminders->previewDueReminders($this->now));
+    }
+
+    public function testPreviewExcludesRenewalsAwaitingReviewAndIdsAreSurfaced(): void
+    {
+        $user = $this->optedUser('reviewlist@example.com', true, 3);
+        $this->createSubscription($user, 'Netflix', BillingCycle::Monthly, 15.99, new \DateTime('2024-03-13'));
+
+        $failing = $this->serviceWithMailer(new FailingMailer());
+        $failing->sendDueReminders($this->now);
+
+        self::assertSame([], $failing->previewDueReminders($this->now));
+
+        $ids = $failing->needsReviewIds();
+        self::assertCount(1, $ids);
+
+        $rows = $this->em->getRepository(RenewalReminder::class)->findAll();
+        self::assertSame([(string) $rows[0]->getId()->toRfc4122()], $ids);
     }
 
     private function optedUser(string $email, bool $optIn, int $leadDays): User

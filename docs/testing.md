@@ -47,8 +47,9 @@ real migrations into `paysub_test` first, proving they apply before tests run.
   time in the account-local calendar day (including DST boundaries), date
   edits and deleted rows producing no stale mail, retry and concurrent-claim
   idempotency via the `renewal_reminder` send identity, ambiguous provider
-  outcomes held for manual review, and one email per due renewal for Users
-  with several renewals.
+  outcomes held for manual review and listed by identifier on every command
+  run, dry-run previews that exclude already-handled renewals, and one email
+  per due renewal for Users with several renewals.
 - Cross-user ownership: a second user is denied (403 via `SubscriptionVoter`
   for subscriptions, 404 elsewhere) for foreign view/edit/delete, and never
   sees foreign rows.

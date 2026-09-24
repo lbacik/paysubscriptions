@@ -18,7 +18,8 @@ use Symfony\Component\Console\Output\OutputInterface;
  * scheduled renewal carries a durable send identity, so overlapping runs and
  * routine retries never duplicate a reminder. Output reports counts only —
  * never Subscription details — while ambiguous provider outcomes stay visible
- * as needs-review rows for manual follow-up.
+ * as needs-review rows for manual follow-up: their identifiers are listed on
+ * every run until resolved.
  */
 #[AsCommand(
     name: 'app:send-renewal-reminders',
@@ -58,6 +59,11 @@ final class SendRenewalRemindersCommand extends Command
             $outcome->skipped,
             $outcome->needsReview
         ));
+
+        $pending = $this->reminders->needsReviewIds();
+        $output->writeln(0 === \count($pending)
+            ? 'needs_review_ids: none'
+            : sprintf('needs_review_ids: %s', implode(', ', $pending)));
 
         return Command::SUCCESS;
     }
