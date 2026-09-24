@@ -66,6 +66,13 @@ dashboard:
     search_placeholder: "Filter subscriptions..."
     no_results: "No subscriptions found"
     hint: "Click any item to toggle its visibility in the chart"
+  upcoming_renewals:
+    title: "Upcoming renewals"
+    forecast_badge: "Forecast"
+    forecast_note: "Forecast charges based on the next payment dates you entered — not recorded transactions."
+    empty_title: "No upcoming renewals yet"
+    empty_body: "Add your first subscription to see its upcoming renewal forecast here."
+    add_first: "Add subscription"
 add_subscription: "Add Subscription"
 edit: "Edit"
 delete: "Delete"
