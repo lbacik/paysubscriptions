@@ -28,28 +28,24 @@ use Doctrine\Migrations\AbstractMigration;
  *   renewal calculation rolls forward from the anchor, and the user edits the
  *   date afterwards. Names, amounts, owners and identities are untouched.
  *
- * Not transactional (see isTransactional()): every ALTER TABLE below is DDL,
- * and MySQL implicitly commits the open transaction before and after each
- * one regardless of what Doctrine or --all-or-nothing asks for. Wrapping
- * this migration in a BEGIN/COMMIT would silently protect nothing while
- * claiming to - the backfill UPDATE is the only statement a transaction
- * could actually roll back, and by the time it runs the ADD COLUMN
- * statements before it are already committed. What actually keeps a
- * mid-migration failure recoverable is every step below being safe to
- * re-run: each ADD/DROP COLUMN is guarded by the schema it's given, so
- * re-running after a failure skips whatever already landed instead of
- * failing on a duplicate column.
+ * Every ALTER TABLE below is DDL, and MySQL implicitly commits the open
+ * transaction before and after each one regardless of what Doctrine asks
+ * for, so wrapping this migration in a BEGIN/COMMIT protects only the
+ * backfill UPDATE - by the time it runs, the ADD COLUMN statements before
+ * it are already committed. What actually keeps a mid-migration failure
+ * recoverable is every step below being safe to re-run: each ADD/DROP
+ * COLUMN is guarded by the schema it's given, so re-running after a
+ * failure skips whatever already landed instead of failing on a duplicate
+ * column. (isTransactional() is intentionally left at its default of true:
+ * both CI and the production deploy run migrations with --all-or-nothing,
+ * which Doctrine refuses outright if any migration in the batch declares
+ * itself non-transactional.)
  */
 final class Version20260923190000 extends AbstractMigration
 {
     public function getDescription(): string
     {
         return 'Explicit billing cycle, amount and next payment date for subscriptions (#37)';
-    }
-
-    public function isTransactional(): bool
-    {
-        return false;
     }
 
     public function up(Schema $schema): void
