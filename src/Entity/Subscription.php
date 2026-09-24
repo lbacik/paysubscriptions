@@ -6,6 +6,7 @@ namespace App\Entity;
 
 use App\Enum\BillingCycle;
 use App\Repository\SubscriptionRepository;
+use App\Service\CurrencyService;
 use DateTime;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
@@ -169,7 +170,7 @@ class Subscription
 
     public function setCurrency(?string $currency): static
     {
-        $this->currency = \App\Service\CurrencyService::normalizeCode($currency);
+        $this->currency = CurrencyService::normalizeCode($currency);
 
         return $this;
     }
@@ -193,7 +194,7 @@ class Subscription
 
     public function setConvertedCurrency(?string $convertedCurrency): static
     {
-        $this->convertedCurrency = \App\Service\CurrencyService::normalizeCode($convertedCurrency);
+        $this->convertedCurrency = CurrencyService::normalizeCode($convertedCurrency);
 
         return $this;
     }
@@ -211,7 +212,7 @@ class Subscription
      */
     public function isCrossCurrency(?string $mainCurrency): bool
     {
-        $main = \App\Service\CurrencyService::normalizeCode($mainCurrency);
+        $main = CurrencyService::normalizeCode($mainCurrency);
 
         return $this->currency !== null && $main !== null && $this->currency !== $main;
     }
@@ -229,7 +230,7 @@ class Subscription
             return false;
         }
 
-        return $this->convertedCurrency !== \App\Service\CurrencyService::normalizeCode($currentMainCurrency);
+        return $this->convertedCurrency !== CurrencyService::normalizeCode($currentMainCurrency);
     }
 
     /**
@@ -240,7 +241,7 @@ class Subscription
      */
     public function isPendingReview(?string $currentMainCurrency): bool
     {
-        $main = \App\Service\CurrencyService::normalizeCode($currentMainCurrency);
+        $main = CurrencyService::normalizeCode($currentMainCurrency);
 
         if ($main === null || !$this->isCrossCurrency($main)) {
             return false;
@@ -258,7 +259,7 @@ class Subscription
      */
     public function syncConvertedCurrency(?string $mainCurrency): static
     {
-        $main = \App\Service\CurrencyService::normalizeCode($mainCurrency);
+        $main = CurrencyService::normalizeCode($mainCurrency);
 
         if (!$this->isCrossCurrency($main) || !$this->hasConvertedAmount()) {
             $this->convertedAmount = null;
@@ -275,18 +276,45 @@ class Subscription
     }
 
     /**
+     * Reconciles converted input after an edit, given the pre-edit currency
+     * and converted amount. Re-entering the converted amount reviews it: the
+     * current main currency is stamped. Changing the currency while keeping
+     * the old figure clears it instead: a figure computed for another
+     * currency must be re-entered, never carried over. Untouched stale
+     * amounts keep their old stamp and stay excluded from aggregates until
+     * reviewed.
+     */
+    public function reconcileConverted(?string $originalCurrency, ?float $originalConvertedAmount, ?string $mainCurrency): static
+    {
+        if ($this->getConvertedAmount() !== $originalConvertedAmount) {
+            $this->setConvertedCurrency($mainCurrency);
+
+            return $this;
+        }
+
+        if ($this->getCurrency() !== CurrencyService::normalizeCode($originalCurrency)
+            && $this->isCrossCurrency($mainCurrency)
+        ) {
+            $this->convertedAmount = null;
+            $this->convertedCurrency = null;
+        }
+
+        return $this;
+    }
+
+    /**
      * @return list<string> Violation messages; empty when valid.
      */
     public function validateConverted(?string $mainCurrency, bool $forSave = false): array
     {
         $violations = [];
-        $main = \App\Service\CurrencyService::normalizeCode($mainCurrency);
+        $main = CurrencyService::normalizeCode($mainCurrency);
 
-        if ($this->currency !== null && !\App\Service\CurrencyService::isValidCode($this->currency)) {
+        if ($this->currency !== null && !CurrencyService::isValidCode($this->currency)) {
             $violations[] = sprintf('Currency "%s" is not a valid ISO 4217 code.', $this->currency);
         }
 
-        if ($this->convertedCurrency !== null && !\App\Service\CurrencyService::isValidCode($this->convertedCurrency)) {
+        if ($this->convertedCurrency !== null && !CurrencyService::isValidCode($this->convertedCurrency)) {
             $violations[] = sprintf('Converted currency "%s" is not a valid ISO 4217 code.', $this->convertedCurrency);
         }
 

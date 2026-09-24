@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Service;
 
+use App\Entity\ExpenseCategory;
 use App\Entity\Subscription;
+use App\Entity\User;
 use App\Enum\BillingCycle;
 use App\Repository\SubscriptionRepository;
 use App\Repository\UserRepository;
@@ -95,6 +97,68 @@ final class SubscriptionServiceCurrencyTest extends TestCase
         self::assertSame(0, $totals['pendingReview']);
     }
 
+    public function testAddDefaultsSubscriptionCurrencyToMainCurrency(): void
+    {
+        $owner = new User();
+        $owner->setEmail('owner@example.com');
+        $owner->setMainCurrency('USD');
+
+        $subscription = $this->monthlySubscription('Defaulted', null, 10.0);
+        $subscription->setOwner($owner);
+        $subscription->setCategory($this->ownedCategory($owner));
+
+        $this->serviceWithPersistedUser($owner)->add($subscription);
+
+        self::assertSame('USD', $subscription->getCurrency());
+        self::assertNull($subscription->getConvertedAmount());
+    }
+
+    public function testAddStampsFreshCrossCurrencyAmountWithMainCurrency(): void
+    {
+        $owner = new User();
+        $owner->setEmail('owner@example.com');
+        $owner->setMainCurrency('USD');
+
+        $subscription = $this->monthlySubscription('Cross', 'EUR', 10.0);
+        $subscription->setConvertedAmount(11.0);
+        $subscription->setOwner($owner);
+        $subscription->setCategory($this->ownedCategory($owner));
+
+        $this->serviceWithPersistedUser($owner)->add($subscription);
+
+        self::assertSame('EUR', $subscription->getCurrency());
+        self::assertSame('USD', $subscription->getConvertedCurrency());
+    }
+
+    public function testAddRejectsCrossCurrencySubscriptionWithoutConvertedAmount(): void
+    {
+        $owner = new User();
+        $owner->setEmail('owner@example.com');
+        $owner->setMainCurrency('USD');
+
+        $subscription = $this->monthlySubscription('Missing', 'EUR', 10.0);
+        $subscription->setOwner($owner);
+        $subscription->setCategory($this->ownedCategory($owner));
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->serviceWithPersistedUser($owner)->add($subscription);
+    }
+
+    public function testAddLeavesLegacySubscriptionWithoutCurrenciesUnchanged(): void
+    {
+        $owner = new User();
+        $owner->setEmail('owner@example.com');
+
+        $subscription = $this->monthlySubscription('Legacy', null, 10.0);
+        $subscription->setOwner($owner);
+        $subscription->setCategory($this->ownedCategory($owner));
+
+        $this->serviceWithPersistedUser($owner)->add($subscription);
+
+        self::assertNull($subscription->getCurrency());
+        self::assertNull($subscription->getConvertedAmount());
+    }
+
     private function service(): SubscriptionService
     {
         return new SubscriptionService(
@@ -102,6 +166,28 @@ final class SubscriptionServiceCurrencyTest extends TestCase
             $this->createMock(UserRepository::class),
             $this->createMock(ExpenseCategoryService::class),
         );
+    }
+
+    private function serviceWithPersistedUser(User $persisted): SubscriptionService
+    {
+        $userRepository = $this->createMock(UserRepository::class);
+        $userRepository->method('find')->willReturn($persisted);
+
+        return new SubscriptionService(
+            $this->createMock(SubscriptionRepository::class),
+            $userRepository,
+            $this->createMock(ExpenseCategoryService::class),
+        );
+    }
+
+    private function ownedCategory(User $owner): ExpenseCategory
+    {
+        $category = (new ExpenseCategory())
+            ->setName(ExpenseCategory::DEFAULT_NAME)
+            ->setColor(ExpenseCategory::DEFAULT_COLOR);
+        $owner->addExpenseCategory($category);
+
+        return $category;
     }
 
     private function monthlySubscription(string $name, ?string $currency, float $amount): Subscription

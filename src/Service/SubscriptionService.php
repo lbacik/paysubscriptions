@@ -156,6 +156,13 @@ class SubscriptionService
         $owner = $subscription->getOwner();
         $main = $owner instanceof \App\Entity\User ? $owner->getMainCurrency() : null;
 
+        // Non-form creation paths get the same default as the form: a new
+        // Subscription starts in the User's main currency. Legacy data (no
+        // confirmed main currency) stays untouched.
+        if ($subscription->getCurrency() === null && CurrencyService::normalizeCode($main) !== null) {
+            $subscription->setCurrency($main);
+        }
+
         $subscription->syncConvertedCurrency($main);
 
         $violations = $subscription->validateConverted($main, true);

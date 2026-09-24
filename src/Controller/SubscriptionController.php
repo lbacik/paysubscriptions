@@ -94,6 +94,7 @@ class SubscriptionController extends AbstractController
         \assert($user instanceof User);
 
         $mainCurrency = $this->getMainCurrency();
+        $originalCurrency = $subscription->getCurrency();
         $originalConverted = $subscription->getConvertedAmount();
 
         $form = $this->createForm(
@@ -108,12 +109,7 @@ class SubscriptionController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            // Re-entering the converted amount reviews it: stamp the current
-            // main currency. Untouched stale amounts keep their old stamp and
-            // stay excluded from totals until reviewed.
-            if ($subscription->getConvertedAmount() !== $originalConverted) {
-                $subscription->setConvertedCurrency($mainCurrency);
-            }
+            $subscription->reconcileConverted($originalCurrency, $originalConverted, $mainCurrency);
 
             try {
                 $this->assertConvertedInput($form, $subscription, $mainCurrency);

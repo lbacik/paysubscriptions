@@ -196,6 +196,48 @@ final class SubscriptionCurrencyTest extends TestCase
         self::assertSame([], $subscription->validateConverted('USD'));
     }
 
+    public function testReconcileConvertedStampsReEnteredAmount(): void
+    {
+        $subscription = $this->monthlySubscription('EUR', 10.0);
+        $subscription->setConvertedAmount(11.0);
+        $subscription->setConvertedCurrency('USD');
+
+        $subscription->setConvertedAmount(12.0);
+        $subscription->reconcileConverted('EUR', 11.0, 'USD');
+
+        self::assertSame('USD', $subscription->getConvertedCurrency());
+        self::assertSame([], $subscription->validateConverted('USD', true));
+    }
+
+    public function testReconcileConvertedClearsFigureWhenCurrencyChanged(): void
+    {
+        $subscription = $this->monthlySubscription('EUR', 10.0);
+        $subscription->setConvertedAmount(11.0);
+        $subscription->setConvertedCurrency('USD');
+
+        // Currency changed EUR -> GBP but the old figure was kept: it was
+        // computed for another currency, so it must be re-entered.
+        $subscription->setCurrency('GBP');
+        $subscription->reconcileConverted('EUR', 11.0, 'USD');
+
+        self::assertNull($subscription->getConvertedAmount());
+        self::assertNull($subscription->getConvertedCurrency());
+        self::assertTrue($subscription->isPendingReview('USD'));
+    }
+
+    public function testReconcileConvertedKeepsUntouchedStaleStamp(): void
+    {
+        $subscription = $this->monthlySubscription('EUR', 10.0);
+        $subscription->setConvertedAmount(11.0);
+        $subscription->setConvertedCurrency('USD');
+
+        $subscription->reconcileConverted('EUR', 11.0, 'PLN');
+
+        self::assertSame(11.0, $subscription->getConvertedAmount());
+        self::assertSame('USD', $subscription->getConvertedCurrency());
+        self::assertTrue($subscription->isPendingReview('PLN'));
+    }
+
     private function monthlySubscription(?string $currency, float $amount): Subscription
     {
         $subscription = new Subscription();

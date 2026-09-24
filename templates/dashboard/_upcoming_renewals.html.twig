@@ -39,8 +39,13 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="shrink-0 font-bold text-slate-900">
-                            {{ renewal.subscription.amount|number_format(2, '.', ' ') }}
+                        <div class="shrink-0 font-bold text-slate-900 text-end">
+                            {{ renewal.subscription.amount|number_format(2, '.', ' ') }}{% if renewal.subscription.currency %} {{ renewal.subscription.currency }}{% endif %}
+                            {% if mainCurrency is defined and mainCurrency and renewal.subscription.currency
+                                and renewal.subscription.currency != mainCurrency and renewal.subscription.hasConvertedAmount
+                                and not renewal.subscription.needsConvertedReview(mainCurrency) %}
+                                <div class="text-xs font-normal text-slate-400">≈ {{ renewal.subscription.convertedAmount|number_format(2, '.', ' ') }} {{ mainCurrency }}</div>
+                            {% endif %}
                         </div>
                     </li>
                 {% endfor %}
