@@ -11,6 +11,7 @@ use App\Entity\Subscription;
 use App\Entity\User;
 use App\Message\MailingSubscribe;
 use App\Service\AccountDeletionService;
+use App\Service\ExpenseCategoryService;
 use App\Tests\DatabaseTestCase;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
@@ -243,12 +244,15 @@ final class AccountDeletionTest extends DatabaseTestCase
 
     private function createSubscription(User $user, string $name): Subscription
     {
+        $categoryService = static::getContainer()->get(ExpenseCategoryService::class);
+
         $subscription = new Subscription();
         $subscription->setName($name);
         $subscription->setBillingCycle(BillingCycle::Monthly);
         $subscription->setAmount(9.99);
         $subscription->setNextPayment(new \DateTime('2024-01-01'));
         $subscription->setOwner($user);
+        $subscription->setCategory($categoryService->ensureDefaultCategory($user));
 
         $this->em->persist($subscription);
         $this->em->flush();
