@@ -20,7 +20,7 @@ Single files while iterating:
 
 ```sh
 DATABASE_URL="mysql://root:root@127.0.0.1:3306/paysub?serverVersion=8.4&charset=utf8mb4" \
-  APP_ENV=test vendor/bin/phpunit tests/Controller/SubscriptionCrudTest.php
+  APP_ENV=test vendor/bin/phpunit tests/Controller/DashboardTest.php
 ```
 
 The suite creates the `paysub_test` database on demand and rebuilds its
@@ -37,10 +37,13 @@ real migrations into `paysub_test` first, proving they apply before tests run.
   email; single-use tokens; invalid tokens change nothing).
 - Contact (reCAPTCHA pass/fail) and newsletter signup (CSRF/method rejection,
   queued `MailingSubscribe` inspection).
-- Subscription CRUD, per-user limits, monthly/yearly normalization and totals,
-  chart datasets (bar/monthly/yearly), dashboard totals and limit gauge.
-- Cross-user ownership: a second user gets 404 (not 403, so ids cannot be
-  probed) for foreign view/edit/delete, and never sees foreign rows.
+- Subscription CRUD, per-user limits, billing-cycle amount normalization and
+  totals (including cross-currency conversion), chart datasets
+  (bar/monthly/yearly), dashboard totals and limit gauge.
+- Expense categories, upcoming renewals, and account deletion.
+- Cross-user ownership: a second user is denied (403 via `SubscriptionVoter`
+  for subscriptions, 404 elsewhere) for foreign view/edit/delete, and never
+  sees foreign rows.
 
 ## External-service fakes
 
@@ -59,8 +62,7 @@ Everything else is faked in the test environment:
 
 ## What is not covered yet
 
-Categories, upcoming renewals, reminders, account deletion, and self-service
-export have no implementation on the v1.0 slices landed so far (export is
-explicitly deferred in #34), so there is nothing automatable to assert yet.
-Cover them here as those slices land; the CI gate picks new tests up with no
-workflow change.
+Reminders and self-service export have no implementation on the v1.0 slices
+landed so far (export is explicitly deferred in #34), so there is nothing
+automatable to assert yet. Cover them here as those slices land; the CI gate
+picks new tests up with no workflow change.

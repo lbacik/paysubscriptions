@@ -7,6 +7,7 @@ namespace App\Tests;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\BillingCycle;
+use App\Service\ExpenseCategoryService;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Tools\SchemaTool;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
@@ -115,11 +116,18 @@ abstract class DatabaseTestCase extends WebTestCase
         float $amount = 15.99,
         ?\DateTimeInterface $nextPayment = null,
     ): Subscription {
+        // Resolved before building the Subscription: ensureDefaultCategory()
+        // flushes internally, which would otherwise trip Doctrine's cascade
+        // check on the not-yet-persisted Subscription reachable through
+        // User#subscriptions.
+        $category = static::getContainer()->get(ExpenseCategoryService::class)->ensureDefaultCategory($owner);
+
         $subscription = (new Subscription())
             ->setName($name)
             ->setBillingCycle($billingCycle)
             ->setAmount($amount)
-            ->setNextPayment($nextPayment ?? new \DateTime('2024-01-15'));
+            ->setNextPayment($nextPayment ?? new \DateTime('2024-01-15'))
+            ->setCategory($category);
         // Keep both sides of the association in sync: the subscription-limit
         // check counts the owner's in-memory collection, so setOwner() alone
         // would leave it stale within the same entity-manager lifecycle.
