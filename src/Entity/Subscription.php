@@ -54,6 +54,10 @@ class Subscription
     #[ORM\Column(length: 3, nullable: true)]
     private ?string $convertedCurrency = null;
 
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    #[Assert\Length(max: 2000)]
+    private ?string $notes = null;
+
     #[ORM\ManyToOne(inversedBy: 'subscriptions')]
     #[ORM\JoinColumn(nullable: false)]
     private ?User $owner = null;
@@ -132,7 +136,7 @@ class Subscription
         return $this->nextPayment;
     }
 
-    public function setNextPayment(\DateTimeInterface $nextPayment): static
+    public function setNextPayment(?\DateTimeInterface $nextPayment): static
     {
         $this->nextPayment = $nextPayment;
 
@@ -195,6 +199,18 @@ class Subscription
     public function setConvertedCurrency(?string $convertedCurrency): static
     {
         $this->convertedCurrency = CurrencyService::normalizeCode($convertedCurrency);
+
+        return $this;
+    }
+
+    public function getNotes(): ?string
+    {
+        return $this->notes;
+    }
+
+    public function setNotes(?string $notes): static
+    {
+        $this->notes = $notes !== null && trim($notes) === '' ? null : $notes;
 
         return $this;
     }

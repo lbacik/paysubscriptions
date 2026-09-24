@@ -14,16 +14,19 @@ use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\EnumType;
 use Symfony\Component\Form\Extension\Core\Type\NumberType;
+use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\Form\FormEvent;
 use Symfony\Component\Form\FormEvents;
 use Symfony\Component\OptionsResolver\OptionsResolver;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 class SubscriptionType extends AbstractType
 {
     public function __construct(
         private readonly CurrencyService $currencies,
+        private readonly TranslatorInterface $translator,
     ) {
     }
 
@@ -81,6 +84,18 @@ class SubscriptionType extends AbstractType
                 'attr' => [
                     'step' => 0.01,
                     'min' => 0,
+                ],
+            ])
+            ->add('notes', TextareaType::class, [
+                'required' => false,
+                'label' => 'subscription.notes',
+                'help' => 'subscription.notes_help',
+                'attr' => [
+                    'rows' => 3,
+                    'maxlength' => 2000,
+                    // Form attr values are not translated automatically, so
+                    // resolve the placeholder up front.
+                    'placeholder' => $this->translator->trans('subscription.notes_placeholder'),
                 ],
             ])
         ;
