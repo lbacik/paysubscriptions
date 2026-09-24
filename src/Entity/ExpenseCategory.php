@@ -139,11 +139,6 @@ class ExpenseCategory
         return $this;
     }
 
-    public function isInUse(): bool
-    {
-        return !$this->subscriptions->isEmpty();
-    }
-
     public function isOwnedBy(User $user): bool
     {
         if (null === $this->owner || null === $this->owner->getId() || null === $user->getId()) {

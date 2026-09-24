@@ -17,5 +17,5 @@ A recurring cost a User tracks: a name, a first-payment date, a monthly-or-yearl
 _Avoid_: Bill
 
 **ExpenseCategory**:
-A User-owned label with a name and a color tag used to group Subscriptions (e.g. the default `Subscriptions` category every account starts with). Each User manages their own set: names are unique per User, every Subscription belongs to exactly one category owned by the same User, and a category in use cannot be deleted until its Subscriptions are reassigned.
+A User-owned label with a name and a color swatch used to group Subscriptions (e.g. the default `Subscriptions` category every account starts with). Each User manages their own set: names are unique per User, every Subscription belongs to exactly one category owned by the same User, and a category in use cannot be deleted until its Subscriptions are reassigned.
 _Avoid_: Tag, label, group

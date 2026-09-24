@@ -28,22 +28,19 @@ class ExpenseCategoryService
         return $this->categoryRepository->findBy(['owner' => $owner], ['name' => 'ASC']);
     }
 
-    public function getDefaultCategory(UserInterface $owner): ?ExpenseCategory
-    {
-        return $this->categoryRepository->findOneBy([
-            'owner' => $owner,
-            'name' => ExpenseCategory::DEFAULT_NAME,
-        ]);
-    }
-
     /**
-     * Returns the owner's default `Subscriptions` category, creating it on
-     * first use. Also assigns it to any of the owner's Subscriptions that
-     * have none, so callers never leave a Subscription uncategorized.
+     * Returns a category to pre-select for a new Subscription: the owner's
+     * first existing category, or a freshly created `Subscriptions` default
+     * when the owner has none yet. Once an owner has at least one category,
+     * this never creates another one, so renaming or deleting a category
+     * (including the original default) never causes it to reappear.
+     *
+     * Also assigns the returned category to any of the owner's Subscriptions
+     * that have none, so callers never leave a Subscription uncategorized.
      */
     public function ensureDefaultCategory(User $owner): ExpenseCategory
     {
-        $default = $this->getDefaultCategory($owner);
+        $default = $this->categoryRepository->findOneBy(['owner' => $owner], ['name' => 'ASC']);
 
         if (null === $default) {
             $default = (new ExpenseCategory())

@@ -34,7 +34,11 @@ class ExpenseCategoryController extends AbstractController
     #[Route('/new', name: 'app_category_new', methods: ['GET', 'POST'])]
     public function new(Request $request): Response
     {
+        $user = $this->getUser();
+        \assert($user instanceof \App\Entity\User);
+
         $category = new ExpenseCategory();
+        $category->setOwner($user);
         $form = $this->createForm(
             ExpenseCategoryType::class,
             $category,
@@ -43,8 +47,6 @@ class ExpenseCategoryController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $user = $this->getUser();
-            \assert($user instanceof \App\Entity\User);
             $this->categoryService->create($user, (string) $category->getName(), (string) $category->getColor());
 
             $this->addFlash('success', 'Category created successfully');

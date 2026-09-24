@@ -167,10 +167,9 @@ final class ExpenseCategoryControllerTest extends DatabaseTestCase
         self::assertResponseStatusCodeSame(403);
     }
 
-    public function testNewSubscriptionFormDefaultsToDefaultCategory(): void
+    public function testNewSubscriptionFormCreatesDefaultCategoryForBrandNewUser(): void
     {
         $user = $this->createUser('owner@example.com');
-        $this->createCategory($user, 'Food', '#ff0000');
         $this->client->loginUser($user);
 
         $crawler = $this->client->request('GET', '/subscription/new');
@@ -178,8 +177,7 @@ final class ExpenseCategoryControllerTest extends DatabaseTestCase
 
         $categoryField = $crawler->filter('select#subscription_category');
         self::assertCount(1, $categoryField);
-        self::assertStringContainsString('Subscriptions', $categoryField->text());
-        self::assertStringContainsString('Food', $categoryField->text());
+        self::assertStringContainsString(ExpenseCategory::DEFAULT_NAME, $categoryField->text());
 
         // Submit without touching the category: the default is used.
         $this->client->submit($crawler->filter('form')->form([
@@ -191,5 +189,61 @@ final class ExpenseCategoryControllerTest extends DatabaseTestCase
         $subscription = $this->em->getRepository(Subscription::class)->findOneBy(['name' => 'Netflix']);
         self::assertNotNull($subscription);
         self::assertSame(ExpenseCategory::DEFAULT_NAME, $subscription->getCategory()->getName());
+    }
+
+    public function testNewSubscriptionFormReusesExistingCategoryInsteadOfCreatingDefault(): void
+    {
+        $user = $this->createUser('owner@example.com');
+        $this->createCategory($user, 'Food', '#ff0000');
+        $this->client->loginUser($user);
+
+        $crawler = $this->client->request('GET', '/subscription/new');
+        self::assertResponseIsSuccessful();
+
+        $categoryField = $crawler->filter('select#subscription_category');
+        self::assertCount(1, $categoryField);
+        self::assertStringContainsString('Food', $categoryField->text());
+        self::assertStringNotContainsString(ExpenseCategory::DEFAULT_NAME, $categoryField->text());
+
+        $repository = static::getContainer()->get(ExpenseCategoryRepository::class);
+        self::assertCount(1, $repository->findBy(['owner' => $user]));
+    }
+
+    public function testRenamedDefaultCategoryDoesNotReappearOnNewSubscriptionForm(): void
+    {
+        $user = $this->createUser('owner@example.com');
+        $default = $this->createCategory($user, ExpenseCategory::DEFAULT_NAME, ExpenseCategory::DEFAULT_COLOR);
+        $default->setName('Renamed');
+        $this->em->flush();
+        $this->client->loginUser($user);
+
+        $this->client->request('GET', '/subscription/new');
+        self::assertResponseIsSuccessful();
+
+        $repository = static::getContainer()->get(ExpenseCategoryRepository::class);
+        self::assertCount(1, $repository->findBy(['owner' => $user]));
+        self::assertNull($repository->findOneBy(['owner' => $user, 'name' => ExpenseCategory::DEFAULT_NAME]));
+    }
+
+    public function testDuplicateCategoryNameShowsFormErrorInsteadOf500(): void
+    {
+        $user = $this->createUser('owner@example.com');
+        $this->createCategory($user, 'Food', '#ff0000');
+        $this->client->loginUser($user);
+
+        $crawler = $this->client->request('GET', '/category/new');
+        self::assertResponseIsSuccessful();
+        $this->client->submit($crawler->filter('form')->form([
+            'expense_category[name]' => 'Food',
+            'expense_category[color]' => '#123456',
+        ]));
+
+        // Symfony returns 422 for a re-rendered form with validation errors,
+        // not a 500 — that's the bug this test guards against.
+        self::assertResponseStatusCodeSame(422);
+        self::assertStringContainsString('already have a category with this name', $this->client->getResponse()->getContent());
+
+        $repository = static::getContainer()->get(ExpenseCategoryRepository::class);
+        self::assertCount(1, $repository->findBy(['owner' => $user, 'name' => 'Food']));
     }
 }

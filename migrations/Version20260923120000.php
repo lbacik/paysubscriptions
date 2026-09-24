@@ -10,7 +10,9 @@ use Doctrine\Migrations\AbstractMigration;
 /**
  * Adds User-owned expense categories and assigns every Subscription a
  * required category. Pre-category Users and Subscriptions are backfilled
- * with one default `Subscriptions` category per User; no data is lost.
+ * with one default `Subscriptions` category per User; no data is lost on
+ * `up()`. `down()` drops the `expense_category` table entirely, so any
+ * category created or renamed after this migration ran is lost on rollback.
  */
 final class Version20260923120000 extends AbstractMigration
 {
