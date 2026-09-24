@@ -12,6 +12,11 @@
                 Next payment: {{ next_renewal(subscription)|date('Y-m-d') }}
             </div>
         {% endif %}
+        {% if subscription.notes %}
+            <div class="text-xs text-slate-500 mt-0.5 break-words">
+                {{ subscription.notes|length > 160 ? subscription.notes|slice(0, 160) ~ '…' : subscription.notes }}
+            </div>
+        {% endif %}
         {% if mainCurrency is defined and mainCurrency and subscription.needsConvertedReview(mainCurrency) %}
             <div class="text-xs text-amber-600 mt-0.5 font-medium">
                 <i class="fa-solid fa-triangle-exclamation text-[10px]"></i>
