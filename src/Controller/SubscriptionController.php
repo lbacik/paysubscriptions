@@ -202,12 +202,9 @@ class SubscriptionController extends AbstractController
 
     private function streamResponse(): Response
     {
-        $subscriptions = $this->subscriptionService->get($this->getUser(), 'name', 'asc');
-
-        return $this->render('dashboard/_table_stream.html.twig', [
-            'subscriptions' => $subscriptions,
-            'order' => 'asc',
-            'sort' => 'name',
-        ], new Response('', 200, ['Content-Type' => 'text/vnd.turbo-stream.html']));
+        // The table component re-reads the session-backed filter/sort state
+        // from this same request, so the Turbo update keeps the list the User
+        // was looking at.
+        return $this->render('dashboard/_table_stream.html.twig', [], new Response('', 200, ['Content-Type' => 'text/vnd.turbo-stream.html']));
     }
 }

@@ -10,6 +10,7 @@ use App\Enum\BillingCycle;
 use App\Repository\SubscriptionRepository;
 use App\Repository\UserRepository;
 use App\Service\ExpenseCategoryService;
+use App\Service\RenewalCalculator;
 use App\Service\SubscriptionService;
 use PHPUnit\Framework\TestCase;
 
@@ -164,7 +165,7 @@ final class SubscriptionServiceTotalsTest extends TestCase
         $service = $this->serviceWithSubscriptions([$cheapRaw, $expensive]);
 
         $owner = new User();
-        $sorted = array_values($service->get($owner, 'monthly', 'asc', 'USD'));
+        $sorted = array_values($service->get($owner, 'monthly', 'asc', null, 'USD'));
 
         // By raw amounts EUR 5.00 would sort first; in USD equivalents
         // (50.00 vs 10.00) the USD Subscription is cheaper.
@@ -178,6 +179,7 @@ final class SubscriptionServiceTotalsTest extends TestCase
             $this->createMock(SubscriptionRepository::class),
             $this->createMock(UserRepository::class),
             $this->createMock(ExpenseCategoryService::class),
+            new RenewalCalculator(),
         );
     }
 
@@ -190,6 +192,7 @@ final class SubscriptionServiceTotalsTest extends TestCase
             $subscriptionRepository,
             $this->createMock(UserRepository::class),
             $this->createMock(ExpenseCategoryService::class),
+            new RenewalCalculator(),
         );
     }
 

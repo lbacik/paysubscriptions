@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Service\ChartService;
+use App\Service\SubscriptionListState;
 use App\Service\SubscriptionService;
 use App\Service\UpcomingRenewals;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -20,6 +21,7 @@ class DashboardController extends AbstractController
         private readonly SubscriptionService $subscriptionService,
         private readonly ChartService $chartService,
         private readonly UpcomingRenewals $upcomingRenewals,
+        private readonly SubscriptionListState $listState,
     ) {
     }
 
@@ -28,13 +30,19 @@ class DashboardController extends AbstractController
         #[MapQueryParameter('chartType')] string $chartType = 'bar',
         #[MapQueryParameter('withCalculated')] bool $withCalculated = false,
         #[MapQueryParameter('month')] int|null $month = null,
-        #[MapQueryParameter('sort')] string $sort = 'name',
-        #[MapQueryParameter('order')] string $order = 'asc',
     ): Response {
         $user = $this->getUser();
         $mainCurrency = $user instanceof \App\Entity\User ? $user->getMainCurrency() : null;
 
-        $subscriptions = $this->subscriptionService->get($this->getUser(), $sort, $order, $mainCurrency);
+        // The same session-backed filter/sort state the table component reads,
+        // so charts, totals, and renewals describe the filtered list.
+        $subscriptions = $this->subscriptionService->get(
+            $this->getUser(),
+            $this->listState->sort(),
+            $this->listState->order(),
+            $this->listState->categoryId(),
+            $mainCurrency,
+        );
 
         $chart = match($chartType) {
             'monthly' => $this->chartService->createMonthlyChart($subscriptions, $withCalculated, $month, $mainCurrency),
