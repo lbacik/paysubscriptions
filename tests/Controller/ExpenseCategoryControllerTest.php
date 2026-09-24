@@ -35,18 +35,6 @@ final class ExpenseCategoryControllerTest extends DatabaseTestCase
         parent::tearDown();
     }
 
-    private function createUser(string $email): User
-    {
-        $user = (new User())
-            ->setEmail($email)
-            ->setPassword('hashed')
-            ->setVerified(true);
-        $this->em->persist($user);
-        $this->em->flush();
-
-        return $user;
-    }
-
     private function createCategory(User $owner, string $name = 'Food', string $color = '#ff0000'): ExpenseCategory
     {
         $category = (new ExpenseCategory())

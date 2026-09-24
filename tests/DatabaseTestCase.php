@@ -4,10 +4,15 @@ declare(strict_types=1);
 
 namespace App\Tests;
 
+use App\Entity\Subscription;
+use App\Entity\User;
+use App\Enum\BillingCycle;
+use App\Service\ExpenseCategoryService;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Tools\SchemaTool;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
+use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 /**
  * Base class for tests that need a real database.
@@ -18,6 +23,17 @@ use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
  * cleanly, so the DB-less CI checks job stays green; a merely missing
  * database is created on the fly, and a missing schema from the entity
  * mappings.
+ *
+ * External services are faked, never contacted:
+ * - mailer: `null://null` transport plus the test message logger; assert with
+ *   MailerAssertionsTrait (getMailerMessage / assertEmailCount).
+ * - messenger `newsletter` transport: overridden to `in-memory://` in
+ *   config/packages/messenger.yaml (`when@test`); assert via the
+ *   `messenger.transport.newsletter` service's getSent().
+ * - reCAPTCHA: replaced per-test with App\Tests\Double\FakeReCaptcha through
+ *   the test container.
+ * - breach-check API (NotCompromisedPassword): the real API is used, so tests
+ *   submit high-entropy passwords that cannot appear in the breach corpus.
  */
 abstract class DatabaseTestCase extends WebTestCase
 {
@@ -75,6 +91,71 @@ abstract class DatabaseTestCase extends WebTestCase
     protected function freshEm(): EntityManagerInterface
     {
         return static::getContainer()->get(EntityManagerInterface::class);
+    }
+
+    protected function createUser(string $email, string $plainPassword = 'Fixture-Password-1', bool $verified = true): User
+    {
+        /** @var UserPasswordHasherInterface $hasher */
+        $hasher = static::getContainer()->get(UserPasswordHasherInterface::class);
+
+        $user = (new User())
+            ->setEmail($email)
+            ->setVerified($verified);
+        $user->setPassword($hasher->hashPassword($user, $plainPassword));
+
+        $this->em->persist($user);
+        $this->em->flush();
+
+        return $user;
+    }
+
+    protected function createSubscription(
+        User $owner,
+        string $name = 'Netflix',
+        BillingCycle $billingCycle = BillingCycle::Monthly,
+        float $amount = 15.99,
+        ?\DateTimeInterface $nextPayment = null,
+    ): Subscription {
+        // Resolved before building the Subscription: ensureDefaultCategory()
+        // flushes internally, which would otherwise trip Doctrine's cascade
+        // check on the not-yet-persisted Subscription reachable through
+        // User#subscriptions.
+        $category = static::getContainer()->get(ExpenseCategoryService::class)->ensureDefaultCategory($owner);
+
+        $subscription = (new Subscription())
+            ->setName($name)
+            ->setBillingCycle($billingCycle)
+            ->setAmount($amount)
+            ->setNextPayment($nextPayment ?? new \DateTime('2024-01-15'))
+            ->setCategory($category);
+        // Keep both sides of the association in sync: the subscription-limit
+        // check counts the owner's in-memory collection, so setOwner() alone
+        // would leave it stale within the same entity-manager lifecycle.
+        $owner->addSubscription($subscription);
+
+        $this->em->persist($subscription);
+        $this->em->flush();
+
+        return $subscription;
+    }
+
+    protected function freshUser(string $email): ?User
+    {
+        $this->em->clear();
+
+        return $this->em->getRepository(User::class)->findOneBy(['email' => $email]);
+    }
+
+    protected function login(string $email, string $password): void
+    {
+        $crawler = $this->client->request('GET', '/login');
+        $token = $crawler->filter('input[name="_csrf_token"]')->attr('value');
+
+        $this->client->request('POST', '/login', [
+            'email' => $email,
+            'password' => $password,
+            '_csrf_token' => $token,
+        ]);
     }
 
     private function isUnknownDatabase(\Throwable $e): bool

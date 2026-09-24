@@ -14,7 +14,6 @@ use App\Service\AccountDeletionService;
 use App\Service\ExpenseCategoryService;
 use App\Tests\DatabaseTestCase;
 use Symfony\Component\Messenger\MessageBusInterface;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 final class AccountDeletionTest extends DatabaseTestCase
 {
@@ -74,8 +73,8 @@ final class AccountDeletionTest extends DatabaseTestCase
     public function testDeleteRemovesUserAndAllOwnedRecords(): void
     {
         $user = $this->createUser('deleted@example.com');
-        $this->createSubscription($user, 'Netflix');
-        $this->createSubscription($user, 'Spotify');
+        $this->createSubscriptionWithCategory($user, 'Netflix');
+        $this->createSubscriptionWithCategory($user, 'Spotify');
         $this->createLimits($user, 50);
         $this->createResetPasswordRequest($user);
 
@@ -101,8 +100,8 @@ final class AccountDeletionTest extends DatabaseTestCase
     {
         $deleted = $this->createUser('gone@example.com');
         $kept = $this->createUser('kept@example.com');
-        $this->createSubscription($deleted, 'Doomed Sub');
-        $this->createSubscription($kept, 'Kept Sub');
+        $this->createSubscriptionWithCategory($deleted, 'Doomed Sub');
+        $this->createSubscriptionWithCategory($kept, 'Kept Sub');
         $this->createLimits($deleted, 10);
         $this->createLimits($kept, 20);
         $this->createResetPasswordRequest($deleted);
@@ -227,22 +226,7 @@ final class AccountDeletionTest extends DatabaseTestCase
         self::assertSame(0, \count($this->freshEm()->getRepository(ResetPasswordRequest::class)->findAll()));
     }
 
-    private function createUser(string $email): User
-    {
-        $hasher = static::getContainer()->get(UserPasswordHasherInterface::class);
-
-        $user = new User();
-        $user->setEmail($email);
-        $user->setVerified(true);
-        $user->setPassword($hasher->hashPassword($user, 'password123'));
-
-        $this->em->persist($user);
-        $this->em->flush();
-
-        return $user;
-    }
-
-    private function createSubscription(User $user, string $name): Subscription
+    private function createSubscriptionWithCategory(User $user, string $name): Subscription
     {
         $categoryService = static::getContainer()->get(ExpenseCategoryService::class);
 

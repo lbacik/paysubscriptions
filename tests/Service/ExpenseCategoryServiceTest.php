@@ -43,19 +43,7 @@ final class ExpenseCategoryServiceTest extends DatabaseTestCase
         parent::tearDown();
     }
 
-    private function createUser(string $email): User
-    {
-        $user = (new User())
-            ->setEmail($email)
-            ->setPassword('hashed')
-            ->setVerified(true);
-        $this->em->persist($user);
-        $this->em->flush();
-
-        return $user;
-    }
-
-    private function createSubscription(User $owner, ?ExpenseCategory $category = null, string $name = 'Netflix'): Subscription
+    private function createSubscriptionWithCategory(User $owner, ?ExpenseCategory $category = null, string $name = 'Netflix'): Subscription
     {
         $subscription = (new Subscription())
             ->setName($name)
@@ -139,7 +127,7 @@ final class ExpenseCategoryServiceTest extends DatabaseTestCase
     {
         $user = $this->createUser('owner@example.com');
         $default = $this->categories->ensureDefaultCategory($user);
-        $subscription = $this->createSubscription($user, $default);
+        $subscription = $this->createSubscriptionWithCategory($user, $default);
 
         try {
             $this->categories->delete($default);
@@ -161,7 +149,7 @@ final class ExpenseCategoryServiceTest extends DatabaseTestCase
     {
         $user = $this->createUser('owner@example.com');
 
-        $subscription = $this->createSubscription($user);
+        $subscription = $this->createSubscriptionWithCategory($user);
 
         self::assertNotNull($subscription->getCategory());
         self::assertSame(ExpenseCategory::DEFAULT_NAME, $subscription->getCategory()->getName());
@@ -173,7 +161,7 @@ final class ExpenseCategoryServiceTest extends DatabaseTestCase
         $user = $this->createUser('owner@example.com');
         $food = $this->categories->create($user, 'Food', '#ff0000');
 
-        $subscription = $this->createSubscription($user, $food);
+        $subscription = $this->createSubscriptionWithCategory($user, $food);
 
         self::assertSame('Food', $subscription->getCategory()->getName());
     }
@@ -202,7 +190,7 @@ final class ExpenseCategoryServiceTest extends DatabaseTestCase
         $other = $this->createUser('other@example.com');
         $foreign = $this->categories->create($other, 'Food', '#ff0000');
 
-        $subscription = $this->createSubscription($user = $owner);
+        $subscription = $this->createSubscriptionWithCategory($user = $owner);
         $subscription->setCategory($foreign);
 
         $this->expectException(\LogicException::class);
