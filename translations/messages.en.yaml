@@ -78,6 +78,7 @@ dashboard:
     click_hint: "Tip: Click any month column to view its breakdown"
     all_months: "All months"
     filter_month: "Month:"
+    filter_month_aria: "Select a month"
   chart:
     caption_charges: "Expected charges per month in %currency% · yearly plans land in their renewal month"
     caption_monthly_equivalent: "Monthly equivalents in %currency% · yearly plans split ÷ 12"
@@ -91,6 +92,7 @@ dashboard:
     empty_hint_yearly: "Enable “Include monthly plans (×12)” above to fold them in."
     filtered_yearly: "%count% yearly plan(s) hidden — enable “Include yearly plans (split /12)” to fold them in."
     filtered_monthly: "%count% monthly plan(s) hidden — enable “Include monthly plans (×12)” to fold them in."
+    summary: "Chart of subscription costs. The same figures are listed in the subscriptions table below."
   legend:
     button: "Legend"
     title: "Chart Legend"
@@ -107,8 +109,6 @@ dashboard:
     empty_title: "No upcoming renewals yet"
     empty_body: "Add your first subscription to see its upcoming renewal forecast here."
     add_first: "Add subscription"
-  chart:
-    summary: "Chart of subscription costs. The same figures are listed in the subscriptions table below."
 add_subscription: "Add Subscription"
 edit: "Edit"
 delete: "Delete"

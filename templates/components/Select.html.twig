@@ -1,4 +1,4 @@
-{% props options = [], selected = 0, url = null %}
+{% props options = [], selected = 0, url = null, ariaLabel = 'Select an option' %}
 
 {% set targetUrl = url ? url : path('app_dashboard', {chartType: 'monthly'}) %}
 
@@ -28,6 +28,7 @@
                     class="hidden absolute z-30 mt-1 max-h-56 min-w-36 overflow-auto rounded-xl bg-white py-1 text-xs shadow-lg border border-slate-200 focus:outline-none"
                     tabindex="-1"
                     role="listbox"
+                    aria-label="{{ ariaLabel }}"
             >
                 {% for option in options %}
                     <li class="relative cursor-pointer select-none py-2 px-3 text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition-colors {% if loop.index0 == selected %}font-semibold bg-slate-50 text-color-ter{% endif %}"
