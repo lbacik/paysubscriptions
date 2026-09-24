@@ -58,7 +58,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     /**
      * @var Collection<int, ExpenseCategory>
      */
-    #[ORM\OneToMany(targetEntity: ExpenseCategory::class, mappedBy: 'owner', cascade: ['persist'], orphanRemoval: true)]
+    #[ORM\OneToMany(targetEntity: ExpenseCategory::class, mappedBy: 'owner', cascade: ['persist'])]
     private Collection $expenseCategories;
 
     #[ORM\OneToOne(mappedBy: 'user', cascade: ['persist', 'remove'])]
@@ -216,18 +216,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         if (!$this->expenseCategories->contains($category)) {
             $this->expenseCategories->add($category);
             $category->setOwner($this);
-        }
-
-        return $this;
-    }
-
-    public function removeExpenseCategory(ExpenseCategory $category): static
-    {
-        if ($this->expenseCategories->removeElement($category)) {
-            // set the owning side to null (unless already changed)
-            if ($category->getOwner() === $this) {
-                $category->setOwner(null);
-            }
         }
 
         return $this;

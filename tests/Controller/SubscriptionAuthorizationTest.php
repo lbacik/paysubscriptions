@@ -6,6 +6,7 @@ namespace App\Tests\Controller;
 
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Factory\ExpenseCategoryFactory;
 use App\Factory\SubscriptionFactory;
 use App\Factory\UserFactory;
 use App\Repository\SubscriptionRepository;
@@ -223,6 +224,45 @@ final class SubscriptionAuthorizationTest extends WebTestCase
         $fresh = $this->freshSubscription($client, $id);
         self::assertNotNull($fresh);
         self::assertSame('Victim Netflix', $fresh->getName());
+    }
+
+    /**
+     * SubscriptionType scopes the `category` choice list to the current
+     * user's own categories, so a form submission cannot legitimately carry
+     * another user's category id. Proves a forged one is rejected as an
+     * invalid form choice — the request never reaches
+     * SubscriptionService::assertCategoryOwnership() — rather than causing a
+     * server error.
+     */
+    public function testForeignCategoryIdIsRejectedAsInvalidChoiceNotServerError(): void
+    {
+        $client = self::createTestClient();
+        $subscription = $this->createSubscriptionForNewUser('owner@example.com', 'Owner Netflix');
+        $id = (string) $subscription->getId();
+        $originalCategoryId = (string) $subscription->getCategory()->getId();
+
+        $stranger = UserFactory::createOne(['email' => 'stranger@example.com', 'isVerified' => true]);
+        $foreignCategory = ExpenseCategoryFactory::createOne(['owner' => $stranger])->_real();
+
+        $this->loginAs($client, 'owner@example.com');
+        $client->request('POST', '/subscription/'.$id.'/edit', [
+            'subscription' => [
+                'name' => 'Owner Netflix',
+                'firstPayment' => '2024-01-01',
+                'category' => (string) $foreignCategory->getId(),
+                'monthly' => '9.99',
+                'yearly' => '',
+                '_token' => $this->csrfToken($client, 'subscription'),
+            ],
+        ]);
+
+        // 422: the form was re-rendered with a validation error, not a 500.
+        self::assertResponseStatusCodeSame(422);
+        self::assertStringNotContainsString('Whoops', (string) $client->getResponse()->getContent());
+
+        $fresh = $this->freshSubscription($client, $id);
+        self::assertNotNull($fresh);
+        self::assertSame($originalCategoryId, (string) $fresh->getCategory()->getId());
     }
 
     private function createSubscriptionForNewUser(string $email, string $name): Subscription

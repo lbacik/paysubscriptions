@@ -8,6 +8,7 @@ use App\Entity\ExpenseCategory;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Repository\ExpenseCategoryRepository;
+use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bridge\Doctrine\Types\UuidType;
 use Symfony\Component\Security\Core\User\UserInterface;
@@ -30,29 +31,38 @@ class ExpenseCategoryService
 
     /**
      * Returns a category to pre-select for a new Subscription: the owner's
-     * first existing category, or a freshly created `Subscriptions` default
-     * when the owner has none yet. Once an owner has at least one category,
-     * this never creates another one, so renaming or deleting a category
-     * (including the original default) never causes it to reappear.
-     *
-     * Also assigns the returned category to any of the owner's Subscriptions
-     * that have none, so callers never leave a Subscription uncategorized.
+     * `Subscriptions` category if it still exists under that name, otherwise
+     * their alphabetically-first category, or a freshly created
+     * `Subscriptions` default when the owner has none yet. Once an owner has
+     * at least one category, this never creates another one, so renaming or
+     * deleting a category (including the original default) never causes it
+     * to reappear — it only recreates the default once the owner is back
+     * down to zero categories.
      */
     public function ensureDefaultCategory(User $owner): ExpenseCategory
     {
-        $default = $this->categoryRepository->findOneBy(['owner' => $owner], ['name' => 'ASC']);
+        $default = $this->categoryRepository->findOneBy(['owner' => $owner, 'name' => ExpenseCategory::DEFAULT_NAME])
+            ?? $this->categoryRepository->findOneBy(['owner' => $owner], ['name' => 'ASC']);
 
-        if (null === $default) {
-            $default = (new ExpenseCategory())
-                ->setName(ExpenseCategory::DEFAULT_NAME)
-                ->setColor(ExpenseCategory::DEFAULT_COLOR);
-            $owner->addExpenseCategory($default);
-            $this->categoryRepository->save($default);
+        if (null !== $default) {
+            return $default;
         }
 
-        foreach ($owner->getSubscriptions() as $subscription) {
-            if (null === $subscription->getCategory()) {
-                $subscription->setCategory($default);
+        $default = (new ExpenseCategory())
+            ->setName(ExpenseCategory::DEFAULT_NAME)
+            ->setColor(ExpenseCategory::DEFAULT_COLOR);
+        $owner->addExpenseCategory($default);
+
+        try {
+            $this->categoryRepository->save($default);
+        } catch (UniqueConstraintViolationException) {
+            // Lost a race with a concurrent request creating the same
+            // default for this owner: use the one that won instead of 500ing.
+            $this->entityManager->clear();
+            $default = $this->categoryRepository->findOneBy(['owner' => $owner, 'name' => ExpenseCategory::DEFAULT_NAME]);
+
+            if (null === $default) {
+                throw new \LogicException('Failed to resolve the default category after a concurrent creation conflict.');
             }
         }
 

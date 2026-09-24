@@ -91,6 +91,11 @@ class SubscriptionController extends AbstractController
 
         if ($form->isSubmitted() && $form->isValid()) {
             try {
+                // Defense-in-depth: the form's category choice list is
+                // already scoped to the user's own categories, so a cross-
+                // user assignment normally fails form validation before
+                // reaching assertCategoryOwnership(). This catch only
+                // matters if that scoping is ever bypassed or loosened.
                 $this->subscriptionService->update($subscription);
 
                 $this->addFlash('success', 'Subscription updated successfully');
