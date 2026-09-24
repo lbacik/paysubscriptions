@@ -7,6 +7,7 @@ namespace App\Tests\Controller;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\BillingCycle;
+use App\Service\ExpenseCategoryService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
@@ -128,13 +129,15 @@ final class SettingsControllerTest extends WebTestCase
     public function testUpdatingSettingsLeavesSubscriptionDatesUntouched(): void
     {
         $user = $this->createUser('subscriber@example.com');
+        $categoryService = static::getContainer()->get(ExpenseCategoryService::class);
         $firstPayment = new \DateTime('2024-03-15');
         $subscription = (new Subscription())
             ->setName('Example Music')
             ->setBillingCycle(BillingCycle::Monthly)
             ->setAmount(9.99)
             ->setNextPayment($firstPayment)
-            ->setOwner($user);
+            ->setOwner($user)
+            ->setCategory($categoryService->ensureDefaultCategory($user));
         $this->em->persist($subscription);
         $this->em->flush();
         $subscriptionId = $subscription->getId();
