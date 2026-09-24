@@ -41,6 +41,14 @@ real migrations into `paysub_test` first, proving they apply before tests run.
   totals (including cross-currency conversion), chart datasets
   (bar/monthly/yearly), dashboard totals and limit gauge.
 - Expense categories, upcoming renewals, and account deletion.
+- Renewal reminders (`tests/Service/RenewalReminderPlannerTest.php`,
+  `tests/Service/RenewalReminderServiceTest.php`,
+  `tests/Command/SendRenewalRemindersCommandTest.php`): opt-in/opt-out, lead
+  time in the account-local calendar day (including DST boundaries), date
+  edits and deleted rows producing no stale mail, retry and concurrent-claim
+  idempotency via the `renewal_reminder` send identity, ambiguous provider
+  outcomes held for manual review, and one email per due renewal for Users
+  with several renewals.
 - Cross-user ownership: a second user is denied (403 via `SubscriptionVoter`
   for subscriptions, 404 elsewhere) for foreign view/edit/delete, and never
   sees foreign rows.
@@ -62,7 +70,7 @@ Everything else is faked in the test environment:
 
 ## What is not covered yet
 
-Reminders and self-service export have no implementation on the v1.0 slices
-landed so far (export is explicitly deferred in #34), so there is nothing
-automatable to assert yet. Cover them here as those slices land; the CI gate
-picks new tests up with no workflow change.
+Self-service export has no implementation on the v1.0 slices landed so far
+(explicitly deferred in #34), so there is nothing automatable to assert yet.
+Cover it here as that slice lands; the CI gate picks new tests up with no
+workflow change.

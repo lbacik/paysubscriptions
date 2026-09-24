@@ -1,0 +1,11 @@
+<h1>Upcoming renewal forecast</h1>
+
+<p>Hello,</p>
+
+<p>This is a forecast reminder, not a bill: <strong>{{ subscriptionName }}</strong> is expected to renew on <strong>{{ renewalDate }}</strong>{% if forecastAmount is not empty %} for a forecast amount of <strong>{{ forecastAmount }}</strong>{% endif %}.</p>
+
+<p><a href="{{ subscriptionUrl }}">View your subscription</a></p>
+
+<p>Forecasts are calculated from the renewal dates you entered and may differ from what your provider actually charges. If the date changed, update it on your subscription so future reminders stay accurate. You can switch these reminders off at any time in your <a href="{{ settingsUrl }}">settings</a>.</p>
+
+<p>Cheers!</p>

@@ -205,7 +205,7 @@ abstract class DatabaseTestCase extends WebTestCase
     private function cleanTables(): void
     {
         // Foreign-key-safe order: children before parents.
-        foreach (['App\Entity\ResetPasswordRequest', 'App\Entity\Subscription', 'App\Entity\Limits', 'App\Entity\User'] as $class) {
+        foreach (['App\Entity\RenewalReminder', 'App\Entity\ResetPasswordRequest', 'App\Entity\Subscription', 'App\Entity\Limits', 'App\Entity\User'] as $class) {
             $this->em->createQuery(sprintf('DELETE FROM %s e', $class))->execute();
         }
 
