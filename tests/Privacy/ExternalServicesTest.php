@@ -14,8 +14,11 @@ use Symfony\Component\Security\Http\Authenticator\Token\PostAuthenticationToken;
  *
  * The verified inventory lives in docs/third-party-services.md. These checks
  * pin its load-time claims: no signed-in avatar (or any other asset request)
- * may send a User's email to a third party, and any newly added external
- * request fails here until the inventory documents it.
+ * may send a User's email to a third party, and any new automatic request or
+ * outbound link added to a Twig template, the reCAPTCHA controller, or the
+ * three transactional email templates fails here until the inventory
+ * documents it. Other request sources (other JavaScript, backend/PHP-issued
+ * HTTP calls, form actions, CSS `@import`) are not scanned.
  */
 final class ExternalServicesTest extends WebTestCase
 {
@@ -39,6 +42,49 @@ final class ExternalServicesTest extends WebTestCase
         'gprodb.com',
         'www.buymeacoffee.com',
     ];
+
+    /**
+     * @var array<string,array{putenv: string|false, server: string|null, env: string|null}>
+     */
+    private array $originalRecaptchaEnv = [];
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        foreach (['GOOGLE_RECAPTCHA_SITE_KEY', 'GOOGLE_RECAPTCHA_SECRET'] as $key) {
+            $this->originalRecaptchaEnv[$key] = [
+                'putenv' => getenv($key),
+                'server' => $_SERVER[$key] ?? null,
+                'env' => $_ENV[$key] ?? null,
+            ];
+        }
+    }
+
+    protected function tearDown(): void
+    {
+        parent::tearDown();
+
+        foreach ($this->originalRecaptchaEnv as $key => $original) {
+            if (false === $original['putenv']) {
+                putenv($key);
+            } else {
+                putenv($key.'='.$original['putenv']);
+            }
+
+            if (null === $original['server']) {
+                unset($_SERVER[$key]);
+            } else {
+                $_SERVER[$key] = $original['server'];
+            }
+
+            if (null === $original['env']) {
+                unset($_ENV[$key]);
+            } else {
+                $_ENV[$key] = $original['env'];
+            }
+        }
+    }
 
     public function testNoTemplateSendsUserDataToAThirdParty(): void
     {
@@ -285,7 +331,11 @@ final class ExternalServicesTest extends WebTestCase
 
     private static function absoluteHost(string $url): ?string
     {
-        if (!str_starts_with($url, 'http://') && !str_starts_with($url, 'https://')) {
+        if (str_starts_with($url, '//')) {
+            $url = 'https:'.$url;
+        }
+
+        if (!preg_match('/^https?:\/\//i', $url)) {
             return null;
         }
 

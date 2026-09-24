@@ -9,13 +9,15 @@ Any automatic HTTPS request inherently discloses the visitor's IP address,
 user agent, and the requested URL (page URL / referrer) to the host serving it.
 The rows below list what each service receives *beyond* that baseline.
 
-Pinned by `tests/Privacy/ExternalServicesTest.php`: adding a new automatic
-third-party request, or a new outbound link, fails the suite until this
-inventory documents it. Verified against the rendered public home, pricing,
-and contact pages, plus an authenticated render of the signed-in user menu
-(the only place account data reaches a template URL context; a full
-signed-in page render needs a database and so stays out of the blocking
-suite).
+Pinned by `tests/Privacy/ExternalServicesTest.php`, which scans Twig
+templates, the reCAPTCHA Stimulus controller, and the three transactional
+email templates: adding a new automatic third-party request or outbound
+link there fails the suite until this inventory documents it. It does not
+scan other JavaScript, backend/PHP-issued HTTP calls, form actions, or CSS
+`@import`. Verified against the rendered public home, pricing, and contact
+pages, plus an authenticated render of the signed-in user menu (the only
+place account data reaches a template URL context; a full signed-in page
+render needs a database and so stays out of the blocking suite).
 
 ## Automatic requests (fire on page view)
 
