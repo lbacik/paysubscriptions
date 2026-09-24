@@ -32,3 +32,6 @@ app.register('subscription-table-modal', SubscriptionTableModalController);
 
 import CsrfProtectionController from './controllers/csrf_protection_controller.js';
 app.register('csrf-protection', CsrfProtectionController);
+
+import TimezoneController from './controllers/timezone_controller.js';
+app.register('timezone', TimezoneController);

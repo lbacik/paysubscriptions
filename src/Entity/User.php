@@ -15,6 +15,7 @@ use Symfony\Bridge\Doctrine\Types\UuidType;
 use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
+use Symfony\Component\Validator\Constraints as Assert;
 use Gedmo\Mapping\Annotation as Gedmo;
 use Symfony\Component\Uid\Uuid;
 
@@ -24,6 +25,11 @@ use Symfony\Component\Uid\Uuid;
 class User implements UserInterface, PasswordAuthenticatedUserInterface
 {
     use Timestampable;
+
+    public const DEFAULT_TIMEZONE = 'UTC';
+    public const DEFAULT_REMINDER_LEAD_DAYS = 3;
+    public const MIN_REMINDER_LEAD_DAYS = 1;
+    public const MAX_REMINDER_LEAD_DAYS = 30;
 
     #[ORM\Id]
     #[ORM\Column(type: UuidType::NAME, unique: true)]
@@ -48,6 +54,30 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     #[ORM\Column]
     private bool $isVerified = false;
+
+    /**
+     * Account time zone as an IANA identifier (e.g. "Europe/Warsaw").
+     * Initially detected from the browser; the User can correct it in settings.
+     * Reminder lead times are measured in calendar days in this zone.
+     */
+    #[ORM\Column(length: 64, options: ['default' => self::DEFAULT_TIMEZONE])]
+    #[Assert\NotBlank]
+    #[Assert\Timezone]
+    private ?string $timezone = self::DEFAULT_TIMEZONE;
+
+    /**
+     * Global opt-in for email reminders. The in-app upcoming-renewals view
+     * stays available regardless of this flag.
+     */
+    #[ORM\Column(options: ['default' => false])]
+    private bool $emailRemindersEnabled = false;
+
+    /**
+     * Global email-reminder lead time in calendar days.
+     */
+    #[ORM\Column(options: ['default' => self::DEFAULT_REMINDER_LEAD_DAYS])]
+    #[Assert\Range(min: self::MIN_REMINDER_LEAD_DAYS, max: self::MAX_REMINDER_LEAD_DAYS)]
+    private int $reminderLeadDays = self::DEFAULT_REMINDER_LEAD_DAYS;
 
     /**
      * @var Collection<int, Subscription>
@@ -171,6 +201,42 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setIsVerified(bool $isVerified): static
     {
         return $this->setVerified($isVerified);
+    }
+
+    public function getTimezone(): ?string
+    {
+        return $this->timezone;
+    }
+
+    public function setTimezone(string $timezone): static
+    {
+        $this->timezone = $timezone;
+
+        return $this;
+    }
+
+    public function isEmailRemindersEnabled(): bool
+    {
+        return $this->emailRemindersEnabled;
+    }
+
+    public function setEmailRemindersEnabled(bool $emailRemindersEnabled): static
+    {
+        $this->emailRemindersEnabled = $emailRemindersEnabled;
+
+        return $this;
+    }
+
+    public function getReminderLeadDays(): int
+    {
+        return $this->reminderLeadDays;
+    }
+
+    public function setReminderLeadDays(int $reminderLeadDays): static
+    {
+        $this->reminderLeadDays = $reminderLeadDays;
+
+        return $this;
     }
 
     /**

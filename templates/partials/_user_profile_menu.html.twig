@@ -20,8 +20,7 @@
             <span class="block text-sm text-gray-500 truncate">{{ app.user.email }}</span>
         </div>
         <ul class="py-2" aria-labelledby="user-menu-button">
-{#            <twig:UserMenuElement href="#">{{ 'user.settings'|trans }}</twig:UserMenuElement>#}
-{#            <twig:UserMenuElement href="{{ path('app_subscription_index') }}">{{ 'user.subscriptions'|trans }}</twig:UserMenuElement>#}
+            <twig:UserMenuElement href="{{ path('app_settings') }}">{{ 'user.settings'|trans }}</twig:UserMenuElement>
             <twig:UserMenuElement href="{{ path('app_account_delete') }}">{{ 'account.delete_menu'|trans }}</twig:UserMenuElement>
             <twig:UserMenuElement href="{{ path('app_logout') }}">{{ 'user.logout'|trans }}</twig:UserMenuElement>
         </ul>

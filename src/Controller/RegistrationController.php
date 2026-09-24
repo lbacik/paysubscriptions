@@ -8,6 +8,7 @@ use App\Repository\UserRepository;
 use App\Security\AppCustomAuthenticator;
 use App\Security\EmailVerifier;
 use App\Service\ExpenseCategoryService;
+use App\Service\TimezoneService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bridge\Twig\Mime\TemplatedEmail;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -24,6 +25,7 @@ class RegistrationController extends AbstractController
 {
     public function __construct(
         private readonly EmailVerifier $emailVerifier,
+        private readonly TimezoneService $timezoneService,
         private readonly string $systemEmail,
         private readonly ExpenseCategoryService $categoryService,
     ) {
@@ -41,6 +43,12 @@ class RegistrationController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
+            // A missing or non-IANA browser zone is stored as UTC explicitly;
+            // the User can correct it in settings.
+            $user->setTimezone(
+                $this->timezoneService->normalize($form->get('timezone')->getData())
+            );
+
             // encode the plain password
             $user->setPassword(
                 $userPasswordHasher->hashPassword(
