@@ -6,6 +6,7 @@ namespace App\Tests\Controller;
 
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Enum\BillingCycle;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
@@ -127,8 +128,9 @@ final class SettingsControllerTest extends WebTestCase
         $firstPayment = new \DateTime('2024-03-15');
         $subscription = (new Subscription())
             ->setName('Example Music')
-            ->setFirstPayment($firstPayment)
-            ->setMonthly(9.99)
+            ->setBillingCycle(BillingCycle::Monthly)
+            ->setAmount(9.99)
+            ->setNextPayment($firstPayment)
             ->setOwner($user);
         $this->em->persist($subscription);
         $this->em->flush();
@@ -148,7 +150,7 @@ final class SettingsControllerTest extends WebTestCase
 
         $this->em->clear();
         $reloaded = $this->em->getRepository(Subscription::class)->find($subscriptionId);
-        self::assertSame('2024-03-15', $reloaded->getFirstPayment()->format('Y-m-d'));
+        self::assertSame('2024-03-15', $reloaded->getNextPayment()->format('Y-m-d'));
         self::assertSame('Example Music', $reloaded->getName());
     }
 
