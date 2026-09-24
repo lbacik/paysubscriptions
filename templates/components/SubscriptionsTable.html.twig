@@ -6,6 +6,7 @@
             <th scope="col" class="py-3 px-4">
                 <twig:SortableColumn field="name">Subscription</twig:SortableColumn>
             </th>
+            <th scope="col" class="py-3 px-4">Category</th>
             <th scope="col" class="py-3 px-4 text-end">
                 <twig:SortableColumn field="monthly">Monthly</twig:SortableColumn>
             </th>
@@ -32,6 +33,7 @@
                 <div>Total</div>
                 <div class="text-xs text-slate-500 font-normal">incl. normalized equivalents</div>
             </td>
+            <td></td>
             <td class="py-4 px-4 font-bold text-end">
                 <div class="text-base text-slate-900">
                     {{ total.monthlyCalculated|number_format(2, '.', ' ') }}

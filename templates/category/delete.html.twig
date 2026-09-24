@@ -1,0 +1,37 @@
+{% extends 'modalBase.html.twig' %}
+
+{% block body %}
+    <twig:ContentCenter :inModal="app.request.headers.get('turbo-frame') == 'modal'"
+                        class="mt-20"
+                        width="w-full px-10 md:px-0 md:w-1/4">
+
+        <h1 class="mb-10 font-semibold text-lg text-color-ter text-right border-b border-gray-200">
+            {{ 'category.delete'|trans }}
+        </h1>
+        <div class="space-y-6">
+            <div class="text-color-ter text-center">
+                {{ 'category.confirm_delete'|trans }}
+            </div>
+            <div class="text-center text-color-qua text-lg">
+                <span class="inline-block w-3.5 h-3.5 rounded-full border border-slate-200 mr-2"
+                      style="background-color: {{ category.color }}"></span>{{ category.name }}
+            </div>
+            {% if category.subscriptions|length > 0 %}
+                <div class="text-amber-700 bg-amber-50 border border-amber-200/80 rounded-2xl p-3.5 text-center text-sm">
+                    {{ 'category.delete_blocked'|trans({'%count%': category.subscriptions|length}) }}
+                </div>
+            {% endif %}
+            <div class="text-color-qui font-bold text-center">
+                {{ 'operation_cant_be_undone'|trans }}
+            </div>
+        </div>
+        <form method="post" action="{{ path('app_category_delete', {'id': category.id}) }}">
+            <div class="flex flex-row items-center justify-end space-x-2 pt-5">
+                <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ category.id) }}">
+                <twig:Button styleType="secondary" href="{{ path('app_category_index') }}">{{ 'cancel'|trans }}</twig:Button>
+                <twig:Button styleType="delete">{{ button_label|default('Delete') }}</twig:Button>
+            </div>
+        </form>
+
+    </twig:ContentCenter>
+{% endblock %}

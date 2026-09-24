@@ -13,8 +13,12 @@ Product-messaging term for the audience a User represents: one person tracking r
 _Avoid_: Family account, shared account, organization
 
 **Subscription**:
-A recurring cost a User tracks: a name, exactly one billing cycle (monthly or yearly), an amount charged per cycle, and a user-entered next payment date. Owned by exactly one User.
-_Avoid_: Bill, expense (until a broader "expense category" concept is decided — see the v1.0 feature-set ticket)
+A recurring cost a User tracks: a name, exactly one billing cycle (monthly or yearly), an amount charged per cycle, a user-entered next payment date, and a required expense category. Owned by exactly one User.
+_Avoid_: Bill
+
+**ExpenseCategory**:
+A User-owned label with a name and a color swatch used to group Subscriptions (e.g. the default `Subscriptions` category every account starts with). Each User manages their own set: names are unique per User, every Subscription belongs to exactly one category owned by the same User, and a category in use cannot be deleted until its Subscriptions are reassigned.
+_Avoid_: Tag, label, group
 
 **Billing cycle**:
 How often a Subscription charges: monthly or yearly. Exactly one per Subscription; the amount is always priced per that cycle.

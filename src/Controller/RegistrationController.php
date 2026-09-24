@@ -7,6 +7,7 @@ use App\Form\RegistrationFormType;
 use App\Repository\UserRepository;
 use App\Security\AppCustomAuthenticator;
 use App\Security\EmailVerifier;
+use App\Service\ExpenseCategoryService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bridge\Twig\Mime\TemplatedEmail;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -24,6 +25,7 @@ class RegistrationController extends AbstractController
     public function __construct(
         private readonly EmailVerifier $emailVerifier,
         private readonly string $systemEmail,
+        private readonly ExpenseCategoryService $categoryService,
     ) {
     }
 
@@ -49,6 +51,9 @@ class RegistrationController extends AbstractController
 
             $entityManager->persist($user);
             $entityManager->flush();
+
+            // Every account starts with one editable `Subscriptions` category.
+            $this->categoryService->ensureDefaultCategory($user);
 
             // generate a signed url and email it to the user
             $this->sendConfirmationEmail($user);
