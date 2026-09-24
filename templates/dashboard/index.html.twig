@@ -102,6 +102,9 @@
         </div>
     </div>
 
+    <!-- Upcoming Renewals Widget -->
+    {{ include('dashboard/_upcoming_renewals.html.twig') }}
+
     <!-- Chart Section Card -->
     {% if subscriptions|length > 0 %}
         <div class="bg-white rounded-3xl border border-slate-200/80 shadow-xs p-6 md:p-8">

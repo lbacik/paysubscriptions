@@ -1,0 +1,16 @@
+<div class="form">
+
+    {{ form_start(form)}}
+
+    {{ form_errors(form) }}
+
+    {{ form_row(form.name) }}
+    {{ form_row(form.color) }}
+
+    <div class="flex flex-row items-center justify-end space-x-2 pt-5">
+        <twig:Button styleType="secondary" href="{{ path('app_category_index') }}">{{ 'cancel'|trans }}</twig:Button>
+        <twig:Button>{{ button_label|default('Save') }}</twig:Button>
+    </div>
+
+    {{ form_end(form) }}
+</div>

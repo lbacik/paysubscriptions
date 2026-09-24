@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Factory;
 
+use App\Entity\ExpenseCategory;
 use App\Entity\Subscription;
 use App\Enum\BillingCycle;
+use App\Repository\ExpenseCategoryRepository;
 use Zenstruck\Foundry\Persistence\PersistentProxyObjectFactory;
 
 /**
@@ -13,6 +15,11 @@ use Zenstruck\Foundry\Persistence\PersistentProxyObjectFactory;
  */
 final class SubscriptionFactory extends PersistentProxyObjectFactory
 {
+    public function __construct(
+        private ExpenseCategoryRepository $categoryRepository
+    ) {
+        parent::__construct();
+    }
 
     public static function class(): string
     {
@@ -38,8 +45,10 @@ final class SubscriptionFactory extends PersistentProxyObjectFactory
      */
     protected function initialize(): static
     {
+        $categoryRepository = $this->categoryRepository;
+
         return $this
-            ->afterInstantiate(function(Subscription $subscription): void {
+            ->afterInstantiate(function(Subscription $subscription) use ($categoryRepository): void {
                 $cycle = self::faker()->boolean() ? BillingCycle::Monthly : BillingCycle::Yearly;
                 $subscription->setBillingCycle($cycle);
                 $subscription->setAmount(
@@ -47,6 +56,39 @@ final class SubscriptionFactory extends PersistentProxyObjectFactory
                         ? self::faker()->randomFloat(2, 10, 100)
                         : self::faker()->randomFloat(2, 100, 1000)
                 );
+
+                if (null !== $subscription->getCategory()) {
+                    return;
+                }
+
+                $owner = $subscription->getOwner();
+
+                foreach ($owner->getExpenseCategories() as $category) {
+                    if ($category->getName() === ExpenseCategory::DEFAULT_NAME) {
+                        $subscription->setCategory($category);
+
+                        return;
+                    }
+                }
+
+                if (null !== $owner->getId()) {
+                    $persisted = $categoryRepository->findOneBy([
+                        'owner' => $owner,
+                        'name' => ExpenseCategory::DEFAULT_NAME,
+                    ]);
+
+                    if (null !== $persisted) {
+                        $subscription->setCategory($persisted);
+
+                        return;
+                    }
+                }
+
+                $category = (new ExpenseCategory())
+                    ->setName(ExpenseCategory::DEFAULT_NAME)
+                    ->setColor(ExpenseCategory::DEFAULT_COLOR);
+                $owner->addExpenseCategory($category);
+                $subscription->setCategory($category);
             })
         ;
     }
