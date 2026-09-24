@@ -24,6 +24,7 @@ final class SubscriptionsTable
             $this->security->getUser(),
             $this->sortableColumn->sort(),
             $this->sortableColumn->order(),
+            $this->getMainCurrency(),
         );
     }
 
