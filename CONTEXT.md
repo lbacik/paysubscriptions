@@ -13,9 +13,21 @@ Product-messaging term for the audience a User represents: one person tracking r
 _Avoid_: Family account, shared account, organization
 
 **Subscription**:
-A recurring cost a User tracks: a name, a first-payment date, a monthly-or-yearly amount, and a required expense category. Owned by exactly one User.
+A recurring cost a User tracks: a name, exactly one billing cycle (monthly or yearly), an amount charged per cycle, a user-entered next payment date, and a required expense category. Owned by exactly one User.
 _Avoid_: Bill
 
 **ExpenseCategory**:
 A User-owned label with a name and a color swatch used to group Subscriptions (e.g. the default `Subscriptions` category every account starts with). Each User manages their own set: names are unique per User, every Subscription belongs to exactly one category owned by the same User, and a category in use cannot be deleted until its Subscriptions are reassigned.
 _Avoid_: Tag, label, group
+
+**Billing cycle**:
+How often a Subscription charges: monthly or yearly. Exactly one per Subscription; the amount is always priced per that cycle.
+_Avoid_: Plan type, frequency (ambiguous next to renewal dates)
+
+**Next payment date**:
+The user-entered next known payment date of a Subscription. It is the anchor from which renewals are computed; the User edits it whenever the known date changes.
+_Avoid_: First payment (legacy name), due date
+
+**Renewal** (upcoming renewal):
+A future payment date computed from the next payment date anchor by stepping whole billing cycles while preserving the anchor's calendar day. An occurrence landing in a month without that day uses that month's last day for that occurrence, and later occurrences return to the anchor day when possible (a January 31st monthly anchor renews February 28th/29th, then March 31st; a February 29th yearly anchor renews February 28th except in leap years). An anchor in the past rolls forward to the first occurrence on or after the reference day.
+_Avoid_: Billing date, charge date

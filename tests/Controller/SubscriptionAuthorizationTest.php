@@ -6,6 +6,7 @@ namespace App\Tests\Controller;
 
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Enum\BillingCycle;
 use App\Factory\ExpenseCategoryFactory;
 use App\Factory\SubscriptionFactory;
 use App\Factory\UserFactory;
@@ -138,8 +139,8 @@ final class SubscriptionAuthorizationTest extends WebTestCase
         $fresh = $this->freshSubscription($client, $id);
         self::assertNotNull($fresh);
         self::assertSame('Victim Netflix', $fresh->getName());
-        self::assertEquals($subscription->getMonthly(), $fresh->getMonthly());
-        self::assertEquals($subscription->getYearly(), $fresh->getYearly());
+        self::assertEquals($subscription->getBillingCycle(), $fresh->getBillingCycle());
+        self::assertEquals($subscription->getAmount(), $fresh->getAmount());
     }
 
     public function testIntruderCannotUpdateSubscriptionViaTurbo(): void
@@ -248,10 +249,10 @@ final class SubscriptionAuthorizationTest extends WebTestCase
         $client->request('POST', '/subscription/'.$id.'/edit', [
             'subscription' => [
                 'name' => 'Owner Netflix',
-                'firstPayment' => '2024-01-01',
+                'billingCycle' => BillingCycle::Monthly->value,
+                'amount' => '9.99',
+                'nextPayment' => '2024-01-01',
                 'category' => (string) $foreignCategory->getId(),
-                'monthly' => '9.99',
-                'yearly' => '',
                 '_token' => $this->csrfToken($client, 'subscription'),
             ],
         ]);
@@ -304,9 +305,9 @@ final class SubscriptionAuthorizationTest extends WebTestCase
     {
         return [
             'name' => 'Hacked',
-            'firstPayment' => '2024-01-01',
-            'monthly' => '99.99',
-            'yearly' => '',
+            'billingCycle' => BillingCycle::Monthly->value,
+            'amount' => '99.99',
+            'nextPayment' => '2024-01-01',
             '_token' => $this->csrfToken($client, 'subscription'),
         ];
     }

@@ -48,8 +48,8 @@ class SubscriptionService
         ];
 
         foreach ($subscriptions as $subscription) {
-            $totals['monthly'] += (float) ($subscription->getMonthly() ?? 0.0);
-            $totals['yearly'] += (float) ($subscription->getYearly() ?? 0.0);
+            $totals['monthly'] += (float) ($subscription->isMonthly() ? $subscription->getAmount() : 0.0);
+            $totals['yearly'] += (float) ($subscription->isYearly() ? $subscription->getAmount() : 0.0);
             $totals['monthlyCalculated'] += (float) ($subscription->getMonthlyCalculated() ?? 0.0);
             $totals['yearlyCalculated'] += (float) ($subscription->getYearlyCalculated() ?? 0.0);
         }

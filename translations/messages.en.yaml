@@ -30,6 +30,11 @@ subscription:
   limit_reached: "Subscriptions limit reached"
   delete: "Delete Subscription"
   confirm_delete: "Are you sure you want to delete this subscription?"
+  billing_cycle: "Billing cycle"
+  billing_cycle_monthly: "Monthly"
+  billing_cycle_yearly: "Yearly"
+  amount: "Amount"
+  next_payment: "Next payment date"
 dashboard:
   title: "Dashboard"
   subtitle: "Track your subscriptions, spending trends, and projected costs"

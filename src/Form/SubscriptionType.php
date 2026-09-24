@@ -7,8 +7,10 @@ namespace App\Form;
 use App\Entity\ExpenseCategory;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Enum\BillingCycle;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
+use Symfony\Component\Form\Extension\Core\Type\EnumType;
 use Symfony\Component\Form\Extension\Core\Type\NumberType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
@@ -29,29 +31,27 @@ class SubscriptionType extends AbstractType
                 ],
 
             ])
-            ->add('firstPayment', null, [
+            ->add('billingCycle', EnumType::class, [
+                'class' => BillingCycle::class,
+                'label' => 'subscription.billing_cycle',
+                'choice_label' => fn(BillingCycle $cycle) => 'subscription.billing_cycle_'.$cycle->value,
+            ])
+            ->add('amount', NumberType::class, [
+                'label' => 'subscription.amount',
+                'html5' => true,
+                'attr' => [
+                    'step' => 0.01,
+                    'min' => 0,
+                ],
+            ])
+            ->add('nextPayment', null, [
                 'widget' => 'single_text',
+                'label' => 'subscription.next_payment',
             ])
             ->add('category', EntityType::class, [
                 'class' => ExpenseCategory::class,
                 'choices' => $user?->getExpenseCategories() ?? [],
                 'choice_label' => fn (ExpenseCategory $category) => $category->getName(),
-            ])
-            ->add('monthly', NumberType::class, [
-                'required' => false,
-                'html5' => true,
-                'attr' => [
-                    'step' => 0.01,
-                    'min' => 0,
-                ],
-            ])
-            ->add('yearly', NumberType::class, [
-                'required' => false,
-                'html5' => true,
-                'attr' => [
-                    'step' => 0.01,
-                    'min' => 0,
-                ],
             ])
         ;
     }
