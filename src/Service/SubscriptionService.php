@@ -43,6 +43,7 @@ class SubscriptionService
         ?\DateTimeInterface $today = null,
     ): array {
         $subscriptions = $this->subscriptionRepository->findBy(['owner' => $owner]);
+        $main = CurrencyService::normalizeCode($mainCurrency);
 
         if ($categoryId !== null && $categoryId !== '') {
             $subscriptions = array_values(array_filter(
@@ -132,6 +133,14 @@ class SubscriptionService
             $totals['monthlyCalculated'] += (float) ($subscription->getReportingMonthlyCalculated($main) ?? 0.0);
             $totals['yearlyCalculated'] += (float) ($subscription->getReportingYearlyCalculated($main) ?? 0.0);
         }
+
+        // Per-Subscription equivalents are already rounded to cents; rounding
+        // the sums keeps binary floating-point dust (10.1 + 20.2) out of the
+        // figures the dashboard labels as currency amounts.
+        $totals['monthly'] = round($totals['monthly'], 2);
+        $totals['yearly'] = round($totals['yearly'], 2);
+        $totals['monthlyCalculated'] = round($totals['monthlyCalculated'], 2);
+        $totals['yearlyCalculated'] = round($totals['yearlyCalculated'], 2);
 
         return $totals;
     }

@@ -10,6 +10,11 @@
         <div class="text-xs text-slate-400 mt-0.5">
             {{ ('subscription.billing_cycle_' ~ subscription.billingCycle.value)|trans }}
         </div>
+        {% if subscription.notes %}
+            <div class="text-xs text-slate-500 mt-0.5 break-words">
+                {{ subscription.notes|length > 160 ? subscription.notes|slice(0, 160) ~ '…' : subscription.notes }}
+            </div>
+        {% endif %}
         {% if mainCurrency is defined and mainCurrency and subscription.needsConvertedReview(mainCurrency) %}
             <div class="text-xs text-amber-600 mt-0.5 font-medium">
                 <i class="fa-solid fa-triangle-exclamation text-[10px]"></i>
@@ -37,20 +42,24 @@
         {% endif %}
     </td>
     <td class="py-3.5 px-4 text-end">
-        {% if subscription.isMonthly() %}
-            <span class="font-bold text-slate-900">{{ subscription.amount|number_format(2, '.', ' ') }}</span>
+        {% if mainCurrency is defined and mainCurrency and subscription.isPendingReview(mainCurrency) %}
+            <span class="text-slate-300 font-normal" title="{{ 'subscription.totals_exclude_review'|trans({'%count%': 1}) }}">—</span>
+        {% elseif subscription.isMonthly() %}
+            <span class="font-bold text-slate-900">{{ subscription.getReportingMonthlyCalculated(mainCurrency|default(null))|number_format(2, '.', ' ') }}</span>
         {% else %}
             <span class="text-xs text-slate-500 font-normal italic" title="Calculated from yearly plan">
-                ~{{ subscription.monthlyCalculated|number_format(2, '.', ' ') }}
+                ~{{ subscription.getReportingMonthlyCalculated(mainCurrency|default(null))|number_format(2, '.', ' ') }}
             </span>
         {% endif %}
     </td>
     <td class="py-3.5 px-4 text-end">
-        {% if subscription.isYearly() %}
-            <span class="font-bold text-slate-900">{{ subscription.amount|number_format(2, '.', ' ') }}</span>
+        {% if mainCurrency is defined and mainCurrency and subscription.isPendingReview(mainCurrency) %}
+            <span class="text-slate-300 font-normal" title="{{ 'subscription.totals_exclude_review'|trans({'%count%': 1}) }}">—</span>
+        {% elseif subscription.isYearly() %}
+            <span class="font-bold text-slate-900">{{ subscription.getReportingYearlyCalculated(mainCurrency|default(null))|number_format(2, '.', ' ') }}</span>
         {% else %}
             <span class="text-xs text-slate-500 font-normal italic" title="Calculated from monthly plan">
-                ~{{ subscription.yearlyCalculated|number_format(2, '.', ' ') }}
+                ~{{ subscription.getReportingYearlyCalculated(mainCurrency|default(null))|number_format(2, '.', ' ') }}
             </span>
         {% endif %}
     </td>

@@ -83,4 +83,37 @@ final class SubscriptionTest extends TestCase
 
         $subscription->getYearlyCalculated();
     }
+
+    public function testNotesAreOptional(): void
+    {
+        $subscription = (new Subscription())
+            ->setName('Netflix')
+            ->setBillingCycle(BillingCycle::Monthly)
+            ->setAmount(15.99)
+            ->setNextPayment(new \DateTimeImmutable('2024-02-15'));
+
+        self::assertNull($subscription->getNotes());
+        self::assertCount(0, $this->validator->validate($subscription));
+    }
+
+    public function testBlankNotesNormalizeToNull(): void
+    {
+        $subscription = (new Subscription())->setNotes('   ');
+
+        self::assertNull($subscription->getNotes());
+    }
+
+    public function testNotesExceedingMaxLengthViolate(): void
+    {
+        $subscription = (new Subscription())->setNotes(str_repeat('a', 2001));
+
+        $violations = $this->validator->validate($subscription);
+
+        $paths = array_map(
+            fn($violation) => $violation->getPropertyPath(),
+            iterator_to_array($violations),
+        );
+
+        self::assertContains('notes', $paths);
+    }
 }

@@ -52,6 +52,7 @@ class DashboardController extends AbstractController
 
         $totals = $this->subscriptionService->getTotals($subscriptions, $mainCurrency);
         $pendingReviewSubscriptions = $this->subscriptionService->getPendingReviewSubscriptions($subscriptions, $mainCurrency);
+        $chartMeta = $this->describeChart($chartType, $withCalculated, $month, $subscriptions, $mainCurrency);
         $subscriptionLimit = $user instanceof \App\Entity\User
             ? $user->getSubscriptionsLimit()
             : \App\Entity\Limits::DEFAULT_SUBSCRIPTIONS_LIMIT;
@@ -72,6 +73,73 @@ class DashboardController extends AbstractController
             'limitPercentage' => $limitPercentage,
             'addSubscriptionDisabled' => ! $this->subscriptionService->isAbleToAddSubscription($this->getUser()),
             'upcomingRenewals' => $this->upcomingRenewals->nextOccurrences($subscriptions),
+            'chartMeta' => $chartMeta,
         ]);
+    }
+
+    /**
+     * Describes what the active chart draws so the template can label its
+     * currency and basis (normalized equivalents vs direct-cycle charges vs
+     * the bar view's per-month charge distribution) and render clear
+     * empty/filtered states. The inclusion rules mirror ChartService: only
+     * reportable Subscriptions (nothing pending converted-amount review)
+     * ever reach a chart.
+     *
+     * @param array<\App\Entity\Subscription> $subscriptions
+     * @return array{basis: string, currency: ?string, empty: bool, hiddenCount: int, hiddenCycle: ?string}
+     */
+    private function describeChart(
+        string $chartType,
+        bool $withCalculated,
+        int|null $month,
+        array $subscriptions,
+        ?string $mainCurrency,
+    ): array {
+        $reportable = $this->chartService->filterReportable($subscriptions, $mainCurrency);
+        $meta = [
+            'basis' => 'charges',
+            'currency' => \App\Service\CurrencyService::normalizeCode($mainCurrency),
+            'empty' => $reportable === [],
+            'hiddenCount' => 0,
+            'hiddenCycle' => null,
+        ];
+
+        if ($chartType === 'monthly') {
+            if ($withCalculated) {
+                $meta['basis'] = 'monthly_equivalent';
+
+                return $meta;
+            }
+
+            $meta['basis'] = 'monthly_direct';
+            $included = array_filter(
+                $reportable,
+                static fn(\App\Entity\Subscription $s) => $s->isMonthly()
+                    || ($month !== null && $s->getNextPayment()?->format('n') === (string) $month),
+            );
+            $meta['empty'] = $included === [];
+            $meta['hiddenCount'] = \count($reportable) - \count($included);
+            $meta['hiddenCycle'] = $meta['hiddenCount'] > 0 ? 'yearly' : null;
+
+            return $meta;
+        }
+
+        if ($chartType === 'yearly') {
+            if ($withCalculated) {
+                $meta['basis'] = 'yearly_equivalent';
+
+                return $meta;
+            }
+
+            $meta['basis'] = 'yearly_direct';
+            $included = array_filter($reportable, static fn(\App\Entity\Subscription $s) => $s->isYearly());
+            $meta['empty'] = $included === [];
+            $meta['hiddenCount'] = \count($reportable) - \count($included);
+            $meta['hiddenCycle'] = $meta['hiddenCount'] > 0 ? 'monthly' : null;
+
+            return $meta;
+        }
+
+        return $meta;
     }
 }
