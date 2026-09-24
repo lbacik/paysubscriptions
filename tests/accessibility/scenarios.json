@@ -8,10 +8,7 @@
     "narrow": { "width": 390, "height": 844 }
   },
   "login": {
-    "path": "/login",
-    "emailSelector": "#inputEmail",
-    "passwordSelector": "#inputPassword",
-    "submitSelector": "button[type=submit]"
+    "path": "/login"
   },
   "scenarios": [
     { "id": "home", "path": "/", "auth": false, "viewports": ["desktop", "narrow"] },

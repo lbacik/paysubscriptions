@@ -69,12 +69,21 @@ async function http(url, { method = 'GET', body = null } = {}) {
   throw new Error(`Too many redirects for ${url}`);
 }
 
+/* Extracts an <input> value by field name regardless of attribute order:
+ * Symfony may render value before name. `name` is a regex-escaped fragment
+ * like "_csrf_token" or "subscription\\[_token\\]". */
+function extractInputValue(html, name) {
+  return html.match(new RegExp(`name="${name}"[^>]*value="([^"]+)"`))?.[1]
+    ?? html.match(new RegExp(`value="([^"]+)"[^>]*name="${name}"`))?.[1];
+}
+
 async function login() {
-  const { res, html } = await http(`${BASE_URL}/login`);
-  if (!res.ok) throw new Error(`GET /login -> ${res.status}; is the server running at ${BASE_URL}?`);
-  const csrf = html.match(/name="_csrf_token"\s+value="([^"]+)"/)?.[1];
+  const loginPath = registry.login?.path ?? '/login';
+  const { res, html } = await http(`${BASE_URL}${loginPath}`);
+  if (!res.ok) throw new Error(`GET ${loginPath} -> ${res.status}; is the server running at ${BASE_URL}?`);
+  const csrf = extractInputValue(html, '_csrf_token');
   if (!csrf) throw new Error('Login form CSRF token not found.');
-  const { url } = await http(`${BASE_URL}/login`, {
+  const { url } = await http(`${BASE_URL}${loginPath}`, {
     method: 'POST',
     body: new URLSearchParams({ email: EMAIL, password: PASSWORD, _csrf_token: csrf }),
   });
@@ -89,16 +98,18 @@ async function resolveSubscriptionId() {
   if (found) return found[1];
 
   // No subscription yet: create one through the form so edit/delete states exist.
+  // Field names mirror src/Form/SubscriptionType.php (name, billingCycle,
+  // amount, nextPayment).
   const { html: formHtml } = await http(`${BASE_URL}/subscription/new`);
-  const token = formHtml.match(/name="subscription\[_token\]"[^>]*value="([^"]+)"/)?.[1];
+  const token = extractInputValue(formHtml, 'subscription\\[_token\\]');
   if (!token) throw new Error('Subscription form token not found; cannot seed scan fixture.');
   await http(`${BASE_URL}/subscription/new`, {
     method: 'POST',
     body: new URLSearchParams({
       'subscription[name]': 'Axe scan fixture',
-      'subscription[firstPayment]': '2026-01-01',
-      'subscription[monthly]': '9.99',
-      'subscription[yearly]': '',
+      'subscription[billingCycle]': 'monthly',
+      'subscription[amount]': '9.99',
+      'subscription[nextPayment]': '2026-01-01',
       'subscription[_token]': token,
     }),
   });
@@ -112,8 +123,8 @@ const failures = [];
 const passes = [];
 const skipped = [];
 
-function report(type, line, extra = '') {
-  console.log(`[a11y] ${type} ${line}${extra}`);
+function report(type, line) {
+  console.log(`[a11y] ${type} ${line}`);
 }
 
 async function scanScenario(browser, scenario, subscriptionId) {
@@ -212,9 +223,11 @@ try {
       report('SKIP', `${scenario.id}: surface not implemented yet (${scenario.issue}).`);
       continue;
     }
-    // Pending with a known path: warn if it quietly went live.
+    // Pending with a known path: warn if it quietly went live. Any
+    // success or auth-redirect (same 200/302/303 set the PHP guard uses)
+    // means the surface resolves and must be promoted to covered.
     const { res } = await http(`${BASE_URL}${scenario.path}`);
-    if (res.ok) {
+    if ([200, 302, 303].includes(res.status)) {
       failures.push({ scenario: scenario.id, error: 'pending surface now resolves: promote to covered' });
       report('FAIL', `${scenario.id}: pending but ${scenario.path} now resolves; promote it in scenarios.json.`);
     } else {
