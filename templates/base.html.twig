@@ -28,9 +28,9 @@
 <body class="flex flex-col min-h-screen bg-color-pri font-sans text-color-qua antialiased selection:bg-color-sec selection:text-color-qua" data-turbo="true">
 {{ include('partials/_header.html.twig') }}
 
-<div class="flex-1">
+<main class="flex-1">
     {% block body %}{% endblock %}
-</div>
+</main>
 
 {{ include('dashboard/_dialog.html.twig') }}
 

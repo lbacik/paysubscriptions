@@ -301,3 +301,120 @@ jobs:
         env:
           APP_ENV: dev
         run: php bin/console doctrine:fixtures:load --no-interaction
+
+  # WCAG 2.1 AA axe scan (issue #52). Blocking: fails on any violation.
+  # Mirrors docs/accessibility.md local reproduction: test-kernel server via
+  # the php -S router, fixture credentials, reCAPTCHA test keys.
+  accessibility:
+    name: Accessibility
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:9
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: paysub
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      APP_ENV: test
+      APP_DEBUG: '0'
+      APP_SECRET: ci
+      DATABASE_URL: "mysql://root:root@127.0.0.1:3306/paysub?serverVersion=8.4&charset=utf8mb4"
+      MESSENGER_TRANSPORT_DSN: 'amqp://guest:guest@127.0.0.1:5672/%2f/messages'
+      MAILER_DSN: 'null://null'
+      GOOGLE_RECAPTCHA_SITE_KEY: '6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI'
+      GOOGLE_RECAPTCHA_SECRET: '6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe'
+      JSON_HUB_PROJECT: '00000000-0000-0000-0000-000000000000'
+      MAILING_PROVIDER_ROUTING_KEY: 'ci'
+      BASE_URL: 'http://127.0.0.1:8000'
+      A11Y_USER_EMAIL: 'foo@bar.com'
+      A11Y_USER_PASSWORD: 'alamakota'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up PHP ${{ env.PHP_VERSION }}
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          extensions: amqp, ctype, iconv, intl, pdo_mysql
+          coverage: none
+          ini-values: memory_limit=1G
+
+      - name: Install dependencies
+        uses: ramsey/composer-install@v4
+
+      - name: Build Tailwind CSS
+        run: php bin/console tailwind:build
+
+      # APP_ENV=test throughout: `when@test` in doctrine.yaml appends `_test`
+      # to the database name, so this targets `paysub_test` — the same database
+      # the router-based server below boots against. Mixing envs here (migrate
+      # under test, fixtures under dev) would seed `paysub` while the server
+      # reads the empty `paysub_test` and every login fails. database:create is
+      # explicit because the MySQL service only creates `paysub`.
+      # MESSENGER_TRANSPORT_DSN stays amqp:// with no broker: the transport
+      # connects lazily and nothing here sends or consumes a message (same
+      # reasoning as the `migrations` job above).
+      - name: Migrate and load fixtures
+        run: |
+          APP_ENV=test php bin/console doctrine:database:create --if-not-exists --no-interaction
+          APP_ENV=test php bin/console doctrine:migrations:migrate --no-interaction --all-or-nothing --allow-no-migration
+          APP_ENV=test php bin/console doctrine:fixtures:load --no-interaction
+
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: tests/accessibility/package-lock.json
+
+      - name: Install scan dependencies
+        working-directory: tests/accessibility
+        run: npm ci
+
+      - name: Install Chromium
+        working-directory: tests/accessibility
+        run: npx playwright install chromium --with-deps
+
+      - name: Start the test-kernel server
+        run: |
+          APP_ENV=test php -S 127.0.0.1:8000 tests/accessibility/router.php > /tmp/a11y-server.log 2>&1 &
+          echo $! > /tmp/a11y-server.pid
+          for i in $(seq 1 30); do
+            if curl -fsS -o /dev/null http://127.0.0.1:8000/; then
+              echo "Server is up."
+              break
+            fi
+            sleep 1
+            if [ "$i" = "30" ]; then
+              echo "Server failed to start:"
+              cat /tmp/a11y-server.log
+              exit 1
+            fi
+          done
+
+      - name: Run the axe WCAG 2.1 AA scan
+        working-directory: tests/accessibility
+        run: node scan.mjs
+
+      - name: Upload the accessibility report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: accessibility-report
+          path: var/accessibility-report.json
+
+      - name: Stop the test-kernel server
+        if: always()
+        run: |
+          kill "$(cat /tmp/a11y-server.pid)" || true

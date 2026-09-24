@@ -11,7 +11,7 @@
                 <p class="text-sm text-slate-500 max-w-sm leading-relaxed">
                     A private, focused subscription cost tracker for individuals and households. Know what you pay and act before it renews.
                 </p>
-                <div class="text-xs text-slate-400 pt-1 font-mono">
+                <div class="text-xs text-slate-500 pt-1 font-mono">
                     PaySubscriptions {{ appVersion }}
                 </div>
             </div>
@@ -34,10 +34,13 @@
                 </p>
                 <form name="newsletter" action="{{ path('app_newsletter_subscribe') }}" method="POST" class="space-y-2">
                     <div class="flex flex-col sm:flex-row gap-2">
+                        <label for="newsletter-email" class="sr-only">Email address</label>
                         <input type="email"
+                               id="newsletter-email"
                                name="email"
                                required
                                placeholder="Enter your email"
+                               autocomplete="email"
                                class="text-sm px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-color-ter/30 flex-1 bg-white"
                         />
                         <input type="hidden" name="_token" value="{{ csrf_token('newsletter') }}"/>
@@ -46,7 +49,7 @@
                         </button>
                     </div>
                 </form>
-                <div class="mt-2.5 text-[11px] text-slate-400">
+                <div class="mt-2.5 text-[11px] text-slate-500">
                     Subscriptions are handled via our shared <a class="underline hover:text-slate-600" href="https://gprodb.com" target="_blank" rel="noopener noreferrer">gprodb.com</a> newsletter list.
                 </div>
             </div>
@@ -54,7 +57,7 @@
         </div>
 
         <!-- Footer Bottom Bar -->
-        <div class="mt-12 pt-6 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-400 gap-2">
+        <div class="mt-12 pt-6 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-2">
             <div>
                 &copy; {{ "now"|date("Y") }} PaySubscriptions. All rights reserved.
             </div>

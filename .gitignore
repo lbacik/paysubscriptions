@@ -29,3 +29,7 @@
 /.env.docker*
 
 config/reference.php
+
+###> paysubscriptions/a11y-scan ###
+/tests/accessibility/node_modules/
+###< paysubscriptions/a11y-scan ###

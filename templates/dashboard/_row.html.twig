@@ -1,5 +1,5 @@
 <tr class="hover:bg-slate-50/90 transition-colors group">
-    <td class="py-3.5 px-4 text-xs text-slate-400 font-medium">{{ loop.index }}</td>
+    <td class="py-3.5 px-4 text-xs text-slate-500 font-medium">{{ loop.index }}</td>
     <td class="py-3.5 px-4">
         <div class="font-semibold text-slate-900">
             {{ subscription.name }}
@@ -7,7 +7,7 @@
                 <span class="ml-1 inline-flex items-center px-1.5 py-0.5 text-[10px] font-bold text-slate-600 bg-slate-100 rounded-md" title="{{ 'subscription.currency_title'|trans }}">{{ subscription.currency }}</span>
             {% endif %}
         </div>
-        <div class="text-xs text-slate-400 mt-0.5">
+        <div class="text-xs text-slate-500 mt-0.5">
             {{ ('subscription.billing_cycle_' ~ subscription.billingCycle.value)|trans }}
         </div>
         {% if subscription.notes %}
@@ -27,7 +27,7 @@
             </div>
         {% elseif subscription.currency and mainCurrency is defined and mainCurrency
             and subscription.currency != mainCurrency and subscription.hasConvertedAmount %}
-            <div class="text-xs text-slate-400 mt-0.5">
+            <div class="text-xs text-slate-500 mt-0.5">
                 ≈ {{ subscription.convertedAmount|number_format(2, '.', ' ') }} {{ mainCurrency }} {{ 'subscription.converted_suffix'|trans }}
             </div>
         {% endif %}
