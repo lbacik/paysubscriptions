@@ -278,6 +278,20 @@ class ChartService
         return $chart;
     }
 
+    /**
+     * Subscriptions aggregates may use: everything except cross-currency
+     * Subscriptions pending converted-amount review. Shared with the
+     * dashboard controller so chart captions and empty states describe
+     * exactly the data the charts draw.
+     *
+     * @param array<Subscription> $subscriptions
+     * @return array<Subscription>
+     */
+    public function filterReportable(array $subscriptions, ?string $mainCurrency): array
+    {
+        return $this->excludePendingReview($subscriptions, $mainCurrency);
+    }
+
     private function createDataSets(array $subscriptions, ?string $mainCurrency = null): array
     {
         $dataSets = [];

@@ -44,20 +44,24 @@
         {% endif %}
     </td>
     <td class="py-3.5 px-4 text-end">
-        {% if subscription.isMonthly() %}
-            <span class="font-bold text-slate-900">{{ subscription.amount|number_format(2, '.', ' ') }}</span>
+        {% if mainCurrency is defined and mainCurrency and subscription.isPendingReview(mainCurrency) %}
+            <span class="text-slate-300 font-normal" title="{{ 'subscription.totals_exclude_review'|trans({'%count%': 1}) }}">—</span>
+        {% elseif subscription.isMonthly() %}
+            <span class="font-bold text-slate-900">{{ subscription.getReportingMonthlyCalculated(mainCurrency|default(null))|number_format(2, '.', ' ') }}</span>
         {% else %}
             <span class="text-xs text-slate-500 font-normal italic" title="Calculated from yearly plan">
-                ~{{ subscription.monthlyCalculated|number_format(2, '.', ' ') }}
+                ~{{ subscription.getReportingMonthlyCalculated(mainCurrency|default(null))|number_format(2, '.', ' ') }}
             </span>
         {% endif %}
     </td>
     <td class="py-3.5 px-4 text-end">
-        {% if subscription.isYearly() %}
-            <span class="font-bold text-slate-900">{{ subscription.amount|number_format(2, '.', ' ') }}</span>
+        {% if mainCurrency is defined and mainCurrency and subscription.isPendingReview(mainCurrency) %}
+            <span class="text-slate-300 font-normal" title="{{ 'subscription.totals_exclude_review'|trans({'%count%': 1}) }}">—</span>
+        {% elseif subscription.isYearly() %}
+            <span class="font-bold text-slate-900">{{ subscription.getReportingYearlyCalculated(mainCurrency|default(null))|number_format(2, '.', ' ') }}</span>
         {% else %}
             <span class="text-xs text-slate-500 font-normal italic" title="Calculated from monthly plan">
-                ~{{ subscription.yearlyCalculated|number_format(2, '.', ' ') }}
+                ~{{ subscription.getReportingYearlyCalculated(mainCurrency|default(null))|number_format(2, '.', ' ') }}
             </span>
         {% endif %}
     </td>

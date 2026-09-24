@@ -77,6 +77,16 @@
                         <span class="text-slate-500">+{{ monthlyFromYearly|number_format(2, '.', ' ') }} {{ "dashboard.kpi.monthly_normalized"|trans }}</span>
                     {% endif %}
                 </div>
+                <div class="mt-1.5 text-[11px] text-slate-400">
+                    {% if totals.currency %}
+                        {{ "dashboard.kpi.monthly_equivalent_caption"|trans({'%currency%': totals.currency}) }}
+                    {% else %}
+                        {{ "dashboard.kpi.no_currency_note"|trans }}
+                    {% endif %}
+                    {% if totals.pendingReview > 0 %}
+                        <span class="text-amber-600 font-medium">· {{ 'subscription.totals_exclude_review'|trans({'%count%': totals.pendingReview}) }}</span>
+                    {% endif %}
+                </div>
             </div>
         </div>
 
@@ -102,6 +112,16 @@
                     {% if yearlyFromMonthly > 0.01 %}
                         <span class="text-slate-300">•</span>
                         <span class="text-slate-500">+{{ yearlyFromMonthly|number_format(2, '.', ' ') }} {{ "dashboard.kpi.yearly_normalized"|trans }}</span>
+                    {% endif %}
+                </div>
+                <div class="mt-1.5 text-[11px] text-slate-400">
+                    {% if totals.currency %}
+                        {{ "dashboard.kpi.yearly_equivalent_caption"|trans({'%currency%': totals.currency}) }}
+                    {% else %}
+                        {{ "dashboard.kpi.no_currency_note"|trans }}
+                    {% endif %}
+                    {% if totals.pendingReview > 0 %}
+                        <span class="text-amber-600 font-medium">· {{ 'subscription.totals_exclude_review'|trans({'%count%': totals.pendingReview}) }}</span>
                     {% endif %}
                 </div>
             </div>
@@ -148,6 +168,43 @@
                 {% set isBarActive = active.type is not defined or active.type == 'bar' %}
                 <div {% if isBarActive %}data-controller="chart-legend"{% endif %} class="relative">
                     <twig:ChartSwitcher :active="active" :subscriptionsCount="subscriptions|length"/>
+
+                    <p class="mt-4 text-xs text-slate-500">
+                        {% if chartMeta.currency %}
+                            {{ ("dashboard.chart.caption_" ~ chartMeta.basis)|trans({'%currency%': chartMeta.currency}) }}
+                        {% else %}
+                            {{ "dashboard.chart.no_currency_note"|trans }}
+                        {% endif %}
+                    </p>
+                    {% if chartMeta.hiddenCount > 0 and chartMeta.hiddenCycle == 'yearly' %}
+                        <p class="mt-1 text-xs text-slate-500">
+                            <i class="fa-solid fa-circle-info text-slate-400"></i>
+                            {{ "dashboard.chart.filtered_yearly"|trans({'%count%': chartMeta.hiddenCount}) }}
+                        </p>
+                    {% elseif chartMeta.hiddenCount > 0 and chartMeta.hiddenCycle == 'monthly' %}
+                        <p class="mt-1 text-xs text-slate-500">
+                            <i class="fa-solid fa-circle-info text-slate-400"></i>
+                            {{ "dashboard.chart.filtered_monthly"|trans({'%count%': chartMeta.hiddenCount}) }}
+                        </p>
+                    {% endif %}
+                    {% if chartMeta.empty %}
+                        <div class="mt-4 rounded-2xl border border-dashed border-slate-300 bg-slate-50/60 p-6 text-center">
+                            <div class="mx-auto w-10 h-10 rounded-xl bg-white border border-slate-200 text-slate-400 flex items-center justify-center text-sm shadow-2xs">
+                                <i class="fa-solid fa-chart-pie"></i>
+                            </div>
+                            <p class="mt-3 text-sm font-bold text-slate-900">
+                                {{ "dashboard.chart.empty_title"|trans }}
+                            </p>
+                            <p class="mt-1 text-xs text-slate-500">
+                                {{ "dashboard.chart.empty_body"|trans }}
+                                {% if chartMeta.hiddenCount > 0 and chartMeta.basis == 'monthly_direct' %}
+                                    {{ "dashboard.chart.empty_hint_monthly"|trans }}
+                                {% elseif chartMeta.hiddenCount > 0 and chartMeta.basis == 'yearly_direct' %}
+                                    {{ "dashboard.chart.empty_hint_yearly"|trans }}
+                                {% endif %}
+                            </p>
+                        </div>
+                    {% endif %}
 
                     <div class="relative mt-6 overflow-hidden rounded-2xl">
                         <div id="chart-container"
