@@ -6,11 +6,14 @@ services:
             $secret: '%env(GOOGLE_RECAPTCHA_SECRET)%'
             $requestMethod: '@ReCaptcha\RequestMethod'
 
-    # Curl is set here as default transport to communicate with Google servers.
-    # If you do not have php-curl extension, you can change for a socket or a plain POST request.
+    # Post (plain file_get_contents) is the default transport on purpose:
+    # CurlPost needs ext-curl, which neither the production image nor CI
+    # installs, and a missing curl_init() used to fatal every verified
+    # submission with a 500. Post works everywhere PHP runs.
     # Check out the repository for all other request methods:
     # https://github.com/google/recaptcha/tree/master/src/ReCaptcha/RequestMethod
-    ReCaptcha\RequestMethod: '@ReCaptcha\RequestMethod\CurlPost'
+    ReCaptcha\RequestMethod: '@ReCaptcha\RequestMethod\Post'
+    ReCaptcha\RequestMethod\Post: null
     ReCaptcha\RequestMethod\CurlPost: null
     ReCaptcha\RequestMethod\Curl: null
 

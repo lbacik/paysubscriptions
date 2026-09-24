@@ -6,6 +6,7 @@ use App\Entity\User;
 use App\Form\ChangePasswordFormType;
 use App\Form\ResetPasswordRequestFormType;
 use App\Repository\UserRepository;
+use Psr\Log\LoggerInterface;
 use Symfony\Bridge\Twig\Mime\TemplatedEmail;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\RedirectResponse;
@@ -28,6 +29,8 @@ class ResetPasswordController extends AbstractController
     public function __construct(
         private ResetPasswordHelperInterface $resetPasswordHelper,
         private UserRepository $userRepository,
+        private readonly string $systemEmail,
+        private readonly LoggerInterface $logger,
     ) {
     }
 
@@ -159,7 +162,7 @@ class ResetPasswordController extends AbstractController
         }
 
         $email = (new TemplatedEmail())
-            ->from(new Address('no-reply@lukaszbacik.com', 'PaySubscriptions'))
+            ->from(new Address($this->systemEmail, 'PaySubscriptions'))
             ->to($user->getEmail())
             ->subject('Your password reset request')
             ->htmlTemplate('reset_password/email.html.twig')
@@ -168,7 +171,16 @@ class ResetPasswordController extends AbstractController
             ])
         ;
 
-        $mailer->send($email);
+        try {
+            $mailer->send($email);
+        } catch (\Throwable $exception) {
+            // A mailer outage must neither 500 nor reveal whether the address
+            // is registered: log for observability and answer with the same
+            // safe redirect as every other outcome of this route.
+            $this->logger->error('Password-reset email could not be sent.', ['exception' => $exception]);
+
+            return $this->redirectToRoute('app_check_email');
+        }
 
         // Store the token object in session for retrieval in check-email route.
         $this->setTokenObjectInSession($resetToken);

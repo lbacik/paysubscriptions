@@ -9,10 +9,13 @@ use App\Security\AppCustomAuthenticator;
 use App\Security\EmailVerifier;
 use App\Service\ExpenseCategoryService;
 use App\Service\TimezoneService;
+use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\Log\LoggerInterface;
 use Symfony\Bridge\Twig\Mime\TemplatedEmail;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Bundle\SecurityBundle\Security;
+use Symfony\Component\Form\FormError;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Mime\Address;
@@ -28,6 +31,7 @@ class RegistrationController extends AbstractController
         private readonly TimezoneService $timezoneService,
         private readonly string $systemEmail,
         private readonly ExpenseCategoryService $categoryService,
+        private readonly LoggerInterface $logger,
     ) {
     }
 
@@ -57,14 +61,39 @@ class RegistrationController extends AbstractController
                 )
             );
 
-            $entityManager->persist($user);
-            $entityManager->flush();
+            try {
+                $entityManager->persist($user);
+                $entityManager->flush();
+            } catch (UniqueConstraintViolationException $exception) {
+                // Lost a race with a concurrent registration for the same
+                // address after UniqueEntity validation passed: re-render with
+                // the same message instead of answering with an HTTP 500.
+                $this->logger->warning('Duplicate registration attempt.', ['exception' => $exception]);
+                $form->get('email')->addError(new FormError('There is already an account with this email'));
+
+                return $this->render('registration/register.html.twig', [
+                    'registrationForm' => $form,
+                ], new Response(null, Response::HTTP_UNPROCESSABLE_ENTITY));
+            }
 
             // Every account starts with one editable `Subscriptions` category.
             $this->categoryService->ensureDefaultCategory($user);
 
-            // generate a signed url and email it to the user
-            $this->sendConfirmationEmail($user);
+            try {
+                // generate a signed url and email it to the user
+                $this->sendConfirmationEmail($user);
+            } catch (\Throwable $exception) {
+                // The account is usable; only the verification email failed.
+                // Log for observability and tell the visitor how to recover
+                // (the resend route) instead of answering with an HTTP 500.
+                $this->logger->error('Verification email could not be sent.', ['exception' => $exception]);
+                $this->addFlash(
+                    'danger',
+                    'Your account has been created, but we could not send the verification email. Please request a new one from the login page.'
+                );
+
+                return $this->redirectToRoute('app_login');
+            }
 
             // do anything else you need here, like send an email
             $this->addFlash(
@@ -123,7 +152,11 @@ class RegistrationController extends AbstractController
         $user = $entityManager->getRepository(User::class)->findOneBy(['email' => $email]);
 
         if ($user) {
-            $this->sendConfirmationEmail($user);
+            try {
+                $this->sendConfirmationEmail($user);
+            } catch (\Throwable $exception) {
+                $this->logger->error('Activation email could not be resent.', ['exception' => $exception]);
+            }
         }
 
         $this->addFlash('success', 'Activation email has been sent to your email address.');
