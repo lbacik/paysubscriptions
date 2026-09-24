@@ -139,11 +139,19 @@ class Subscription
 
     public function getMonthlyCalculated(): float
     {
+        if (null === $this->billingCycle || null === $this->amount) {
+            throw new \LogicException('Cannot calculate a monthly amount before billingCycle and amount are set.');
+        }
+
         return round($this->isMonthly() ? $this->getAmount() : $this->getAmount() / 12, 2);
     }
 
     public function getYearlyCalculated(): float
     {
+        if (null === $this->billingCycle || null === $this->amount) {
+            throw new \LogicException('Cannot calculate a yearly amount before billingCycle and amount are set.');
+        }
+
         return round($this->isYearly() ? $this->getAmount() : $this->getAmount() * 12, 2);
     }
 }

@@ -6,7 +6,7 @@
         </div>
         {% if subscription.nextPayment %}
             <div class="text-xs text-slate-400 mt-0.5">
-                Next payment: {{ subscription.nextPayment|date('Y-m-d') }}
+                Next payment: {{ next_renewal(subscription)|date('Y-m-d') }}
             </div>
         {% endif %}
     </td>

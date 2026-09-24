@@ -134,12 +134,42 @@ final class BillingCycleMigrationTest extends TestCase
         $reflection = new \ReflectionClass(Version20260923190000::class);
         /** @var Version20260923190000 $migration */
         $migration = $reflection->newInstanceWithoutConstructor();
-        $migration->{$direction}(new Schema());
+        $migration->{$direction}('up' === $direction ? self::legacySchema() : self::migratedSchema());
 
         return array_map(
             static fn($query) => $query->getStatement(),
             $migration->getSql(),
         );
+    }
+
+    /**
+     * Mirrors the pre-migration table shape, so the guard clauses in up()
+     * (which check the schema they're handed, not just $this->addSql) see the
+     * same "nothing landed yet" state a real first run would.
+     */
+    private static function legacySchema(): Schema
+    {
+        $schema = new Schema();
+        $table = $schema->createTable('subscription');
+        $table->addColumn('monthly', 'decimal', ['notnull' => false]);
+        $table->addColumn('yearly', 'decimal', ['notnull' => false]);
+        $table->addColumn('first_payment', 'date', ['notnull' => true]);
+
+        return $schema;
+    }
+
+    /**
+     * Mirrors the post-migration table shape, for the down() guard clauses.
+     */
+    private static function migratedSchema(): Schema
+    {
+        $schema = new Schema();
+        $table = $schema->createTable('subscription');
+        $table->addColumn('billing_cycle', 'string', ['length' => 16]);
+        $table->addColumn('amount', 'decimal', ['notnull' => true]);
+        $table->addColumn('next_payment', 'date', ['notnull' => true]);
+
+        return $schema;
     }
 
     private static function mysql(): ?PDO

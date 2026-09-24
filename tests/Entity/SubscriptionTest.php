@@ -65,4 +65,22 @@ final class SubscriptionTest extends TestCase
         self::assertSame(10.00, $subscription->getMonthlyCalculated());
         self::assertSame(120.00, $subscription->getYearlyCalculated());
     }
+
+    public function testMonthlyCalculatedThrowsWithoutAmount(): void
+    {
+        $subscription = (new Subscription())->setBillingCycle(BillingCycle::Monthly);
+
+        $this->expectException(\LogicException::class);
+
+        $subscription->getMonthlyCalculated();
+    }
+
+    public function testYearlyCalculatedThrowsWithoutBillingCycle(): void
+    {
+        $subscription = (new Subscription())->setAmount(10.00);
+
+        $this->expectException(\LogicException::class);
+
+        $subscription->getYearlyCalculated();
+    }
 }
