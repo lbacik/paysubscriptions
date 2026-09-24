@@ -6,6 +6,7 @@ namespace App\Controller;
 
 use App\Service\ChartService;
 use App\Service\SubscriptionService;
+use App\Service\UpcomingRenewals;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
@@ -18,6 +19,7 @@ class DashboardController extends AbstractController
     public function __construct(
         private readonly SubscriptionService $subscriptionService,
         private readonly ChartService $chartService,
+        private readonly UpcomingRenewals $upcomingRenewals,
     ) {
     }
 
@@ -56,6 +58,7 @@ class DashboardController extends AbstractController
             'subscriptionLimit' => $subscriptionLimit,
             'limitPercentage' => $limitPercentage,
             'addSubscriptionDisabled' => ! $this->subscriptionService->isAbleToAddSubscription($this->getUser()),
+            'upcomingRenewals' => $this->upcomingRenewals->nextOccurrences($subscriptions),
         ]);
     }
 }
