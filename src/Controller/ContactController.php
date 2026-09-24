@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Form\ContactType;
-use ReCaptcha\ReCaptcha;
+use App\Service\RecaptchaVerifierInterface;
+use Psr\Log\LoggerInterface;
 use Symfony\Bridge\Twig\Mime\TemplatedEmail;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -17,7 +18,8 @@ use Symfony\Component\Routing\Attribute\Route;
 class ContactController extends AbstractController
 {
     public function __construct(
-        private readonly ReCaptcha $reCaptcha,
+        private readonly RecaptchaVerifierInterface $recaptcha,
+        private readonly LoggerInterface $logger,
     ) {
     }
 
@@ -32,7 +34,10 @@ class ContactController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            if (!$this->reCaptchaSuccess($request)) {
+            if (!$this->recaptcha->verify(
+                (string) $request->request->get('g-recaptcha-response', ''),
+                $request->getClientIp()
+            )) {
                 $this->addFlash('danger', 'Invalid reCAPTCHA response.');
 
                 return $this->redirectToRoute('app_contact');
@@ -52,6 +57,7 @@ class ContactController extends AbstractController
             try {
                 $mailer->send($email);
             } catch (\Throwable $exception) {
+                $this->logger->error('Contact message could not be sent.', ['exception' => $exception]);
                 $this->addFlash('danger', 'An error occurred while sending your message.');
 
                 return $this->redirectToRoute('app_contact');
@@ -65,13 +71,5 @@ class ContactController extends AbstractController
         return $this->render('contact/index.html.twig', [
             'form' => $form,
         ]);
-    }
-
-    private function reCaptchaSuccess(Request $request): bool
-    {
-        $recaptchaResponse = $request->request->get('g-recaptcha-response');
-        $recaptcha = $this->reCaptcha->verify($recaptchaResponse, $request->getClientIp());
-
-        return $recaptcha->isSuccess();
     }
 }

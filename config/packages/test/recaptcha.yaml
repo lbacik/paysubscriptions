@@ -1,0 +1,8 @@
+# Test-only reCAPTCHA wiring: verify through a fake transport that never
+# touches Google, so the contact journey is deterministic and offline.
+# The token "valid-test-token" succeeds; any other token fails.
+# See App\Tests\Double\FakeRecaptchaRequestMethod.
+services:
+    ReCaptcha\RequestMethod: '@App\Tests\Double\FakeRecaptchaRequestMethod'
+
+    App\Tests\Double\FakeRecaptchaRequestMethod: null
