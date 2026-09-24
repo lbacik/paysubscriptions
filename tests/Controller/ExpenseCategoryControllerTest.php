@@ -7,6 +7,7 @@ namespace App\Tests\Controller;
 use App\Entity\ExpenseCategory;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Enum\BillingCycle;
 use App\Repository\ExpenseCategoryRepository;
 use App\Tests\DatabaseTestCase;
 
@@ -125,8 +126,9 @@ final class ExpenseCategoryControllerTest extends DatabaseTestCase
 
         $subscription = (new Subscription())
             ->setName('Netflix')
-            ->setFirstPayment(new \DateTimeImmutable('2024-01-15'))
-            ->setMonthly(15.99);
+            ->setBillingCycle(BillingCycle::Monthly)
+            ->setAmount(15.99)
+            ->setNextPayment(new \DateTimeImmutable('2024-01-15'));
         // Maintain both sides: the first HTTP request reuses this test's
         // entity manager, so an owning-side-only link would leave the
         // inverse collections initialized-but-empty in memory.
@@ -182,8 +184,9 @@ final class ExpenseCategoryControllerTest extends DatabaseTestCase
         // Submit without touching the category: the default is used.
         $this->client->submit($crawler->filter('form')->form([
             'subscription[name]' => 'Netflix',
-            'subscription[firstPayment]' => '2024-01-15',
-            'subscription[monthly]' => '15.99',
+            'subscription[billingCycle]' => BillingCycle::Monthly->value,
+            'subscription[amount]' => '15.99',
+            'subscription[nextPayment]' => '2024-01-15',
         ]));
 
         $subscription = $this->em->getRepository(Subscription::class)->findOneBy(['name' => 'Netflix']);

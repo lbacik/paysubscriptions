@@ -7,6 +7,7 @@ namespace App\Tests\Service;
 use App\Entity\ExpenseCategory;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Enum\BillingCycle;
 use App\Service\ExpenseCategoryService;
 use App\Service\SubscriptionService;
 use App\Tests\DatabaseTestCase;
@@ -58,8 +59,9 @@ final class ExpenseCategoryServiceTest extends DatabaseTestCase
     {
         $subscription = (new Subscription())
             ->setName($name)
-            ->setFirstPayment(new \DateTimeImmutable('2024-01-15'))
-            ->setMonthly(15.99)
+            ->setBillingCycle(BillingCycle::Monthly)
+            ->setAmount(15.99)
+            ->setNextPayment(new \DateTimeImmutable('2024-01-15'))
             ->setOwner($owner);
         if (null !== $category) {
             $subscription->setCategory($category);
@@ -184,8 +186,9 @@ final class ExpenseCategoryServiceTest extends DatabaseTestCase
 
         $subscription = (new Subscription())
             ->setName('Netflix')
-            ->setFirstPayment(new \DateTimeImmutable('2024-01-15'))
-            ->setMonthly(15.99)
+            ->setBillingCycle(BillingCycle::Monthly)
+            ->setAmount(15.99)
+            ->setNextPayment(new \DateTimeImmutable('2024-01-15'))
             ->setOwner($owner)
             ->setCategory($foreign);
 

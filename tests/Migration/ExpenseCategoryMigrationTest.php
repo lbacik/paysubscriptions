@@ -138,7 +138,7 @@ final class ExpenseCategoryMigrationTest extends DatabaseTestCase
 
         // Every subscription kept its data and points at its owner's category.
         $rows = $this->connection->fetchAllAssociative(
-            'SELECT s.name, s.monthly, s.yearly, s.owner_id, s.category_id, ec.owner_id AS cat_owner, ec.name AS cat_name
+            'SELECT s.name, s.billing_cycle, s.amount, s.owner_id, s.category_id, ec.owner_id AS cat_owner, ec.name AS cat_name
              FROM subscription s JOIN expense_category ec ON ec.id = s.category_id
              ORDER BY s.name'
         );
@@ -149,9 +149,12 @@ final class ExpenseCategoryMigrationTest extends DatabaseTestCase
             $byName[$row['name']] = $row;
         }
 
-        self::assertSame('15.99', (string) $byName['Legacy Netflix']['monthly']);
-        self::assertSame('139.00', (string) $byName['Legacy Prime']['yearly']);
-        self::assertSame('9.99', (string) $byName['Legacy Spotify']['monthly']);
+        self::assertSame('monthly', $byName['Legacy Netflix']['billing_cycle']);
+        self::assertSame('15.99', (string) $byName['Legacy Netflix']['amount']);
+        self::assertSame('yearly', $byName['Legacy Prime']['billing_cycle']);
+        self::assertSame('139.00', (string) $byName['Legacy Prime']['amount']);
+        self::assertSame('monthly', $byName['Legacy Spotify']['billing_cycle']);
+        self::assertSame('9.99', (string) $byName['Legacy Spotify']['amount']);
 
         foreach ($rows as $row) {
             self::assertSame($row['owner_id'], $row['category_id'] ? $row['cat_owner'] : null);
