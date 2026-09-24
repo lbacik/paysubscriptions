@@ -7,11 +7,9 @@
                 <span class="ml-1 inline-flex items-center px-1.5 py-0.5 text-[10px] font-bold text-slate-600 bg-slate-100 rounded-md" title="{{ 'subscription.currency_title'|trans }}">{{ subscription.currency }}</span>
             {% endif %}
         </div>
-        {% if subscription.nextPayment %}
-            <div class="text-xs text-slate-400 mt-0.5">
-                Next payment: {{ next_renewal(subscription)|date('Y-m-d') }}
-            </div>
-        {% endif %}
+        <div class="text-xs text-slate-400 mt-0.5">
+            {{ ('subscription.billing_cycle_' ~ subscription.billingCycle.value)|trans }}
+        </div>
         {% if mainCurrency is defined and mainCurrency and subscription.needsConvertedReview(mainCurrency) %}
             <div class="text-xs text-amber-600 mt-0.5 font-medium">
                 <i class="fa-solid fa-triangle-exclamation text-[10px]"></i>
@@ -55,6 +53,9 @@
                 ~{{ subscription.yearlyCalculated|number_format(2, '.', ' ') }}
             </span>
         {% endif %}
+    </td>
+    <td class="py-3.5 px-4 text-end whitespace-nowrap">
+        <span class="text-xs font-semibold text-slate-700">{{ next_renewal(subscription)|date('Y-m-d') }}</span>
     </td>
     <td class="py-3.5 px-4 text-end">
         <div class="inline-flex items-center gap-1.5 justify-end">

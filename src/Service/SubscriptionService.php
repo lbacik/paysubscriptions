@@ -16,19 +16,83 @@ class SubscriptionService
         private readonly SubscriptionRepository $subscriptionRepository,
         private readonly UserRepository $userRepository,
         private readonly ExpenseCategoryService $categoryService,
+        private readonly RenewalCalculator $renewalCalculator,
     ) {
     }
 
-    public function get(UserInterface $owner, string $sortBy, string $order): array
-    {
+    /**
+     * The signed-in owner's Subscriptions, optionally narrowed to one of
+     * their categories and ordered by name, comparable price, or next renewal.
+     *
+     * The category id is matched against the owner's own loaded records only,
+     * so a forged foreign id matches nothing instead of leaking another
+     * User's records. Price compares the monthly equivalent in the given main
+     * currency (hand-entered converted amounts included); renewals compare the
+     * projected next occurrence from the renewal model. Ties always break by
+     * ascending name, then id, independent of the direction, so ties never
+     * flip when the direction toggles.
+     *
+     * @param string|null $categoryId UUID string, or null for all categories
+     */
+    public function get(
+        UserInterface $owner,
+        string $sortBy,
+        string $order,
+        ?string $categoryId = null,
+        ?string $mainCurrency = null,
+        ?\DateTimeInterface $today = null,
+    ): array {
         $subscriptions = $this->subscriptionRepository->findBy(['owner' => $owner]);
 
-        uasort($subscriptions, fn(Subscription $a, Subscription $b) => match($sortBy) {
-                'name' => $a->getName() <=> $b->getName(),
-                'monthly' => $a->getMonthlyCalculated() <=> $b->getMonthlyCalculated(),
-                'yearly' => $a->getYearlyCalculated() <=> $b->getYearlyCalculated(),
-                default => 0,
-            } * ($order === 'asc' ? 1 : -1));
+        if ($categoryId !== null && $categoryId !== '') {
+            $subscriptions = array_values(array_filter(
+                $subscriptions,
+                static fn(Subscription $s) => $s->getCategory()?->getId() !== null
+                    && (string) $s->getCategory()->getId() === $categoryId,
+            ));
+        }
+
+        // Legacy keys predate the comparable-price sort; both monetary columns
+        // follow the same price ordering (shared normalizer with the request state).
+        $sortBy = SubscriptionListState::normalizeSort($sortBy);
+
+        $main = CurrencyService::normalizeCode($mainCurrency);
+        $today ??= new \DateTimeImmutable('today');
+        $direction = $order === 'desc' ? -1 : 1;
+
+        // Precompute the expensive keys once: renewal projection walks whole
+        // billing cycles and must not run inside the comparator.
+        $prices = [];
+        $renewals = [];
+        foreach ($subscriptions as $subscription) {
+            $key = spl_object_id($subscription);
+            $prices[$key] = $subscription->getReportingMonthlyCalculated($main);
+            $renewals[$key] = $this->renewalCalculator->nextRenewal(
+                $subscription->getNextPayment(),
+                $subscription->getBillingCycle(),
+                $today,
+            );
+        }
+
+        uasort(
+            $subscriptions,
+            static function (Subscription $a, Subscription $b) use ($sortBy, $direction, $prices, $renewals): int {
+                $primary = match ($sortBy) {
+                    'name' => $a->getName() <=> $b->getName(),
+                    'price' => $prices[spl_object_id($a)] <=> $prices[spl_object_id($b)],
+                    'renewal' => $renewals[spl_object_id($a)]->format('Y-m-d') <=> $renewals[spl_object_id($b)]->format('Y-m-d'),
+                    default => 0,
+                };
+
+                if ($primary !== 0) {
+                    return $primary * $direction;
+                }
+
+                $tie = ($a->getName() ?? '') <=> ($b->getName() ?? '');
+
+                return $tie !== 0 ? $tie : (string) $a->getId() <=> (string) $b->getId();
+            }
+        );
 
         return $subscriptions;
     }

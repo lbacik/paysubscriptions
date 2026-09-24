@@ -11,6 +11,7 @@ use App\Enum\BillingCycle;
 use App\Repository\SubscriptionRepository;
 use App\Repository\UserRepository;
 use App\Service\ExpenseCategoryService;
+use App\Service\RenewalCalculator;
 use App\Service\SubscriptionService;
 use PHPUnit\Framework\TestCase;
 
@@ -165,6 +166,7 @@ final class SubscriptionServiceCurrencyTest extends TestCase
             $this->createMock(SubscriptionRepository::class),
             $this->createMock(UserRepository::class),
             $this->createMock(ExpenseCategoryService::class),
+            new RenewalCalculator(),
         );
     }
 
@@ -177,6 +179,7 @@ final class SubscriptionServiceCurrencyTest extends TestCase
             $this->createMock(SubscriptionRepository::class),
             $userRepository,
             $this->createMock(ExpenseCategoryService::class),
+            new RenewalCalculator(),
         );
     }
 
