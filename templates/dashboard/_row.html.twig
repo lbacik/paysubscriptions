@@ -3,10 +3,29 @@
     <td class="py-3.5 px-4">
         <div class="font-semibold text-slate-900">
             {{ subscription.name }}
+            {% if subscription.currency %}
+                <span class="ml-1 inline-flex items-center px-1.5 py-0.5 text-[10px] font-bold text-slate-600 bg-slate-100 rounded-md" title="{{ 'subscription.currency_title'|trans }}">{{ subscription.currency }}</span>
+            {% endif %}
         </div>
         {% if subscription.nextPayment %}
             <div class="text-xs text-slate-400 mt-0.5">
                 Next payment: {{ next_renewal(subscription)|date('Y-m-d') }}
+            </div>
+        {% endif %}
+        {% if mainCurrency is defined and mainCurrency and subscription.needsConvertedReview(mainCurrency) %}
+            <div class="text-xs text-amber-600 mt-0.5 font-medium">
+                <i class="fa-solid fa-triangle-exclamation text-[10px]"></i>
+                {{ 'subscription.converted_review_badge'|trans({'%old%': subscription.convertedCurrency, '%new%': mainCurrency}) }}
+            </div>
+        {% elseif mainCurrency is defined and mainCurrency and subscription.isPendingReview(mainCurrency) %}
+            <div class="text-xs text-amber-600 mt-0.5 font-medium">
+                <i class="fa-solid fa-triangle-exclamation text-[10px]"></i>
+                {{ 'subscription.converted_missing_badge'|trans({'%currency%': subscription.currency, '%new%': mainCurrency}) }}
+            </div>
+        {% elseif subscription.currency and mainCurrency is defined and mainCurrency
+            and subscription.currency != mainCurrency and subscription.hasConvertedAmount %}
+            <div class="text-xs text-slate-400 mt-0.5">
+                ≈ {{ subscription.convertedAmount|number_format(2, '.', ' ') }} {{ mainCurrency }} {{ 'subscription.converted_suffix'|trans }}
             </div>
         {% endif %}
     </td>

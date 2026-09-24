@@ -34,32 +34,68 @@ class SubscriptionService
     }
 
     /**
+     * Totals in the given main currency. Cross-currency Subscriptions
+     * contribute their user-entered converted amount; Subscriptions pending
+     * review (stale or missing converted amount) are excluded until
+     * reviewed. Without a confirmed main currency, stored amounts are summed
+     * unchanged and totals carry no currency label.
+     *
      * @param array<Subscription> $subscriptions
-     * @return array{monthly: float, yearly: float, monthlyCalculated: float, yearlyCalculated: float, count: int}
+     * @return array{monthly: float, yearly: float, monthlyCalculated: float, yearlyCalculated: float, count: int, currency: ?string, pendingReview: int}
      */
-    public function getTotals(array $subscriptions): array
+    public function getTotals(array $subscriptions, ?string $mainCurrency = null): array
     {
+        $main = CurrencyService::normalizeCode($mainCurrency);
         $totals = [
             'monthly' => 0.0,
             'yearly' => 0.0,
             'monthlyCalculated' => 0.0,
             'yearlyCalculated' => 0.0,
             'count' => count($subscriptions),
+            'currency' => $main,
+            'pendingReview' => 0,
         ];
 
         foreach ($subscriptions as $subscription) {
-            $totals['monthly'] += (float) ($subscription->isMonthly() ? $subscription->getAmount() : 0.0);
-            $totals['yearly'] += (float) ($subscription->isYearly() ? $subscription->getAmount() : 0.0);
-            $totals['monthlyCalculated'] += (float) ($subscription->getMonthlyCalculated() ?? 0.0);
-            $totals['yearlyCalculated'] += (float) ($subscription->getYearlyCalculated() ?? 0.0);
+            if ($subscription->isPendingReview($main)) {
+                ++$totals['pendingReview'];
+
+                continue;
+            }
+
+            $totals['monthly'] += (float) ($subscription->isMonthly() ? $subscription->getReportingAmount($main) : 0.0);
+            $totals['yearly'] += (float) ($subscription->isYearly() ? $subscription->getReportingAmount($main) : 0.0);
+            $totals['monthlyCalculated'] += (float) ($subscription->getReportingMonthlyCalculated($main) ?? 0.0);
+            $totals['yearlyCalculated'] += (float) ($subscription->getReportingYearlyCalculated($main) ?? 0.0);
         }
 
         return $totals;
     }
 
+    /**
+     * @param array<Subscription> $subscriptions
+     * @return array<Subscription> Cross-currency Subscriptions pending review
+     *                             before aggregates use them: stale converted
+     *                             amounts or missing converted amounts.
+     */
+    public function getPendingReviewSubscriptions(array $subscriptions, ?string $mainCurrency): array
+    {
+        $main = CurrencyService::normalizeCode($mainCurrency);
+
+        if ($main === null) {
+            return [];
+        }
+
+        return array_values(array_filter(
+            $subscriptions,
+            static fn(Subscription $s) => $s->isPendingReview($main),
+        ));
+    }
+
     public function add(Subscription $subscription): void
     {
         $this->canAddNewSubscription($subscription->getOwner());
+        $this->assertValidCurrency($subscription);
 
         $owner = $subscription->getOwner();
         if ($owner instanceof User && null === $subscription->getCategory()) {
@@ -73,6 +109,7 @@ class SubscriptionService
     public function update(Subscription $subscription): void
     {
         $this->assertCategoryOwnership($subscription);
+        $this->assertValidCurrency($subscription);
 
         $this->subscriptionRepository->save($subscription);
     }
@@ -111,6 +148,27 @@ class SubscriptionService
             return true;
         } catch (\LogicException) {
             return false;
+        }
+    }
+
+    private function assertValidCurrency(Subscription $subscription): void
+    {
+        $owner = $subscription->getOwner();
+        $main = $owner instanceof \App\Entity\User ? $owner->getMainCurrency() : null;
+
+        // Non-form creation paths get the same default as the form: a new
+        // Subscription starts in the User's main currency. Legacy data (no
+        // confirmed main currency) stays untouched.
+        if ($subscription->getCurrency() === null && CurrencyService::normalizeCode($main) !== null) {
+            $subscription->setCurrency($main);
+        }
+
+        $subscription->syncConvertedCurrency($main);
+
+        $violations = $subscription->validateConverted($main, true);
+
+        if ($violations !== []) {
+            throw new \InvalidArgumentException(implode(' ', $violations));
         }
     }
 }

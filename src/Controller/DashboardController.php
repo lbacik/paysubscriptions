@@ -33,14 +33,17 @@ class DashboardController extends AbstractController
     ): Response {
         $subscriptions = $this->subscriptionService->get($this->getUser(), $sort, $order);
 
+        $user = $this->getUser();
+        $mainCurrency = $user instanceof \App\Entity\User ? $user->getMainCurrency() : null;
+
         $chart = match($chartType) {
-            'monthly' => $this->chartService->createMonthlyChart($subscriptions, $withCalculated, $month),
-            'yearly' => $this->chartService->createYearlyChart($subscriptions, $withCalculated),
-            default => $this->chartService->createBarChart($subscriptions),
+            'monthly' => $this->chartService->createMonthlyChart($subscriptions, $withCalculated, $month, $mainCurrency),
+            'yearly' => $this->chartService->createYearlyChart($subscriptions, $withCalculated, $mainCurrency),
+            default => $this->chartService->createBarChart($subscriptions, $mainCurrency),
         };
 
-        $user = $this->getUser();
-        $totals = $this->subscriptionService->getTotals($subscriptions);
+        $totals = $this->subscriptionService->getTotals($subscriptions, $mainCurrency);
+        $pendingReviewSubscriptions = $this->subscriptionService->getPendingReviewSubscriptions($subscriptions, $mainCurrency);
         $subscriptionLimit = $user instanceof \App\Entity\User
             ? $user->getSubscriptionsLimit()
             : \App\Entity\Limits::DEFAULT_SUBSCRIPTIONS_LIMIT;
@@ -55,6 +58,8 @@ class DashboardController extends AbstractController
             'fullWidth' => $chartType === 'bar',
             'active' => ['type' => $chartType, 'withCalculated' => $withCalculated, 'month' => $month],
             'totals' => $totals,
+            'mainCurrency' => $mainCurrency,
+            'pendingReviewSubscriptions' => $pendingReviewSubscriptions,
             'subscriptionLimit' => $subscriptionLimit,
             'limitPercentage' => $limitPercentage,
             'addSubscriptionDisabled' => ! $this->subscriptionService->isAbleToAddSubscription($this->getUser()),

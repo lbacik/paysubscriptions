@@ -19,7 +19,7 @@
         <tbody class="divide-y divide-slate-100">
 
         {% for subscription in this.subscriptions %}
-            {{ include('dashboard/_row.html.twig', {subscription: subscription}) }}
+            {{ include('dashboard/_row.html.twig', {subscription: subscription, mainCurrency: this.mainCurrency}) }}
         {% endfor %}
 
         </tbody>
@@ -30,8 +30,11 @@
         <tr class="bg-slate-50/80 border-t-2 border-slate-200 text-slate-900">
             <td></td>
             <td class="py-4 px-4 font-bold">
-                <div>Total</div>
+                <div>Total{% if total.currency %} ({{ total.currency }}){% endif %}</div>
                 <div class="text-xs text-slate-500 font-normal">incl. normalized equivalents</div>
+                {% if total.pendingReview > 0 %}
+                    <div class="text-xs text-amber-600 font-medium mt-1">{{ 'subscription.totals_exclude_review'|trans({'%count%': total.pendingReview}) }}</div>
+                {% endif %}
             </td>
             <td></td>
             <td class="py-4 px-4 font-bold text-end">

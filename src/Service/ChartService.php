@@ -53,10 +53,10 @@ class ChartService
     ) {
     }
 
-    public function createBarChart(array $subscriptions): Chart
+    public function createBarChart(array $subscriptions, ?string $mainCurrency = null): Chart
     {
         $chart = $this->chartBuilder->createChart(Chart::TYPE_BAR);
-        $dataSets = $this->createDataSets($subscriptions);
+        $dataSets = $this->createDataSets($this->excludePendingReview($subscriptions, $mainCurrency), $mainCurrency);
 
         $chart->setData(
             [
@@ -120,21 +120,22 @@ class ChartService
         return $chart;
     }
 
-    public function createMonthlyChart(array $subscriptions, bool $withYearly = false, int|null $month = null): Chart
+    public function createMonthlyChart(array $subscriptions, bool $withYearly = false, int|null $month = null, ?string $mainCurrency = null): Chart
     {
         $chart = $this->chartBuilder->createChart(Chart::TYPE_DOUGHNUT);
+        $subscriptions = $this->excludePendingReview($subscriptions, $mainCurrency);
 
         $withYearly ?
             $data = array_map(
                 fn(Subscription $subscription) => [
-                    'm' => $subscription->getMonthlyCalculated(),
+                    'm' => $subscription->getReportingMonthlyCalculated($mainCurrency),
                     'l' => $subscription->getName()
                 ],
                 $subscriptions
             )
             : $data = array_map(
                 fn(Subscription $subscription) => [
-                    'm' => $subscription->getAmount(),
+                    'm' => $subscription->getReportingAmount($mainCurrency),
                     'l' => $subscription->getName()
                 ],
                 array_filter(
@@ -202,20 +203,21 @@ class ChartService
         return $chart;
     }
 
-    public function createYearlyChart(array $subscriptions, bool $withMonthly = false): Chart
+    public function createYearlyChart(array $subscriptions, bool $withMonthly = false, ?string $mainCurrency = null): Chart
     {
         $chart = $this->chartBuilder->createChart(Chart::TYPE_DOUGHNUT);
+        $subscriptions = $this->excludePendingReview($subscriptions, $mainCurrency);
 
         $withMonthly ?
             $data = array_map(
                 fn(Subscription $subscription) => [
-                    'm' => $subscription->getYearlyCalculated(),
+                    'm' => $subscription->getReportingYearlyCalculated($mainCurrency),
                     'l' => $subscription->getName()
                 ],
                 $subscriptions
             )
             : $data = array_map(
-            fn(Subscription $subscription) => ['m' => $subscription->getAmount(), 'l' => $subscription->getName()],
+            fn(Subscription $subscription) => ['m' => $subscription->getReportingAmount($mainCurrency), 'l' => $subscription->getName()],
             array_filter($subscriptions, fn(Subscription $subscription) => $subscription->isYearly())
         );
 
@@ -276,17 +278,17 @@ class ChartService
         return $chart;
     }
 
-    private function createDataSets(array $subscriptions): array
+    private function createDataSets(array $subscriptions, ?string $mainCurrency = null): array
     {
         $dataSets = [];
         foreach ($subscriptions as $index => $subscription) {
             $amountFormatted = $subscription->isMonthly()
-                ? number_format((float)$subscription->getAmount(), 2, '.', ' ') . ' / mo'
-                : number_format((float)$subscription->getAmount(), 2, '.', ' ') . ' / yr';
+                ? number_format((float) $subscription->getReportingAmount($mainCurrency), 2, '.', ' ') . ' / mo'
+                : number_format((float) $subscription->getReportingAmount($mainCurrency), 2, '.', ' ') . ' / yr';
 
             $dataSets[] = [
                 'label' => $subscription->getName(),
-                'data' => $this->createData($subscription),
+                'data' => $this->createData($subscription, $mainCurrency),
                 'backgroundColor' => $this->getColorForSubscription($subscription->getName(), $index),
                 'borderRadius' => 4,
                 'amount' => $amountFormatted,
@@ -296,11 +298,11 @@ class ChartService
         return $dataSets;
     }
 
-    private function createData(Subscription $subscription): array
+    private function createData(Subscription $subscription, ?string $mainCurrency = null): array
     {
         $data = [];
         foreach (array_keys(self::MONTHS) as $month) {
-            $data[] = $this->countByMonth([$subscription], $month);
+            $data[] = $this->countByMonth([$subscription], $month, $mainCurrency);
         }
 
         return $data;
@@ -314,18 +316,36 @@ class ChartService
         return self::COLOR_PALETTE[$colorIndex];
     }
 
-    private function countByMonth(array $subscriptions, int $month): float
+    private function countByMonth(array $subscriptions, int $month, ?string $mainCurrency = null): float
     {
         $total = 0.0;
 
         foreach ($subscriptions as $subscription) {
             if ($subscription->isMonthly()) {
-                $total += $subscription->getAmount();
+                $total += $subscription->getReportingAmount($mainCurrency);
             } elseif ((int)$subscription->getNextPayment()->format('n') === ($month + 1)) {
-                $total += $subscription->getAmount();
+                $total += $subscription->getReportingAmount($mainCurrency);
             }
         }
 
         return $total;
+    }
+
+    /**
+     * @param array<Subscription> $subscriptions
+     * @return array<Subscription>
+     */
+    private function excludePendingReview(array $subscriptions, ?string $mainCurrency): array
+    {
+        $main = \App\Service\CurrencyService::normalizeCode($mainCurrency);
+
+        if ($main === null) {
+            return $subscriptions;
+        }
+
+        return array_values(array_filter(
+            $subscriptions,
+            static fn(Subscription $s) => !$s->isPendingReview($main),
+        ));
     }
 }

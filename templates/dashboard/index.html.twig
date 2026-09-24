@@ -12,8 +12,44 @@
         </h1>
         <p class="text-sm text-slate-500 mt-1">
             {{ "dashboard.subtitle"|trans }}
+            {% if mainCurrency %}<span class="font-semibold text-slate-600">{{ mainCurrency }}</span>{% endif %}
         </p>
     </div>
+
+    {% if not mainCurrency %}
+        <div class="p-4 rounded-2xl bg-blue-50 border border-blue-200/80 flex flex-col sm:flex-row sm:items-center gap-3 text-sm text-blue-900">
+            <div class="flex items-center gap-2">
+                <i class="fa-solid fa-circle-info text-blue-500"></i>
+                <span>{{ "dashboard.currency_confirm_prompt"|trans }}</span>
+            </div>
+            <a href="{{ path('app_profile') }}"
+               class="btn-primary text-xs py-2 px-4 inline-flex items-center gap-2 shrink-0">
+                <i class="fa-solid fa-coins text-xs"></i>
+                <span>{{ "dashboard.currency_confirm_cta"|trans }}</span>
+            </a>
+        </div>
+    {% endif %}
+
+    {% if pendingReviewSubscriptions|length > 0 %}
+        <div class="p-4 rounded-2xl bg-amber-50 border border-amber-200/80 text-sm text-amber-800 space-y-2">
+            <div class="flex items-center gap-2 font-semibold">
+                <i class="fa-solid fa-triangle-exclamation text-amber-500"></i>
+                <span>{{ "dashboard.stale_review_title"|trans({'%count%': pendingReviewSubscriptions|length, '%currency%': mainCurrency}) }}</span>
+            </div>
+            <p class="text-xs">{{ "dashboard.stale_review_hint"|trans }}</p>
+            <ul class="text-xs space-y-1">
+                {% for pending in pendingReviewSubscriptions %}
+                    <li>
+                        <a href="{{ path('app_subscription_edit', {'id': pending.id}) }}"
+                           data-turbo-frame="modal"
+                           class="font-semibold underline hover:text-amber-900 transition-colors">
+                            {{ pending.name }} ({{ pending.currency }} → {{ mainCurrency }})
+                        </a>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
 
     <!-- Summary KPI Cards -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
@@ -28,7 +64,7 @@
             <div class="mt-3">
                 <div class="text-3xl font-extrabold text-slate-900 tracking-tight">
                     {{ totals.monthlyCalculated|number_format(2, '.', ' ') }}
-                    <span class="text-sm font-normal text-slate-400">/ mo</span>
+                    <span class="text-sm font-normal text-slate-400">{% if totals.currency %}{{ totals.currency }} {% endif %}/ mo</span>
                 </div>
                 <div class="mt-2 text-xs text-slate-500 flex flex-wrap items-center gap-x-2 gap-y-1">
                     <span class="inline-flex items-center gap-1 font-medium text-slate-700">
@@ -55,7 +91,7 @@
             <div class="mt-3">
                 <div class="text-3xl font-extrabold text-slate-900 tracking-tight">
                     {{ totals.yearlyCalculated|number_format(2, '.', ' ') }}
-                    <span class="text-sm font-normal text-slate-400">/ yr</span>
+                    <span class="text-sm font-normal text-slate-400">{% if totals.currency %}{{ totals.currency }} {% endif %}/ yr</span>
                 </div>
                 <div class="mt-2 text-xs text-slate-500 flex flex-wrap items-center gap-x-2 gap-y-1">
                     <span class="inline-flex items-center gap-1 font-medium text-slate-700">

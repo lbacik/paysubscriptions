@@ -45,4 +45,44 @@ final class ChartServiceTest extends TestCase
         $options = $chart->getOptions();
         self::assertFalse($options['plugins']['legend']['display']);
     }
+
+    public function testBarChartUsesConvertedAmountsInMainCurrency(): void
+    {
+        $chartBuilder = new ChartBuilder();
+        $chartService = new ChartService($chartBuilder);
+
+        $subscription = new Subscription();
+        $subscription->setName('Foreign Service');
+        $subscription->setBillingCycle(BillingCycle::Monthly);
+        $subscription->setAmount(10.00);
+        $subscription->setCurrency('EUR');
+        $subscription->setNextPayment(new \DateTime('2024-01-01'));
+        $subscription->setConvertedAmount(11.00);
+        $subscription->setConvertedCurrency('USD');
+
+        $chart = $chartService->createBarChart([$subscription], 'USD');
+
+        $data = $chart->getData();
+        self::assertSame('11.00 / mo', $data['datasets'][0]['amount']);
+        self::assertEqualsWithDelta(11.00, $data['datasets'][0]['data'][0], 0.001);
+    }
+
+    public function testChartsExcludeStaleConvertedAmountsPendingReview(): void
+    {
+        $chartBuilder = new ChartBuilder();
+        $chartService = new ChartService($chartBuilder);
+
+        $stale = new Subscription();
+        $stale->setName('Stale Service');
+        $stale->setBillingCycle(BillingCycle::Monthly);
+        $stale->setAmount(20.00);
+        $stale->setCurrency('EUR');
+        $stale->setNextPayment(new \DateTime('2024-01-01'));
+        $stale->setConvertedAmount(22.00);
+        $stale->setConvertedCurrency('PLN');
+
+        $chart = $chartService->createBarChart([$stale], 'USD');
+
+        self::assertCount(0, $chart->getData()['datasets']);
+    }
 }

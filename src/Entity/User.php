@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Entity;
 
 use App\Repository\UserRepository;
+use App\Service\CurrencyService;
 use DateTime;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -54,6 +55,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     #[ORM\Column]
     private bool $isVerified = false;
+
+    #[ORM\Column(length: 3, nullable: true)]
+    private ?string $mainCurrency = null;
 
     /**
      * Account time zone as an IANA identifier (e.g. "Europe/Warsaw").
@@ -235,6 +239,24 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setReminderLeadDays(int $reminderLeadDays): static
     {
         $this->reminderLeadDays = $reminderLeadDays;
+
+        return $this;
+    }
+
+    public function getMainCurrency(): ?string
+    {
+        return $this->mainCurrency;
+    }
+
+    public function setMainCurrency(?string $mainCurrency): static
+    {
+        $normalized = CurrencyService::normalizeCode($mainCurrency);
+
+        if ($normalized !== null && !CurrencyService::isValidCode($normalized)) {
+            throw new \InvalidArgumentException(sprintf('Currency "%s" is not a valid ISO 4217 code.', $mainCurrency));
+        }
+
+        $this->mainCurrency = $normalized;
 
         return $this;
     }
