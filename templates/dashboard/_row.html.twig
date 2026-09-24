@@ -4,15 +4,15 @@
         <div class="font-semibold text-slate-900">
             {{ subscription.name }}
         </div>
-        {% if subscription.firstPayment %}
+        {% if subscription.nextPayment %}
             <div class="text-xs text-slate-400 mt-0.5">
-                First payment: {{ subscription.firstPayment|date('Y-m-d') }}
+                Next payment: {{ next_renewal(subscription)|date('Y-m-d') }}
             </div>
         {% endif %}
     </td>
     <td class="py-3.5 px-4 text-end">
-        {% if subscription.monthly %}
-            <span class="font-bold text-slate-900">{{ subscription.monthly|number_format(2, '.', ' ') }}</span>
+        {% if subscription.isMonthly() %}
+            <span class="font-bold text-slate-900">{{ subscription.amount|number_format(2, '.', ' ') }}</span>
         {% else %}
             <span class="text-xs text-slate-500 font-normal italic" title="Calculated from yearly plan">
                 ~{{ subscription.monthlyCalculated|number_format(2, '.', ' ') }}
@@ -20,8 +20,8 @@
         {% endif %}
     </td>
     <td class="py-3.5 px-4 text-end">
-        {% if subscription.yearly %}
-            <span class="font-bold text-slate-900">{{ subscription.yearly|number_format(2, '.', ' ') }}</span>
+        {% if subscription.isYearly() %}
+            <span class="font-bold text-slate-900">{{ subscription.amount|number_format(2, '.', ' ') }}</span>
         {% else %}
             <span class="text-xs text-slate-500 font-normal italic" title="Calculated from monthly plan">
                 ~{{ subscription.yearlyCalculated|number_format(2, '.', ' ') }}

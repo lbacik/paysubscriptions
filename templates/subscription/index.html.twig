@@ -16,9 +16,9 @@
         <tr>
             <th class="{{ tdClass }}">#</th>
             <th class="{{ tdClass }}">Name</th>
-            <th class="{{ tdClass }}">FirstPayment</th>
-            <th class="{{ tdClass }}">Monthly</th>
-            <th class="{{ tdClass }}">Yearly</th>
+            <th class="{{ tdClass }}">BillingCycle</th>
+            <th class="{{ tdClass }}">Amount</th>
+            <th class="{{ tdClass }}">NextPayment</th>
             <th class="{{ tdClass }}">actions</th>
         </tr>
         </thead>
@@ -27,17 +27,9 @@
             <tr>
                 <td class="{{ tdClass }}">{{ loop.index }}</td>
                 <td class="{{ tdClass }}">{{ subscription.name }}</td>
-                <td class="{{ tdClass }}">{{ subscription.firstPayment ? subscription.firstPayment|date('Y-m-d') : '' }}</td>
-                <td class="{{ tdClass }}">{{ subscription.monthly }}</td>
-                <td class="{{ tdClass }}">
-                    {% if subscription.yearly %}
-                        {{ subscription.yearly }}
-                    {% else %}
-                        <span class="text-gray-400">
-                            {{ subscription.monthly * 12 }}
-                        </span>
-                    {% endif %}
-                </td>
+                <td class="{{ tdClass }}">{{ subscription.billingCycle.value }}</td>
+                <td class="{{ tdClass }}">{{ subscription.amount }}</td>
+                <td class="{{ tdClass }}">{{ subscription.nextPayment ? subscription.nextPayment|date('Y-m-d') : '' }}</td>
                 <td class="{{ tdClass }}">
                     <twig:Button href="{{ path('app_subscription_edit', {'id': subscription.id}) }}">edit</twig:Button>
                 </td>

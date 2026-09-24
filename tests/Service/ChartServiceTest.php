@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service;
 
 use App\Entity\Subscription;
+use App\Enum\BillingCycle;
 use App\Service\ChartService;
 use PHPUnit\Framework\TestCase;
 use Symfony\UX\Chartjs\Builder\ChartBuilder;
@@ -18,13 +19,15 @@ final class ChartServiceTest extends TestCase
 
         $subscription1 = new Subscription();
         $subscription1->setName('Netflix');
-        $subscription1->setMonthly(15.99);
-        $subscription1->setFirstPayment(new \DateTime('2024-01-01'));
+        $subscription1->setBillingCycle(BillingCycle::Monthly);
+        $subscription1->setAmount(15.99);
+        $subscription1->setNextPayment(new \DateTime('2024-01-01'));
 
         $subscription2 = new Subscription();
         $subscription2->setName('Amazon Prime');
-        $subscription2->setYearly(139.00);
-        $subscription2->setFirstPayment(new \DateTime('2024-05-01'));
+        $subscription2->setBillingCycle(BillingCycle::Yearly);
+        $subscription2->setAmount(139.00);
+        $subscription2->setNextPayment(new \DateTime('2024-05-01'));
 
         $chart = $chartService->createBarChart([$subscription1, $subscription2]);
 

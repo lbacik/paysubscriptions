@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Factory;
 
 use App\Entity\Subscription;
+use App\Enum\BillingCycle;
 use Zenstruck\Foundry\Persistence\PersistentProxyObjectFactory;
 
 /**
@@ -26,7 +27,7 @@ final class SubscriptionFactory extends PersistentProxyObjectFactory
     protected function defaults(): array|callable
     {
         return [
-            'firstPayment' => self::faker()->dateTime(),
+            'nextPayment' => self::faker()->dateTimeBetween('-1 year', '+1 year'),
             'name' => self::faker()->domainName(),
             'owner' => UserFactory::new(),
         ];
@@ -39,9 +40,13 @@ final class SubscriptionFactory extends PersistentProxyObjectFactory
     {
         return $this
             ->afterInstantiate(function(Subscription $subscription): void {
-                self::faker()->boolean()
-                    ? $subscription->setMonthly(self::faker()->randomFloat(2, 10, 100))
-                    : $subscription->setYearly(self::faker()->randomFloat(2, 100, 1000));
+                $cycle = self::faker()->boolean() ? BillingCycle::Monthly : BillingCycle::Yearly;
+                $subscription->setBillingCycle($cycle);
+                $subscription->setAmount(
+                    $cycle === BillingCycle::Monthly
+                        ? self::faker()->randomFloat(2, 10, 100)
+                        : self::faker()->randomFloat(2, 100, 1000)
+                );
             })
         ;
     }
