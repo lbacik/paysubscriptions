@@ -10,6 +10,7 @@ use App\Enum\BillingCycle;
 use App\Factory\UserFactory;
 use App\Repository\SubscriptionRepository;
 use App\Repository\UserRepository;
+use App\Service\ExpenseCategoryService;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Zenstruck\Foundry\Test\Factories;
@@ -174,12 +175,16 @@ final class UpcomingRenewalsWidgetTest extends WebTestCase
         \DateTimeInterface $nextPayment,
         float $amount,
     ): Subscription {
+        $managedOwner = $this->managedUser($client, $owner);
+        $categoryService = $client->getContainer()->get(ExpenseCategoryService::class);
+
         $subscription = (new Subscription())
             ->setName($name)
             ->setBillingCycle($cycle)
             ->setNextPayment($nextPayment)
             ->setAmount($amount)
-            ->setOwner($this->managedUser($client, $owner));
+            ->setOwner($managedOwner)
+            ->setCategory($categoryService->ensureDefaultCategory($managedOwner));
 
         $client->getContainer()->get(SubscriptionRepository::class)->save($subscription);
 
