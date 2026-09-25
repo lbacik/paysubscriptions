@@ -32,6 +32,12 @@
                 {{ 'account.delete_newsletter_note'|trans({'%url%': 'https://gprodb.com'})|raw }}
             </div>
 
+            <div class="text-sm text-slate-600 leading-relaxed bg-blue-50 border border-blue-200/80 rounded-xl p-4 space-y-2">
+                <div class="font-semibold text-slate-900">{{ 'account.export_title'|trans }}</div>
+                <p>{{ 'account.export_intro'|trans }}</p>
+                <a href="{{ path('app_contact') }}" class="inline-block font-semibold text-color-ter underline hover:text-slate-900">{{ 'account.export_cta'|trans }}</a>
+            </div>
+
             <form method="post" action="{{ path('app_account_delete_confirm') }}" class="space-y-4">
                 <input type="hidden" name="_token" value="{{ csrf_token('delete_account') }}">
 
