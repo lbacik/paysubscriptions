@@ -25,6 +25,7 @@ main_menu:
   dashboard: "Dashboard"
   contact: "Contact"
   docs: "About"
+  privacy: "Privacy"
 subscription:
   edit: "Edit Subscription"
   new: "Add New Subscription"

@@ -24,7 +24,7 @@
     { "id": "subscription-new", "path": "/subscription/new", "auth": true, "viewports": ["desktop"] },
     { "id": "subscription-edit", "path": "/subscription/{id}/edit", "auth": true, "viewports": ["desktop"], "dynamic": "first-owned-subscription" },
     { "id": "subscription-delete", "path": "/subscription/{id}", "auth": true, "viewports": ["desktop"], "dynamic": "first-owned-subscription" },
-    { "id": "privacy", "path": null, "auth": false, "viewports": ["desktop"], "pending": true, "issue": "#49", "note": "Standalone privacy page does not exist yet; /about doubles as About & Privacy until then." },
+    { "id": "privacy", "path": "/privacy", "auth": false, "viewports": ["desktop"] },
     { "id": "categories", "path": null, "auth": true, "viewports": ["desktop"], "pending": true, "issue": "#39", "note": "User-defined expense categories are not implemented yet." },
     { "id": "settings", "path": null, "auth": true, "viewports": ["desktop"], "pending": true, "issue": "#44", "note": "Timezone/reminder preferences page is not implemented yet." },
     { "id": "account-deletion", "path": null, "auth": true, "viewports": ["desktop"], "pending": true, "issue": "#46", "note": "Self-service account deletion is not implemented yet." }

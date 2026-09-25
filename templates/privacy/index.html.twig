@@ -1,0 +1,189 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Privacy — PaySubscriptions{% endblock %}
+
+{% block metaheaders %}
+    <meta name="description" content="How PaySubscriptions stores your account and subscription data, which external services receive what, how account deletion works, and how to request a copy of your data.">
+{% endblock %}
+
+{% block body %}
+<div class="relative overflow-hidden py-12 md:py-20">
+    <div class="absolute -top-40 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-blue-100/50 rounded-full blur-3xl pointer-events-none"></div>
+
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        <div class="text-center max-w-2xl mx-auto mb-12">
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-700 mb-4">
+                <i class="fa-solid fa-shield-halved text-color-ter"></i>
+                Privacy &amp; Data Handling
+            </span>
+            <h1 class="text-4xl sm:text-5xl font-extrabold text-slate-900 tracking-tight">
+                Privacy at PaySubscriptions
+            </h1>
+            <p class="mt-4 text-lg text-slate-600">
+                What we store, which outside services are involved, and how you can delete your account or ask for a copy of your data — in plain language.
+            </p>
+        </div>
+
+        <div class="bg-white rounded-3xl border border-slate-200/90 shadow-xl p-8 sm:p-14 space-y-12">
+
+            <section aria-labelledby="privacy-collect">
+                <h2 id="privacy-collect" class="text-2xl font-bold text-slate-900 mt-0 mb-4 pb-2 border-b border-slate-100">What we store</h2>
+                <div class="text-slate-600 leading-relaxed space-y-4 text-[15px]">
+                    <p>
+                        Your account holds your email address, your password stored as a one-way hash (never in readable form),
+                        and the settings you choose: main currency, account time zone, and reminder preferences.
+                        Your subscriptions hold what you enter yourself: name, billing cycle, amounts and currencies,
+                        next payment date, expense category, and any optional note.
+                    </p>
+                    <p>
+                        PaySubscriptions never connects to your bank, never scans your inbox, and never discovers
+                        subscriptions automatically. Everything in your account is there because you typed it in,
+                        and removing an entry here does not cancel anything with its provider.
+                    </p>
+                </div>
+            </section>
+
+            <section aria-labelledby="privacy-selling">
+                <h2 id="privacy-selling" class="text-2xl font-bold text-slate-900 mt-10 mb-4 pb-2 border-b border-slate-100">Your data is not for sale</h2>
+                <div class="text-slate-600 leading-relaxed space-y-4 text-[15px]">
+                    <p>
+                        Account and Subscription data is not sold.
+                    </p>
+                    <p>
+                        Running the service necessarily involves a small number of external services, listed in the
+                        next section. Each of them receives only the data it needs to do its job — account and
+                        subscription records are never handed to advertisers, data brokers, or analytics profiles.
+                    </p>
+                </div>
+            </section>
+
+            <section aria-labelledby="privacy-services">
+                <h2 id="privacy-services" class="text-2xl font-bold text-slate-900 mt-10 mb-4 pb-2 border-b border-slate-100">External services and what each receives</h2>
+                <div class="text-slate-600 leading-relaxed space-y-4 text-[15px]">
+                    <p>
+                        Every automatic request on the web discloses the visitor's IP address, browser information,
+                        and the visited page address to the host serving it. Beyond that baseline, each service below
+                        receives only what is listed:
+                    </p>
+                    <ul class="list-disc list-inside space-y-3">
+                        <li>
+                            <strong class="text-slate-900">Umami Cloud analytics (cloud.umami.is).</strong>
+                            Cookieless page-view counts on every page. Receives the page address, the referring page,
+                            and device and browser metadata. It does not receive your account or subscription details.
+                        </li>
+                        <li>
+                            <strong class="text-slate-900">Google Fonts.</strong>
+                            Provides the interface typefaces loaded on every page. Receives font file requests
+                            tied to the visited page.
+                        </li>
+                        <li>
+                            <strong class="text-slate-900">Font Awesome stylesheet via the Cloudflare CDN (cdnjs.cloudflare.com).</strong>
+                            Provides the icons used across the site. Receives stylesheet requests tied to the visited page.
+                        </li>
+                        <li>
+                            <strong class="text-slate-900">Google reCAPTCHA, on the contact page only.</strong>
+                            Spam protection for the contact form. Google receives risk-analysis signals when the form
+                            is shown; when you submit, our server sends Google the one-time token and your IP address
+                            for verification. Your name, email address, subject, and message are never sent to Google.
+                        </li>
+                        <li>
+                            <strong class="text-slate-900">Mail delivery.</strong>
+                            Account emails — registration verification, password resets, and contact-form messages to
+                            the maintainer — are sent through the configured mail provider (an SES-compatible service
+                            in production). Those emails contain the recipient and sender addresses, the subject, and
+                            the message body by design, and carry no tracking pixels or externally hosted content.
+                        </li>
+                        <li>
+                            <strong class="text-slate-900">Product-updates newsletter via the shared gprodb.com list.</strong>
+                            A separate opt-in (see below): only the subscriber's email address is forwarded to the
+                            external mailing provider, together with the mailing project identifier and routing key.
+                        </li>
+                        <li>
+                            <strong class="text-slate-900">BuyMeACoffee support link, on the pricing page only.</strong>
+                            A plain link you can choose to follow. Nothing is sent there unless you click it.
+                        </li>
+                    </ul>
+                </div>
+            </section>
+
+            <section aria-labelledby="privacy-storage">
+                <h2 id="privacy-storage" class="text-2xl font-bold text-slate-900 mt-10 mb-4 pb-2 border-b border-slate-100">How your data is stored</h2>
+                <div class="text-slate-600 leading-relaxed space-y-4 text-[15px]">
+                    <p>
+                        Your account and subscription records live in the application's database so you can reach them
+                        through a browser. There is no application-level field encryption at rest: names, amounts, notes,
+                        and your email address are stored as plain database columns. Only your password gets stronger
+                        treatment — it is stored as a one-way hash and cannot be read back.
+                    </p>
+                    <p>
+                        We describe this plainly on purpose: the protection your data has is access control on the
+                        account and the servers, not per-field encryption.
+                    </p>
+                </div>
+            </section>
+
+            <section aria-labelledby="privacy-deletion">
+                <h2 id="privacy-deletion" class="text-2xl font-bold text-slate-900 mt-10 mb-4 pb-2 border-b border-slate-100">Deleting your account</h2>
+                <div class="text-slate-600 leading-relaxed space-y-4 text-[15px]">
+                    <p>
+                        You can delete your account yourself at any time from the
+                        <a href="{{ path('app_account_delete') }}" class="text-color-ter font-semibold underline hover:text-slate-900">account deletion page</a>.
+                        Deletion permanently removes your profile and login, your subscriptions and categories, your
+                        subscription limits, pending password-reset requests, and your reminder preferences, and it
+                        discards queued account emails waiting to be sent. It takes effect immediately and
+                        cannot be undone.
+                    </p>
+                    <p>
+                        The product-updates newsletter is a separate opt-in handled through our shared
+                        <a class="underline hover:text-slate-600" href="https://gprodb.com" target="_blank" rel="noopener noreferrer">gprodb.com</a>
+                        list. Deleting your account does not unsubscribe that list — please unsubscribe there separately
+                        if you no longer want those emails.
+                    </p>
+                </div>
+            </section>
+
+            <section aria-labelledby="privacy-export">
+                <h2 id="privacy-export" class="text-2xl font-bold text-slate-900 mt-10 mb-4 pb-2 border-b border-slate-100">Getting a copy of your data</h2>
+                <div class="text-slate-600 leading-relaxed space-y-4 text-[15px]">
+                    <p>
+                        A copy of your data is available as a manual email request — there is no self-service download.
+                        Send the <a href="{{ path('app_contact') }}" class="text-color-ter font-semibold underline hover:text-slate-900">contact form</a>
+                        from your account email address with the subject “Data export request”. The maintainer checks
+                        that the sender address matches the account, then replies to that same address with your account
+                        profile, subscriptions with their categories, expense categories, and limits as a JSON file.
+                        Password hashes are never included, and the newsletter list is separate and is never included.
+                    </p>
+                    <p>
+                        If you are planning to delete your account, ask for the copy first so nothing is lost.
+                    </p>
+                </div>
+            </section>
+
+            <section aria-labelledby="privacy-newsletter">
+                <h2 id="privacy-newsletter" class="text-2xl font-bold text-slate-900 mt-10 mb-4 pb-2 border-b border-slate-100">The newsletter is a separate opt-in</h2>
+                <div class="text-slate-600 leading-relaxed space-y-4 text-[15px]">
+                    <p>
+                        The product-updates signup in the footer is an optional, separate opt-in to the shared
+                        <a class="underline hover:text-slate-600" href="https://gprodb.com" target="_blank" rel="noopener noreferrer">gprodb.com</a>
+                        newsletter list, run by an external mailing provider. Creating an account never subscribes you,
+                        deleting your account never unsubscribes you, and asking for a data export never touches the list.
+                        To stop those emails, unsubscribe through the newsletter list itself — deleting your
+                        PaySubscriptions account will not do it.
+                    </p>
+                </div>
+            </section>
+
+            <section aria-labelledby="privacy-questions">
+                <h2 id="privacy-questions" class="text-2xl font-bold text-slate-900 mt-10 mb-4 pb-2 border-b border-slate-100">Questions</h2>
+                <div class="text-slate-600 leading-relaxed space-y-4 text-[15px]">
+                    <p>
+                        Anything unclear about how your data is handled?
+                        <a href="{{ path('app_contact') }}" class="text-color-ter font-semibold underline hover:text-slate-900">Contact the maintainer</a>.
+                    </p>
+                </div>
+            </section>
+
+        </div>
+    </div>
+</div>
+{% endblock %}
