@@ -71,7 +71,8 @@ Everything else is faked in the test environment:
 
 ## What is not covered yet
 
-Self-service export has no implementation on the v1.0 slices landed so far
-(explicitly deferred in #34), so there is nothing automatable to assert yet.
-Cover it here as that slice lands; the CI gate picks new tests up with no
-workflow change.
+Self-service export has no implementation (explicitly deferred in #34), so
+there is nothing automatable to assert for it. The manual email-request path
+(issue #48) is covered instead: `UserDataExportService` scope/isolation,
+the `user:export` operator command, and the account/contact request-route
+wording.

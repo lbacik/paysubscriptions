@@ -119,6 +119,8 @@ contact:
   title: "Contact Form"
   info: "Please fill out the form below and I will get back to you as soon as possible."
   send: "Send Message"
+  export_title: "Requesting a copy of your data?"
+  export_hint: "Data export is a manual email request, not a self-service download: send this form from your account email address with the subject “Data export request”. The maintainer verifies the sender address matches the account, then replies with your account and subscription records as a JSON file. The product-updates newsletter list is separate and is never included."
 maintenance:
   title: "Maintenance"
   message: "The site is currently under maintenance. Please check back later."
@@ -158,3 +160,6 @@ account:
   delete_newsletter_note: "The product-updates newsletter is a separate opt-in handled via our shared <a class=\"underline hover:text-slate-600\" href=\"%url%\" target=\"_blank\" rel=\"noopener noreferrer\">gprodb.com</a> list. Deleting your account does not unsubscribe that list — please unsubscribe there separately if you no longer want those emails."
   delete_confirm_label: "I understand my account and all of its data will be permanently deleted and this cannot be undone."
   delete_submit: "Delete my account permanently"
+  export_title: "Want a copy of your data first?"
+  export_intro: "Data export is a manual email request, not a self-service download. Contact the maintainer from your account email address and your account and subscription records will be sent back to you as a JSON file — usually before any deletion, so nothing is lost."
+  export_cta: "Request your data export"
