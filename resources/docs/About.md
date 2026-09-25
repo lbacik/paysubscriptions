@@ -12,14 +12,41 @@ nothing to upgrade to.
 
 ## How it works today
 
-The product tracks only the details you add yourself: a manual subscription list with monthly
-and yearly cost equivalents in a single-owner account. These figures are calculated from your
-entries, not imported transactions or confirmation that a payment was made.
+The product tracks only the details you add yourself: a manual subscription list with a monthly
+or yearly billing cycle per subscription and monthly and yearly cost equivalents in a
+single-owner account. These figures are calculated from your entries, not imported transactions
+or confirmation that a payment was made.
+
+Totals are shown in your main currency. Each subscription keeps its own currency, and when the
+two differ you enter the converted amount yourself — there is no automatic conversion.
+
+Each account tracks up to a fixed per-account subscription limit; the free plan and its limit
+are the whole offer, with no paid tier to raise it.
 
 Upcoming dates, optional reminders, categories, a published data-handling policy and self-service
 account deletion are release goals for v1.0, pending implementation and verification.
 
 [Create your free account](/register) or [check the free plan and its limit](/pricing).
+
+## Planned for v1.0: what the release goals mean
+
+The following describes the v1.0 goals — not what is available today:
+
+**Renewal dates you enter.** Each subscription keeps a next payment date you type in and can
+edit later. Monthly and yearly recurrences step forward from that date, keeping the same
+calendar day where the month allows; a charge that would land on a missing day uses that
+month's last day instead. Upcoming renewals are forecasts computed from your entries, not
+records of payments made.
+
+**Reminders before renewals.** An upcoming-renewals list stays visible in the app whether or
+not you want email. Email reminders are optional: one account-wide setting chooses how many
+calendar days ahead to send them (three by default, counted in your account time zone), at most
+one email per scheduled renewal, and turning email off only stops the emails — the in-app list stays.
+
+**Your own categories.** Every subscription belongs to exactly one category you define: a name
+plus a color swatch, with no fixed list. New accounts start with a single editable “Subscriptions”
+category so the first entry is never blocked; a category still in use cannot be deleted until
+its subscriptions are reassigned — nothing is silently reclassified.
 
 ## You choose what to track
 
