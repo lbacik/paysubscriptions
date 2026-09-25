@@ -7,8 +7,8 @@ namespace App\Tests\Controller;
 use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
+use Symfony\Bundle\FrameworkBundle\Test\MailerAssertionsTrait;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-use Symfony\Component\Mailer\Messenger\SendEmailMessage;
 use Symfony\Component\Mime\Email;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use SymfonyCasts\Bundle\ResetPassword\ResetPasswordHelperInterface;
@@ -24,6 +24,7 @@ use Zenstruck\Foundry\Test\ResetDatabase;
  */
 final class PasswordResetFlowTest extends WebTestCase
 {
+    use MailerAssertionsTrait;
     use ResetDatabase;
 
     private KernelBrowser $client;
@@ -35,7 +36,6 @@ final class PasswordResetFlowTest extends WebTestCase
 
         $this->client = static::createClient();
         $this->em = static::getContainer()->get(EntityManagerInterface::class);
-        $this->purgeQueuedEmails();
     }
 
     public function testInvalidSubmissionReRendersWithout500(): void
@@ -47,7 +47,7 @@ final class PasswordResetFlowTest extends WebTestCase
         $this->client->submit($form);
 
         self::assertResponseStatusCodeSame(422);
-        self::assertSame([], $this->queuedEmails());
+        self::assertEmailCount(0);
     }
 
     public function testUnknownEmailGetsTheSameSafeResponseAndNoEmail(): void
@@ -59,7 +59,7 @@ final class PasswordResetFlowTest extends WebTestCase
         $this->client->submit($form);
 
         self::assertResponseRedirects('/reset-password/check-email');
-        self::assertSame([], $this->queuedEmails());
+        self::assertEmailCount(0);
 
         $this->client->followRedirect();
         self::assertResponseIsSuccessful();
@@ -77,9 +77,10 @@ final class PasswordResetFlowTest extends WebTestCase
 
         self::assertResponseRedirects('/reset-password/check-email');
 
-        $emails = $this->queuedEmails();
-        self::assertCount(1, $emails);
-        self::assertSame(['known@example.com'], $this->recipientAddresses($emails[0]));
+        self::assertEmailCount(1);
+        $email = self::getMailerMessage(0);
+        \assert($email instanceof Email);
+        self::assertSame(['known@example.com'], $this->recipientAddresses($email));
     }
 
     public function testTokenCompletionSetsNewPassword(): void
@@ -132,27 +133,6 @@ final class PasswordResetFlowTest extends WebTestCase
     }
 
     /**
-     * @return list<Email>
-     */
-    private function queuedEmails(): array
-    {
-        $transport = static::getContainer()->get('messenger.transport.async');
-        $emails = [];
-
-        foreach ($transport->get() as $envelope) {
-            $message = $envelope->getMessage();
-
-            if ($message instanceof SendEmailMessage) {
-                $original = $message->getMessage();
-                \assert($original instanceof Email);
-                $emails[] = $original;
-            }
-        }
-
-        return $emails;
-    }
-
-    /**
      * @return list<string>
      */
     private function recipientAddresses(Email $email): array
@@ -161,10 +141,5 @@ final class PasswordResetFlowTest extends WebTestCase
             static fn ($address) => $address->getAddress(),
             $email->getTo()
         );
-    }
-
-    private function purgeQueuedEmails(): void
-    {
-        $this->em->getConnection()->executeStatement('DELETE FROM messenger_messages');
     }
 }

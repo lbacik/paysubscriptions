@@ -6,6 +6,8 @@ namespace App\Tests\Migration;
 
 use App\Entity\ExpenseCategory;
 use App\Tests\DatabaseTestCase;
+use App\Tests\WithoutDatabaseRollback;
+use DAMA\DoctrineTestBundle\Doctrine\DBAL\StaticDriver;
 use Doctrine\DBAL\Connection;
 use Symfony\Bundle\FrameworkBundle\Console\Application;
 use Symfony\Component\Console\Input\ArrayInput;
@@ -17,8 +19,10 @@ use Symfony\Component\Uid\Uuid;
  * "fresh" (empty DB, all migrations) and "migrated" (legacy rows written
  * under the pre-category schema, then the category migration).
  *
- * Needs a database; skips cleanly where none is reachable.
+ * Needs a database. Runs real DDL, so it opts out of the per-test rollback
+ * and re-migrates a clean database for the tests that follow.
  */
+#[WithoutDatabaseRollback]
 final class ExpenseCategoryMigrationTest extends DatabaseTestCase
 {
     private const PREVIOUS_VERSION = 'DoctrineMigrations\Version20240928142037';
@@ -30,6 +34,33 @@ final class ExpenseCategoryMigrationTest extends DatabaseTestCase
         parent::setUp();
 
         $this->connection = $this->em->getConnection();
+    }
+
+    // Each test drops and rebuilds the database itself; Foundry's per-test reset would be wasted work.
+    public static function _resetDatabaseBeforeEachTest(): void
+    {
+    }
+
+    public static function tearDownAfterClass(): void
+    {
+        StaticDriver::setKeepStaticConnections(false);
+        $kernel = static::bootKernel();
+        foreach ([
+            ['command' => 'doctrine:database:drop', '--force' => true, '--if-exists' => true],
+            ['command' => 'doctrine:database:create'],
+            ['command' => 'doctrine:migrations:migrate', '--no-interaction' => true, '--allow-no-migration' => true],
+        ] as $input) {
+            $application = new Application($kernel);
+            $application->setAutoExit(false);
+            $output = new BufferedOutput();
+            if (0 !== $application->run(new ArrayInput($input), $output)) {
+                throw new \RuntimeException(sprintf("Restoring the test database failed at '%s': %s", $input['command'], $output->fetch()));
+            }
+        }
+        static::ensureKernelShutdown();
+        StaticDriver::setKeepStaticConnections(true);
+
+        parent::tearDownAfterClass();
     }
 
     private function runCommand(string $name, array $arguments = []): string

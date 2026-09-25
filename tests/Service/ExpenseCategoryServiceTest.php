@@ -12,12 +12,10 @@ use App\Service\ExpenseCategoryService;
 use App\Service\SubscriptionService;
 use App\Tests\DatabaseTestCase;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
-use Doctrine\ORM\EntityManagerInterface;
 
 /**
  * Needs a database: set DATABASE_URL (e.g. the CI migrations job's
- * mysql://root:root@127.0.0.1:3306/paysub) before running. Skips cleanly
- * where no database is reachable, so the DB-less CI checks job stays green.
+ * mysql://root:root@127.0.0.1:3306/paysub) before running.
  */
 final class ExpenseCategoryServiceTest extends DatabaseTestCase
 {
@@ -28,19 +26,8 @@ final class ExpenseCategoryServiceTest extends DatabaseTestCase
     {
         parent::setUp();
 
-        $this->recreateSchema();
-
         $this->categories = static::getContainer()->get(ExpenseCategoryService::class);
         $this->subscriptions = static::getContainer()->get(SubscriptionService::class);
-    }
-
-    protected function tearDown(): void
-    {
-        if ($this->em instanceof EntityManagerInterface && $this->em->getConnection()->isConnected()) {
-            $this->dropSchema();
-        }
-
-        parent::tearDown();
     }
 
     private function createSubscriptionWithCategory(User $owner, ?ExpenseCategory $category = null, string $name = 'Netflix'): Subscription
