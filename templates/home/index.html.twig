@@ -7,51 +7,108 @@
 {% endblock %}
 
 {% block body %}
+{% if variant is defined and variant == 'A' %}
+    {{ include('home/prototypes/variant_a.html.twig') }}
+    {{ include('home/prototypes/_switcher.html.twig', {'currentVariant': 'A'}) }}
+{% elseif variant is defined and variant == 'C' %}
+    {{ include('home/prototypes/variant_c.html.twig') }}
+    {{ include('home/prototypes/_switcher.html.twig', {'currentVariant': 'C'}) }}
+{% elseif variant is defined and variant == 'original' %}
+    {{ include('home/prototypes/variant_original.html.twig') }}
+    {{ include('home/prototypes/_switcher.html.twig', {'currentVariant': 'original'}) }}
+{% else %}
 <div class="relative overflow-hidden">
-    <!-- Quiet slate/blue ambient surfaces -->
-    <div class="absolute -top-40 -right-40 w-96 h-96 bg-blue-100/50 rounded-full blur-3xl pointer-events-none" aria-hidden="true"></div>
-    <div class="absolute top-96 -left-40 w-80 h-80 bg-slate-200/50 rounded-full blur-3xl pointer-events-none" aria-hidden="true"></div>
+    <!-- Ambient ambient glow surfaces -->
+    <div class="absolute top-10 right-10 w-96 h-96 bg-indigo-100/50 rounded-full blur-3xl pointer-events-none" aria-hidden="true"></div>
+    <div class="absolute top-96 -left-32 w-80 h-80 bg-rose-100/40 rounded-full blur-3xl pointer-events-none" aria-hidden="true"></div>
 
-    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-20 relative z-10">
-        <!-- Hero: outcome-led headline + illustrative upcoming-renewals preview -->
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-14 relative z-10">
 
-            <!-- Left Column: Value Proposition & CTA -->
-            <div class="lg:col-span-7 flex flex-col items-start">
-                <span class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-100 border border-slate-200 text-xs font-semibold uppercase tracking-wider text-color-ter mb-6">
+        <!-- Split Hero Section: High impact, condensed layout -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-center">
+
+            <!-- Left Column: Copy, Animated 3-Step Flow & Conversion -->
+            <div class="lg:col-span-6 flex flex-col items-start">
+                <span class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-100 border border-slate-200 text-xs font-semibold uppercase tracking-wider text-color-ter mb-5 shadow-2xs">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                     A clearer view of recurring costs
                 </span>
 
-                <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 tracking-tight leading-[1.15]">
-                    Know what you pay. See what renews next.
+                <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 tracking-tight leading-[1.12]">
+                    Know what you pay.<br/>
+                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-color-ter via-slate-800 to-color-qui">
+                        See what renews next.
+                    </span>
                 </h1>
 
-                <p class="mt-6 text-lg sm:text-xl text-slate-600 leading-relaxed max-w-xl">
+                <p class="mt-4 text-base sm:text-lg text-slate-600 leading-relaxed max-w-lg">
                     Keep subscriptions and household bills in one place. See the next charges,
                     understand your totals, and choose whether to get a reminder before renewal.
                     No bank connection needed.
                 </p>
 
+                <!-- Animated 3-Step Workflow Pipeline -->
+                <section id="how-it-works" aria-labelledby="how-it-works-title" class="mt-6 p-4 rounded-2xl bg-white/95 backdrop-blur-md border border-slate-200/90 shadow-sm w-full max-w-lg">
+                    <div class="flex items-center justify-between mb-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                        <span id="how-it-works-title" class="flex items-center gap-1.5 text-color-ter">
+                            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                            How it works in 3 simple steps
+                        </span>
+                        <span class="text-emerald-700 bg-emerald-50 border border-emerald-200/60 px-2 py-0.5 rounded-full text-[10px] font-semibold">
+                            <i class="fa-solid fa-lock text-[9px] mr-1"></i> Private by design
+                        </span>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-2.5 relative">
+                        <!-- Step 1 -->
+                        <div class="group relative flex flex-col items-center text-center p-3 rounded-xl bg-slate-50/80 hover:bg-emerald-50/70 border border-slate-100 hover:border-emerald-200 transition-all duration-200 cursor-default">
+                            <div class="w-10 h-10 rounded-xl bg-emerald-100/90 text-emerald-700 flex items-center justify-center text-base mb-2 shadow-2xs group-hover:scale-110 transition-transform">
+                                <i class="fa-solid fa-pen-to-square"></i>
+                            </div>
+                            <span class="text-xs font-bold text-slate-900 leading-tight">Add what you pay for</span>
+                            <span class="text-[10px] text-slate-500 mt-1 leading-snug">Manual entry</span>
+                        </div>
+
+                        <!-- Step 2 -->
+                        <div class="group relative flex flex-col items-center text-center p-3 rounded-xl bg-slate-50/80 hover:bg-blue-50/70 border border-slate-100 hover:border-blue-200 transition-all duration-200 cursor-default">
+                            <div class="w-10 h-10 rounded-xl bg-blue-100/90 text-blue-700 flex items-center justify-center text-base mb-2 shadow-2xs group-hover:scale-110 transition-transform">
+                                <i class="fa-solid fa-calendar-days"></i>
+                            </div>
+                            <span class="text-xs font-bold text-slate-900 leading-tight">See the dates and totals</span>
+                            <span class="text-[10px] text-slate-500 mt-1 leading-snug">Auto-renewals</span>
+                        </div>
+
+                        <!-- Step 3 -->
+                        <div class="group relative flex flex-col items-center text-center p-3 rounded-xl bg-slate-50/80 hover:bg-rose-50/70 border border-slate-100 hover:border-rose-200 transition-all duration-200 cursor-default">
+                            <div class="w-10 h-10 rounded-xl bg-rose-100/90 text-rose-700 flex items-center justify-center text-base mb-2 shadow-2xs group-hover:scale-110 transition-transform">
+                                <i class="fa-solid fa-bell animate-bell"></i>
+                            </div>
+                            <span class="text-xs font-bold text-slate-900 leading-tight">Decide in time</span>
+                            <span class="text-[10px] text-slate-500 mt-1 leading-snug">Timely reminder</span>
+                        </div>
+                    </div>
+                </section>
+
                 <!-- Primary CTA buttons -->
-                <div class="mt-8 flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full sm:w-auto">
+                <div class="mt-6 flex flex-col sm:flex-row items-stretch sm:items-center gap-3.5 w-full sm:w-auto">
                     {% if app.user %}
-                        <a href="{{ path('app_dashboard') }}" class="btn-cta text-center focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-color-ter">
+                        <a href="{{ path('app_dashboard') }}" class="btn-cta text-center shadow-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-color-ter">
                             Go to your dashboard
                             <i class="fa-solid fa-arrow-right ml-2 text-sm" aria-hidden="true"></i>
                         </a>
                     {% else %}
-                        <a href="{{ path('app_register') }}" class="btn-cta text-center focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-color-ter">
+                        <a href="{{ path('app_register') }}" class="btn-cta text-center shadow-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-color-ter">
                             Create your free account
                             <i class="fa-solid fa-arrow-right ml-2 text-sm" aria-hidden="true"></i>
                         </a>
                     {% endif %}
-                    <a href="#how-it-works" class="btn-secondary text-center focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-color-ter">
+                    <a href="#how-it-works" class="btn-secondary text-center text-sm py-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-color-ter">
                         See how it works
                     </a>
                 </div>
 
                 <!-- Reassurance Micro-copy -->
-                <div class="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs font-medium text-slate-500">
+                <div class="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs font-medium text-slate-500">
                     <div class="flex items-center gap-1.5">
                         <i class="fa-solid fa-circle-check text-emerald-600" aria-hidden="true"></i>
                         <span>No credit card required</span>
@@ -67,90 +124,97 @@
                 </div>
             </div>
 
-            <!-- Right Column: Illustrative upcoming-renewals preview (never a real record) -->
-            <div class="lg:col-span-5">
-                <div class="bg-white rounded-2xl border border-slate-200/90 shadow-xl overflow-hidden" aria-label="Illustrative example of the planned upcoming-renewals view. Not your data.">
-                    <!-- Window Chrome -->
-                    <div class="bg-slate-100/90 px-4 py-3 border-b border-slate-200 flex items-center justify-between gap-3">
-                        <span class="text-xs font-semibold text-slate-700">Upcoming renewals</span>
-                        <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Illustrative example</span>
-                    </div>
+            <!-- Right Column: Visual Graphic Stage with Person Illustration & Floating Cards -->
+            <div class="lg:col-span-6 relative flex items-center justify-center mt-8 lg:mt-0">
 
-                    <!-- Preview Content -->
-                    <div class="p-5 space-y-3">
-                        <div>
-                            <div class="text-xs text-slate-500 font-medium">Next 30 days</div>
-                            <div class="text-2xl font-extrabold text-slate-900 tracking-tight mt-0.5">3 charges</div>
-                        </div>
+                <!-- Ambient glow behind illustration -->
+                <div class="absolute inset-0 bg-gradient-to-tr from-blue-100/50 via-slate-100/30 to-rose-100/50 rounded-3xl blur-2xl transform scale-90 pointer-events-none"></div>
 
-                        <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-100">
-                            <span class="text-sm font-semibold text-slate-800">Music plan</span>
-                            <span class="text-sm text-slate-500">Oct 4 · €12.00</span>
+                <!-- Illustrated Frame: Person at desk reviewing renewals -->
+                <div class="w-full max-w-[460px] bg-white rounded-3xl border border-slate-200/90 shadow-2xl overflow-hidden relative z-10 transition-all duration-300 hover:shadow-3xl group" aria-label="Illustrative example of the planned upcoming-renewals view. Not your data.">
+                    <div class="relative overflow-hidden bg-slate-50">
+                        <img src="{{ asset('images/hero-person-subscriptions.jpg') }}" 
+                             alt="Person sitting in front of computer calmly tracking upcoming subscriptions and bills" 
+                             class="w-full h-auto object-cover transform group-hover:scale-[1.02] transition-transform duration-500"
+                             loading="eager" width="800" height="800">
+                        
+                        <!-- Bottom banner integrated into the illustration frame -->
+                        <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950/85 via-slate-900/40 to-transparent p-4 sm:p-5 flex items-center justify-between text-white">
+                            <div>
+                                <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-400 bg-emerald-500/20 px-2 py-0.5 rounded-full border border-emerald-500/30">
+                                    Total Clarity
+                                </span>
+                                <p class="text-xs sm:text-sm font-semibold text-slate-100 mt-1">
+                                    Know what renews before it charges.
+                                </p>
+                            </div>
+                            <div class="hidden sm:flex items-center gap-1.5 text-xs font-bold text-slate-200 bg-white/10 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/20">
+                                <i class="fa-solid fa-shield text-emerald-400"></i>
+                                <span>No bank access</span>
+                            </div>
                         </div>
-                        <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-100">
-                            <span class="text-sm font-semibold text-slate-800">Home internet</span>
-                            <span class="text-sm text-slate-500">Oct 9 · €35.00</span>
-                        </div>
-                        <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-100">
-                            <span class="text-sm font-semibold text-slate-800">Cloud storage</span>
-                            <span class="text-sm text-slate-500">Oct 21 · €3.00</span>
-                        </div>
-
-                        <p class="pt-1 text-xs text-slate-500">
-                            Example entries and dates — not your data, not a real transaction.
-                            This view shows the planned v1.0 design.
-                        </p>
                     </div>
                 </div>
-                <p class="mt-3 flex items-center gap-2 text-xs text-slate-500">
-                    <span class="inline-block px-2.5 py-1 rounded-full bg-orange-100 text-orange-800 font-bold whitespace-nowrap">Planned for v1.0</span>
-                    <span>Upcoming renewals and optional email reminders</span>
-                </p>
+
+                <!-- Floating Card 1: Urgent Renewal Alert (Top Right) -->
+                <div class="absolute -top-4 -right-1 sm:-right-4 z-20 animate-float bg-white/95 backdrop-blur-md rounded-2xl border border-rose-200 shadow-xl p-3 flex items-center gap-3 w-56 sm:w-64">
+                    <div class="w-9 h-9 rounded-xl bg-red-600 text-white flex items-center justify-center font-bold text-xs shadow-xs flex-shrink-0">
+                        <i class="fa-solid fa-play"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-bold text-slate-900 truncate">Netflix Plan</span>
+                            <span class="text-xs font-bold text-slate-900">€15.49</span>
+                        </div>
+                        <div class="flex items-center gap-1.5 mt-0.5">
+                            <span class="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping"></span>
+                            <span class="text-[10px] font-bold text-rose-600">Renews in 2 days</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Floating Card 2: Spotify / Next charge (Top Left) -->
+                <div class="absolute top-10 -left-2 sm:-left-6 z-20 animate-float-slow bg-white/95 backdrop-blur-md rounded-2xl border border-emerald-200 shadow-lg px-3 py-2 flex items-center gap-2.5">
+                    <div class="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-[10px] font-bold">
+                        <i class="fa-solid fa-music"></i>
+                    </div>
+                    <div class="text-left">
+                        <div class="text-[11px] font-bold text-slate-900">Spotify · $9.99</div>
+                        <div class="text-[9px] text-slate-500">Renews Oct 28</div>
+                    </div>
+                </div>
+
             </div>
         </div>
 
-        <!-- How it works: three-step explanation -->
-        <section id="how-it-works" aria-labelledby="how-it-works-title" class="mt-28">
-            <span class="text-xs font-bold text-color-ter uppercase tracking-wider">How it works</span>
-            <h2 id="how-it-works-title" class="text-3xl font-bold text-slate-900 tracking-tight sm:text-4xl mt-2">
-                From scattered renewals to one useful overview.
-            </h2>
+        <!-- Clarifying preview note -->
+        <p class="mt-4 flex items-center justify-center sm:justify-start gap-2 text-xs text-slate-500">
+            <span class="inline-block px-2.5 py-0.5 rounded-full bg-orange-100 text-orange-800 font-bold whitespace-nowrap">Planned for v1.0</span>
+            <span>Illustrative example — not your data. Upcoming renewals and optional reminders.</span>
+        </p>
 
-            <div class="mt-10 grid grid-cols-1 md:grid-cols-3 gap-6">
-                <!-- Step 1 -->
-                <div class="bg-white p-7 rounded-2xl border border-slate-200/80 shadow-sm">
-                    <div class="text-sm font-extrabold text-color-qui mb-4" aria-hidden="true">01</div>
-                    <h3 class="text-xl font-bold text-slate-900 mb-2">Add what you pay for</h3>
-                    <p class="text-slate-600 text-sm leading-relaxed">
-                        Enter a name, amount, currency and monthly or yearly cycle.
-                        Group it with a category that makes sense to you.
-                    </p>
-                </div>
-
-                <!-- Step 2 -->
-                <div class="bg-white p-7 rounded-2xl border border-slate-200/80 shadow-sm">
-                    <div class="text-sm font-extrabold text-color-qui mb-4" aria-hidden="true">02</div>
-                    <h3 class="text-xl font-bold text-slate-900 mb-2">See the dates and totals</h3>
-                    <p class="text-slate-600 text-sm leading-relaxed">
-                        Review upcoming renewals and compare recurring spend in your main currency.
-                        Enter your own converted amount when currencies differ.
-                    </p>
-                </div>
-
-                <!-- Step 3 -->
-                <div class="bg-white p-7 rounded-2xl border border-slate-200/80 shadow-sm">
-                    <div class="text-sm font-extrabold text-color-qui mb-4" aria-hidden="true">03</div>
-                    <h3 class="text-xl font-bold text-slate-900 mb-2">Decide in time</h3>
-                    <p class="text-slate-600 text-sm leading-relaxed">
-                        Keep the upcoming list in view. Turn on email reminders
-                        if you want an extra nudge before the next charge.
-                    </p>
-                </div>
+        <!-- Condensed Horizontal Value Strip -->
+        <div class="mt-10 pt-6 border-t border-slate-200/80 grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+            <div class="p-2.5">
+                <div class="text-2xl font-black text-slate-900">0%</div>
+                <div class="text-xs font-semibold text-slate-500 mt-0.5">Bank Credential Sharing</div>
             </div>
-        </section>
+            <div class="p-2.5">
+                <div class="text-2xl font-black text-color-qui">100%</div>
+                <div class="text-xs font-semibold text-slate-500 mt-0.5">Manual-First Control</div>
+            </div>
+            <div class="p-2.5">
+                <div class="text-2xl font-black text-color-ter">{{ constant('App\\Entity\\Limits::DEFAULT_SUBSCRIPTIONS_LIMIT') }}</div>
+                <div class="text-xs font-semibold text-slate-500 mt-0.5">Free Subscriptions Included</div>
+            </div>
+            <div class="p-2.5">
+                <div class="text-2xl font-black text-emerald-600">Dual</div>
+                <div class="text-xs font-semibold text-slate-500 mt-0.5">Monthly & Annual Equivs</div>
+            </div>
+        </div>
 
         <!-- Data handling: brief section with honest boundaries -->
-        <section aria-labelledby="data-handling-title" class="mt-28 bg-white rounded-3xl border border-slate-200/80 p-8 sm:p-12 shadow-sm">
+        <section aria-labelledby="data-handling-title" class="mt-20 bg-white rounded-3xl border border-slate-200/80 p-8 sm:p-12 shadow-sm">
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-12 items-start">
                 <div>
                     <span class="text-xs font-bold text-color-ter uppercase tracking-wider">How your data is handled</span>
@@ -187,7 +251,7 @@
         </section>
 
         <!-- Build status: honest current-versus-planned -->
-        <section aria-labelledby="build-status-title" class="mt-28 bg-slate-100/70 rounded-3xl border border-slate-200/80 p-8 sm:p-12">
+        <section aria-labelledby="build-status-title" class="mt-20 bg-slate-100/70 rounded-3xl border border-slate-200/80 p-8 sm:p-12">
             <span class="text-xs font-bold text-color-ter uppercase tracking-wider">Build status</span>
             <h2 id="build-status-title" class="text-3xl font-bold text-slate-900 tracking-tight mt-2">
                 What exists, and what this design proposes.
@@ -214,7 +278,7 @@
         </section>
 
         <!-- Closing CTA -->
-        <section aria-labelledby="closing-title" class="mt-28 text-center">
+        <section aria-labelledby="closing-title" class="mt-20 text-center">
             <h2 id="closing-title" class="text-3xl font-bold text-slate-900 tracking-tight sm:text-4xl">
                 Start with a clearer picture.
             </h2>
@@ -239,4 +303,5 @@
         </section>
     </div>
 </div>
+{% endif %}
 {% endblock %}
