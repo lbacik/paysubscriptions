@@ -7,8 +7,8 @@ namespace App\Tests\Controller;
 use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
+use Symfony\Bundle\FrameworkBundle\Test\MailerAssertionsTrait;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-use Symfony\Component\Mailer\Messenger\SendEmailMessage;
 use Symfony\Component\Mime\Email;
 use Zenstruck\Foundry\Test\ResetDatabase;
 
@@ -21,6 +21,7 @@ use Zenstruck\Foundry\Test\ResetDatabase;
  */
 final class RegistrationFlowTest extends WebTestCase
 {
+    use MailerAssertionsTrait;
     use ResetDatabase;
 
     private KernelBrowser $client;
@@ -32,7 +33,6 @@ final class RegistrationFlowTest extends WebTestCase
 
         $this->client = static::createClient();
         $this->em = static::getContainer()->get(EntityManagerInterface::class);
-        $this->purgeQueuedEmails();
     }
 
     public function testInvalidSubmissionReRendersWithout500AndCreatesNothing(): void
@@ -49,7 +49,7 @@ final class RegistrationFlowTest extends WebTestCase
         self::assertNull(
             $this->em->getRepository(User::class)->findOneBy(['email' => 'not-an-email'])
         );
-        self::assertSame([], $this->queuedEmails());
+        self::assertEmailCount(0);
     }
 
     public function testValidSubmissionCreatesAccountAndQueuesVerificationEmail(): void
@@ -62,16 +62,16 @@ final class RegistrationFlowTest extends WebTestCase
         self::assertNotNull($user);
         self::assertFalse($user->isVerified());
 
-        $emails = $this->queuedEmails();
-        self::assertCount(1, $emails);
-        self::assertSame(['newuser@example.com'], $this->recipientAddresses($emails[0]));
+        self::assertEmailCount(1);
+        $email = self::getMailerMessage(0);
+        \assert($email instanceof Email);
+        self::assertSame(['newuser@example.com'], $this->recipientAddresses($email));
     }
 
     public function testDuplicateEmailReRendersWithout500(): void
     {
         $this->register('dupe@example.com');
         self::assertResponseRedirects('/login');
-        $this->purgeQueuedEmails();
 
         $crawler = $this->client->request('GET', '/register');
         $form = $crawler->selectButton('Register')->form([
@@ -88,7 +88,7 @@ final class RegistrationFlowTest extends WebTestCase
             'already an account',
             strip_tags((string) $this->client->getResponse()->getContent())
         );
-        self::assertSame([], $this->queuedEmails());
+        self::assertEmailCount(0);
     }
 
     private function register(string $email): void
@@ -105,27 +105,6 @@ final class RegistrationFlowTest extends WebTestCase
     }
 
     /**
-     * @return list<Email>
-     */
-    private function queuedEmails(): array
-    {
-        $transport = static::getContainer()->get('messenger.transport.async');
-        $emails = [];
-
-        foreach ($transport->get() as $envelope) {
-            $message = $envelope->getMessage();
-
-            if ($message instanceof SendEmailMessage) {
-                $original = $message->getMessage();
-                \assert($original instanceof Email);
-                $emails[] = $original;
-            }
-        }
-
-        return $emails;
-    }
-
-    /**
      * @return list<string>
      */
     private function recipientAddresses(Email $email): array
@@ -134,10 +113,5 @@ final class RegistrationFlowTest extends WebTestCase
             static fn ($address) => $address->getAddress(),
             $email->getTo()
         );
-    }
-
-    private function purgeQueuedEmails(): void
-    {
-        $this->em->getConnection()->executeStatement('DELETE FROM messenger_messages');
     }
 }

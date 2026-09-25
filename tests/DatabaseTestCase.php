@@ -29,8 +29,9 @@ use Zenstruck\Foundry\Test\ResetDatabase;
  * - messenger `newsletter` transport: overridden to `in-memory://` in
  *   config/packages/messenger.yaml (`when@test`); assert via the
  *   `messenger.transport.newsletter` service's getSent().
- * - reCAPTCHA: replaced per-test with App\Tests\Double\FakeReCaptcha through
- *   the test container.
+ * - reCAPTCHA: the HTTP transport is replaced with
+ *   App\Tests\Double\FakeRecaptchaRequestMethod (config/packages/test/recaptcha.yaml);
+ *   the token `valid-test-token` verifies, any other token fails.
  * - breach-check API (NotCompromisedPassword): the real API is used, so tests
  *   submit high-entropy passwords that cannot appear in the breach corpus.
  */
