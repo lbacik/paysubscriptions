@@ -15,26 +15,10 @@ use App\Tests\DatabaseTestCase;
  * End-to-end coverage for category management and the subscription
  * category assignment, including cross-user rejection at the HTTP layer.
  *
- * Needs a database; skips cleanly where none is reachable.
+ * Needs a database.
  */
 final class ExpenseCategoryControllerTest extends DatabaseTestCase
 {
-    protected function setUp(): void
-    {
-        parent::setUp();
-
-        $this->recreateSchema();
-    }
-
-    protected function tearDown(): void
-    {
-        if ($this->em->getConnection()->isConnected()) {
-            $this->dropSchema();
-        }
-
-        parent::tearDown();
-    }
-
     private function createCategory(User $owner, string $name = 'Food', string $color = '#ff0000'): ExpenseCategory
     {
         $category = (new ExpenseCategory())
