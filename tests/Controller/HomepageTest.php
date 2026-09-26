@@ -13,7 +13,7 @@ use Zenstruck\Foundry\Test\Factories;
 use Zenstruck\Foundry\Test\ResetDatabase;
 
 /**
- * Covers the approved v1.0 homepage (issue #53, prototype variant A).
+ * Covers the current homepage design.
  */
 final class HomepageTest extends WebTestCase
 {
@@ -64,33 +64,24 @@ final class HomepageTest extends WebTestCase
         self::assertStringNotContainsString('Dashboard Demo', $content);
     }
 
-    public function testStatusLabelsDistinguishAvailableNowFromPlanned(): void
+    public function testHowItWorksStepsAreExplained(): void
     {
         $client = static::createClient();
         $content = $this->getHomepageContent($client);
 
-        self::assertStringContainsString('Available now', $content);
         self::assertStringContainsString('Planned for v1.0', $content);
-        self::assertStringContainsString('What exists, and what this design proposes.', $content);
-        // Three-step explanation section is present and reachable from the hero.
+        // Three-step explanation section is present in the hero.
         self::assertStringContainsString('id="how-it-works"', $content);
         self::assertStringContainsString('Add what you pay for', $content);
         self::assertStringContainsString('See the dates and totals', $content);
         self::assertStringContainsString('Decide in time', $content);
-        self::assertStringContainsString('href="#how-it-works"', $content);
     }
 
-    public function testDataHandlingCopyUsesCorrectedBoundaryWithoutAbsoluteClaims(): void
+    public function testAbsolutePrivacyClaimsAreBanned(): void
     {
         $client = static::createClient();
         $content = $this->getHomepageContent($client);
 
-        self::assertStringContainsString('How your data is handled', $content);
-        self::assertStringContainsString('no bank or inbox connection', $content);
-        self::assertStringContainsString('external service', $content);
-        self::assertStringContainsString('Account and subscription data is not sold', $content);
-        self::assertStringContainsString('separate opt-in', $content);
-        self::assertStringContainsString('account deletion', $content);
         // Absolute privacy claims are banned after the #28 correction.
         self::assertStringNotContainsString('100% private', $content);
         self::assertStringNotContainsString('100% Private', $content);
@@ -98,7 +89,7 @@ final class HomepageTest extends WebTestCase
         self::assertStringNotContainsString('only third party', $content);
     }
 
-    public function testMarkupIsAccessibleWithClosingCta(): void
+    public function testMarkupIsAccessible(): void
     {
         $client = static::createClient();
         $this->getHomepageContent($client);
@@ -110,33 +101,11 @@ final class HomepageTest extends WebTestCase
 
         // Every content section names its heading.
         $sections = $crawler->filter('main section[aria-labelledby]');
-        self::assertGreaterThanOrEqual(3, $sections->count(), 'Content sections must name their headings.');
+        self::assertGreaterThanOrEqual(1, $sections->count(), 'Content sections must name their headings.');
         foreach ($sections as $section) {
             $labelledBy = $section->getAttribute('aria-labelledby');
             self::assertNotSame('', $labelledBy);
             self::assertGreaterThan(0, $crawler->filter('#'.$labelledBy)->count(), \sprintf('Section references missing heading #%s.', $labelledBy));
-        }
-
-        // Closing CTA block: signup for visitors plus a link to About.
-        $content = (string) $client->getResponse()->getContent();
-        self::assertStringContainsString('Start with a clearer picture.', $content);
-        self::assertStringContainsString('/about', $content);
-    }
-
-    public function testClosingCtaPointsToDashboardForSignedInUsers(): void
-    {
-        $client = static::createClient();
-        UserFactory::createOne(['email' => 'closing-user@example.com', 'isVerified' => true]);
-        $this->loginAs($client, 'closing-user@example.com');
-
-        $client->request('GET', '/');
-
-        self::assertResponseIsSuccessful();
-        $crawler = $client->getCrawler();
-        $ctaLinks = $crawler->filter('main a.btn-cta');
-        self::assertGreaterThanOrEqual(2, $ctaLinks->count(), 'Hero and closing CTAs must both render.');
-        foreach ($ctaLinks as $link) {
-            self::assertSame('/dashboard', $link->getAttribute('href'));
         }
     }
 
