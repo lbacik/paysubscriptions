@@ -1,41 +1,283 @@
 {% extends 'base.html.twig' %}
 
-{% block body %}
-    <div>
-        <twig:ContentCenter>
-            <div class="flex my-20">
-                <div class="doc-menu hidden lg:flex flex-col w-52 pt-5 space-y-3 border-r border-color-sec">
-                    {% for section, chapters in documentation.menuItems %}
-                        <div
-                                data-controller="doc-menu-item"
-                        >
-                            <div
-                                    data-action="click->doc-menu-item#toggle"
-                            >
-                                <a href="{{ path('app_docs', {section: section}) }}">
-                                    <i
-                                            data-doc-menu-item-target="arrow"
-                                            class="fa-solid fa-chevron-right fa-xs transition duration-1000"
-                                    ></i>
-                                    {{ section }}
-                                </a>
-                            </div>
-                            <div
-                                    class="doc-chapters {% if show != section %} hidden {% endif %} flex flex-col space-y-2 mt-2 text-sm"
-                                    data-doc-menu-item-target="chapters"
-                            >
-                                {% for chapter in chapters %}
-                                    <div class="ml-8">{{ chapter }}</div>
-                                {% endfor %}
-                            </div>
-                        </div>
+{% block title %}{{ show }} — PaySubscriptions{% endblock %}
 
-                    {% endfor %}
+{% block metaheaders %}
+    {% if show == 'About' %}
+        <meta name="description" content="Learn how PaySubscriptions helps you track personal and household subscriptions, what is available today, and where the project is heading.">
+    {% endif %}
+{% endblock %}
+
+{% block body %}
+{% if show == 'About' %}
+{# Story-led About page (issue #54, selected prototype variant A at 0eaf67a). #}
+{# Pre-launch framing: the #34 release gates have not passed, so the Now #}
+{# roadmap column is labelled as a v1.0 goal, never as current behavior. #}
+{# At launch, flip the Now column to verified v1.0 outcomes. #}
+<div class="relative overflow-hidden py-12 md:py-20">
+    <div class="absolute -top-40 right-1/4 w-[500px] h-[500px] bg-blue-100/50 rounded-full blur-3xl pointer-events-none"></div>
+
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+
+        <!-- Story hero -->
+        <div class="text-center max-w-2xl mx-auto mb-12">
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-700 mb-4">
+                <i class="fa-solid fa-circle-info text-color-ter"></i>
+                About PaySubscriptions
+            </span>
+            <h1 class="text-4xl sm:text-5xl font-extrabold text-slate-900 tracking-tight">
+                A clearer view of the costs that come back.
+            </h1>
+            <p class="mt-4 text-lg text-slate-600">
+                PaySubscriptions is a free, manual-first tracker for one person keeping on top of
+                their own subscriptions and household recurring costs. You enter what you pay —
+                with no bank connection and no inbox scan — so you can see what renews next and act in time.
+            </p>
+        </div>
+
+        <!-- Trust badges -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-12">
+            <div class="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
+                    <i class="fa-solid fa-lock"></i>
                 </div>
-                <div class="ml-5 md:ml-20 prose font-thin">
-                    {{ documentation.content(show)|markdown_to_html }}
+                <div>
+                    <div class="text-xs font-bold text-slate-900">Zero Bank Access</div>
+                    <div class="text-xs text-slate-500">Your bank credentials stay yours</div>
                 </div>
             </div>
-        </twig:ContentCenter>
+
+            <div class="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-lg bg-blue-100 text-color-ter flex items-center justify-center shrink-0">
+                    <i class="fa-solid fa-calculator"></i>
+                </div>
+                <div>
+                    <div class="text-xs font-bold text-slate-900">Calculated Totals</div>
+                    <div class="text-xs text-slate-500">Monthly &amp; yearly equivalents</div>
+                </div>
+            </div>
+
+            <div class="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center shrink-0">
+                    <i class="fa-solid fa-user-shield"></i>
+                </div>
+                <div>
+                    <div class="text-xs font-bold text-slate-900">Private &amp; Free</div>
+                    <div class="text-xs text-slate-500">No ads, no data selling</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Product boundary: free, manual-first, one owner -->
+        <section aria-labelledby="boundary-title" class="bg-white rounded-3xl border border-slate-200/90 shadow-xl p-8 sm:p-12 mb-8">
+            <span class="text-xs font-bold text-color-ter uppercase tracking-wider">The boundary</span>
+            <h2 id="boundary-title" class="text-3xl font-bold text-slate-900 tracking-tight mt-2">
+                Free, manual-first, and yours alone.
+            </h2>
+            <p class="mt-4 text-slate-600 leading-relaxed">
+                PaySubscriptions is a free subscription tracker for individuals and households.
+                Each account belongs to exactly one person: you can track subscriptions used by the
+                people you live with, but there is no shared account, no invitation, and no access
+                for other household members. There are no paid plans and nothing to upgrade to —
+                the <a href="{{ path('app_pricing') }}" class="text-color-ter font-semibold underline hover:text-slate-900">free plan and its limit</a>
+                are the whole offer.
+            </p>
+            <div class="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-slate-50 p-6 rounded-2xl border border-slate-200/80">
+                    <span class="inline-block px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold mb-3">Available now</span>
+                    <h3 class="text-lg font-bold text-slate-900">A manual subscription tracker</h3>
+                    <p class="text-slate-600 text-sm leading-relaxed mt-2">
+                        Track monthly or yearly amounts and compare monthly and annual equivalents
+                        in a single-owner account. Everything in your account is there because you typed it in.
+                    </p>
+                </div>
+                <div class="bg-slate-50 p-6 rounded-2xl border border-slate-200/80">
+                    <span class="inline-block px-2.5 py-1 rounded-full bg-orange-100 text-orange-800 text-xs font-bold mb-3">Planned for v1.0</span>
+                    <h3 class="text-lg font-bold text-slate-900">Renewal clarity and data control</h3>
+                    <p class="text-slate-600 text-sm leading-relaxed mt-2">
+                        Upcoming dates, optional reminders, categories, a published data-handling policy
+                        and self-service account deletion are release goals, pending implementation and verification.
+                    </p>
+                </div>
+            </div>
+            <p class="mt-6 text-slate-600 text-sm leading-relaxed">
+                PaySubscriptions does not connect to your bank, scan your inbox, or automatically discover
+                subscriptions — and it cannot cancel anything with a provider for you.
+                Removing an entry from your list removes it from your overview only.
+            </p>
+        </section>
+
+        <!-- Data handling: specifics matching the published privacy policy -->
+        <section aria-labelledby="data-handling-title" class="bg-white rounded-3xl border border-slate-200/90 shadow-xl p-8 sm:p-12 mb-8">
+            <span class="text-xs font-bold text-color-ter uppercase tracking-wider">Data handling</span>
+            <h2 id="data-handling-title" class="text-3xl font-bold text-slate-900 tracking-tight mt-2">
+                Trust needs specifics.
+            </h2>
+            <p class="mt-4 text-slate-600 leading-relaxed">
+                The short version is below. The full account lives in the
+                <a href="{{ path('app_privacy') }}" class="text-color-ter font-semibold underline hover:text-slate-900">published privacy policy</a>,
+                which names every external service and the data each one receives.
+            </p>
+            <div class="mt-8 space-y-6">
+                <div class="border-b border-slate-100 pb-6">
+                    <h3 class="text-lg font-bold text-slate-900">Manual entry, no integrations</h3>
+                    <p class="text-slate-600 text-sm leading-relaxed mt-2">
+                        The product never ingests bank transactions, messages, or provider accounts.
+                        Your account holds your email address, your password stored as a one-way hash,
+                        and the settings you choose; your subscriptions hold exactly what you enter yourself.
+                    </p>
+                </div>
+                <div class="border-b border-slate-100 pb-6">
+                    <h3 class="text-lg font-bold text-slate-900">External services, each named</h3>
+                    <p class="text-slate-600 text-sm leading-relaxed mt-2">
+                        Account and subscription data is not sold. Running the service involves a small number
+                        of external services — including hosted Umami page-view analytics alongside interface
+                        fonts, icon delivery, contact-form spam protection, and mail delivery — and each receives
+                        only the data it needs to do its job. The product-updates newsletter is a separate opt-in
+                        to the shared gprodb.com list with its own unsubscribe path. See the
+                        <a href="{{ path('app_privacy') }}" class="text-color-ter font-semibold underline hover:text-slate-900">privacy policy</a>
+                        for the complete list.
+                    </p>
+                </div>
+                <div class="border-b border-slate-100 pb-6">
+                    <h3 class="text-lg font-bold text-slate-900">Storage stated plainly</h3>
+                    <p class="text-slate-600 text-sm leading-relaxed mt-2">
+                        There is no application-level field encryption at rest: names, amounts, notes, and your
+                        email address are stored as plain database columns, protected by access control on the
+                        account and the servers. Only your password gets stronger treatment — it is stored as a
+                        one-way hash and cannot be read back.
+                    </p>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold text-slate-900">Deletion and export you control</h3>
+                    <p class="text-slate-600 text-sm leading-relaxed mt-2">
+                        You can delete your account yourself from the
+                        <a href="{{ path('app_account_delete') }}" class="text-color-ter font-semibold underline hover:text-slate-900">account deletion page</a>;
+                        deletion takes effect immediately and cannot be undone, and it does not unsubscribe the
+                        separate newsletter list. A copy of your data is available as a manual email request —
+                        there is no self-service download: send the
+                        <a href="{{ path('app_contact') }}" class="text-color-ter font-semibold underline hover:text-slate-900">contact form</a>
+                        from your account email address with the subject “Data export request”.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Public roadmap: vertical Now / Next / Later -->
+        <section aria-labelledby="roadmap-title" class="bg-white rounded-3xl border border-slate-200/90 shadow-xl p-8 sm:p-12 mb-8">
+            <span class="text-xs font-bold text-color-ter uppercase tracking-wider">Public roadmap</span>
+            <h2 id="roadmap-title" class="text-3xl font-bold text-slate-900 tracking-tight mt-2">
+                Progress by outcome.
+            </h2>
+            <p class="mt-4 text-slate-600 leading-relaxed">
+                Where the project is heading, without dates or feature promises.
+                This sequence is proposed for publication with v1.0 — until the release gates pass,
+                treat Now as the v1.0 goal, not as a description of the current product.
+            </p>
+            <div class="mt-8 border-l-[3px] border-orange-200 pl-6 space-y-8">
+                <div>
+                    <span class="inline-block px-2.5 py-1 rounded-full bg-orange-100 text-orange-800 text-xs font-bold mb-3">Now · v1.0 goal</span>
+                    <h3 class="text-lg font-bold text-slate-900">Know what is coming due</h3>
+                    <p class="text-slate-600 text-sm leading-relaxed mt-2">
+                        Manual organization, renewal dates, clear monthly and yearly totals, optional reminders,
+                        and control over account data. This describes the v1.0 release goal —
+                        it is not all available today.
+                    </p>
+                </div>
+                <div>
+                    <span class="inline-block px-2.5 py-1 rounded-full bg-blue-100 text-blue-800 text-xs font-bold mb-3">Next · explore</span>
+                    <h3 class="text-lg font-bold text-slate-900">Make records easier to keep current</h3>
+                    <p class="text-slate-600 text-sm leading-relaxed mt-2">
+                        Possible import and self-service export, subject to feedback.
+                        An area to explore, not a commitment.
+                    </p>
+                </div>
+                <div>
+                    <span class="inline-block px-2.5 py-1 rounded-full bg-blue-100 text-blue-800 text-xs font-bold mb-3">Later · explore</span>
+                    <h3 class="text-lg font-bold text-slate-900">Make longer-range planning easier</h3>
+                    <p class="text-slate-600 text-sm leading-relaxed mt-2">
+                        Possible automatic currency conversion and change history.
+                        An area to explore, not a commitment.
+                    </p>
+                </div>
+            </div>
+            <p class="mt-8 text-sm text-slate-500 leading-relaxed">
+                Next and Later are candidate directions with no dates and no guaranteed order.
+                Bank, inbox, and provider integrations remain outside v1.0.
+            </p>
+        </section>
+
+        <!-- Closing -->
+        <section aria-labelledby="closing-title" class="text-center">
+            <h2 id="closing-title" class="text-3xl font-bold text-slate-900 tracking-tight sm:text-4xl">
+                A focused, free tracker for recurring costs.
+            </h2>
+            <p class="mt-4 text-lg text-slate-600 max-w-xl mx-auto">
+                What would make it easier to keep your subscriptions under control?
+            </p>
+            <div class="mt-8 flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-4">
+                {% if app.user %}
+                    <a href="{{ path('app_dashboard') }}" class="btn-cta text-center focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-color-ter">
+                        Go to your dashboard
+                    </a>
+                {% else %}
+                    <a href="{{ path('app_register') }}" class="btn-cta text-center focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-color-ter">
+                        Create your free account
+                    </a>
+                {% endif %}
+                <a href="{{ path('app_contact') }}" class="btn-secondary text-center focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-color-ter">
+                    Contact Maintainer
+                </a>
+            </div>
+        </section>
+
     </div>
+</div>
+{% else %}
+<div class="relative overflow-hidden py-12 md:py-20">
+    <div class="absolute -top-40 right-1/4 w-[500px] h-[500px] bg-blue-100/50 rounded-full blur-3xl pointer-events-none"></div>
+
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+
+        <div class="text-center max-w-2xl mx-auto mb-12">
+            <h1 class="text-4xl sm:text-5xl font-extrabold text-slate-900 tracking-tight">
+                {{ show }}
+            </h1>
+        </div>
+
+        <div class="bg-white rounded-3xl border border-slate-200/90 shadow-xl p-8 sm:p-14">
+            {% if documentation.menuItems|length > 1 %}
+                <div class="flex flex-wrap gap-2 mb-8 pb-6 border-b border-slate-100">
+                    {% for section, chapters in documentation.menuItems %}
+                        <a href="{{ path('app_docs', {section: section}) }}"
+                           class="px-4 py-2 rounded-xl text-sm font-semibold transition-colors {% if show == section %} bg-color-qua text-white {% else %} bg-slate-100 text-slate-600 hover:bg-slate-200 {% endif %}">
+                            {{ section }}
+                        </a>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <article class="prose prose-slate lg:prose-lg max-w-none
+                            prose-h1:hidden
+                            prose-h2:text-2xl prose-h2:font-bold prose-h2:text-slate-900 prose-h2:mt-10 prose-h2:mb-4 prose-h2:border-b prose-h2:border-slate-100 prose-h2:pb-2
+                            prose-p:text-slate-600 prose-p:leading-relaxed
+                            prose-li:text-slate-600
+                            prose-a:text-color-ter prose-a:font-semibold prose-a:underline hover:prose-a:text-slate-900">
+                {{ documentation.content(show)|markdown_to_html }}
+            </article>
+
+            <!-- Bottom Support Box -->
+            <div class="mt-12 pt-8 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-50 rounded-2xl p-6">
+                <div>
+                    <h3 class="text-base font-bold text-slate-900">Have suggestions or feedback?</h3>
+                    <p class="text-sm text-slate-500 mt-0.5">We are actively refining the product to make subscription tracking effortless.</p>
+                </div>
+                <a href="{{ path('app_contact') }}" class="btn-primary text-sm whitespace-nowrap">
+                    Contact Maintainer
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
 {% endblock %}

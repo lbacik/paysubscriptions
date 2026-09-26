@@ -2,9 +2,16 @@
 
 {% set query = app.request.query.all %}
 
+{# The active category filter travels with every sort link so sorting never
+   drops the filter; a null category is left out of the URL entirely. #}
+{% set params = query|merge({sort: field, order: this.nextOrder(this.order)}) %}
+{% if this.categoryId %}
+    {% set params = params|merge({category: this.categoryId}) %}
+{% endif %}
+
 <a
         {{ attributes.defaults({class: "flex justify-between"}) }}
-        href="{{ path('app_dashboard', query|merge({sort: field, order: this.nextOrder(this.order)})) }}"
+        href="{{ path('app_dashboard', params) }}"
 >
     {% block content %}{% endblock %}
     <twig:SortButtons :order="this.sort == field ? this.order : null" class="ml-2" />

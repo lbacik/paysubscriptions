@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json.schemastore.org/package.json",
+  "comment": "WCAG 2.1 AA axe scan for issue #52. Single source of truth for scanned routes/states; guarded by tests/AccessibilityScenariosTest.php. Pending entries have no path yet because their surfaces are built by other v1.0 issues - whoever implements one flips it to covered here (set path, remove pending) instead of touching the scanner code.",
+  "version": 1,
+  "wcagTags": ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"],
+  "viewports": {
+    "desktop": { "width": 1280, "height": 800 },
+    "narrow": { "width": 390, "height": 844 }
+  },
+  "login": {
+    "path": "/login"
+  },
+  "scenarios": [
+    { "id": "home", "path": "/", "auth": false, "viewports": ["desktop", "narrow"] },
+    { "id": "about", "path": "/about", "auth": false, "viewports": ["desktop"] },
+    { "id": "pricing", "path": "/pricing", "auth": false, "viewports": ["desktop"] },
+    { "id": "contact", "path": "/contact", "auth": false, "viewports": ["desktop"] },
+    { "id": "register", "path": "/register", "auth": false, "viewports": ["desktop"] },
+    { "id": "login", "path": "/login", "auth": false, "viewports": ["desktop", "narrow"] },
+    { "id": "reset-request", "path": "/reset-password", "auth": false, "viewports": ["desktop"] },
+    { "id": "reset-check-email", "path": "/reset-password/check-email", "auth": false, "viewports": ["desktop"] },
+    { "id": "dashboard", "path": "/dashboard", "auth": true, "viewports": ["desktop", "narrow"] },
+    { "id": "dashboard-monthly-chart", "path": "/dashboard?chartType=monthly", "auth": true, "viewports": ["desktop"] },
+    { "id": "subscription-new", "path": "/subscription/new", "auth": true, "viewports": ["desktop"] },
+    { "id": "subscription-edit", "path": "/subscription/{id}/edit", "auth": true, "viewports": ["desktop"], "dynamic": "first-owned-subscription" },
+    { "id": "subscription-delete", "path": "/subscription/{id}", "auth": true, "viewports": ["desktop"], "dynamic": "first-owned-subscription" },
+    { "id": "privacy", "path": "/privacy", "auth": false, "viewports": ["desktop"] },
+    { "id": "categories", "path": null, "auth": true, "viewports": ["desktop"], "pending": true, "issue": "#39", "note": "User-defined expense categories are not implemented yet." },
+    { "id": "settings", "path": null, "auth": true, "viewports": ["desktop"], "pending": true, "issue": "#44", "note": "Timezone/reminder preferences page is not implemented yet." },
+    { "id": "account-deletion", "path": null, "auth": true, "viewports": ["desktop"], "pending": true, "issue": "#46", "note": "Self-service account deletion is not implemented yet." }
+  ]
+}

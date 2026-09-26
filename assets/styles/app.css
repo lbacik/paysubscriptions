@@ -12,75 +12,77 @@
 @source inline("text-red-700");
 
 @theme {
-    --color-color-pri: #f7f7ff;
-    --color-color-sec: #bdd5ea;
+    --color-color-pri: #f8fafc;
+    --color-color-sec: #e2e8f0;
     --color-color-ter: #577399;
-    --color-color-qua: #495867;
+    --color-color-qua: #1e293b;
     --color-color-qui: #fe5f55;
 
+    --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     --font-handwriting: 'Patrick Hand', cursive;
     --font-handwriting2: 'Indie Flower', cursive;
-    --font-sans: Roboto, sans-serif;
     --font-serif: Merriweather, serif;
 
-    --animate-fade-in: fadeIn .5s ease-out;
+    --animate-fade-in: fadeIn .4s ease-out;
 }
 
 @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 body {
-    @apply bg-color-pri;
+    @apply bg-color-pri text-color-qua font-sans;
 
     nav {
-        @apply bg-color-pri;
+        @apply bg-color-pri/95 backdrop-blur-md sticky top-0 z-40 border-b border-slate-200/80;
 
         #header-logo {
-            @apply text-color-ter;
+            @apply text-color-qua font-bold hover:text-color-ter transition-colors;
         }
 
         #navbar-main {
-            @apply bg-color-sec md:bg-color-pri;
-
             li.a {
                 @apply block py-2 px-3 md:p-0;
             }
 
             .active-color {
-                @apply text-white bg-blue-700 md:bg-transparent md:text-black font-semibold;
+                @apply text-color-ter md:text-color-qua font-bold border-b-2 border-color-qui md:pb-1;
             }
 
             .inactive-color {
-                @apply text-color-ter hover:bg-gray-100 md:hover:bg-transparent md:hover:text-blue-700 font-semibold;
+                @apply text-slate-600 hover:text-color-qua font-medium transition-colors md:hover:border-b-2 md:hover:border-slate-300 md:pb-1;
             }
         }
 
         .mobile-menu-item {
-            @apply font-semibold pt-8 text-center text-2xl;
+            @apply font-semibold py-4 text-center text-lg border-b border-slate-100;
         }
 
         .mobile-active {
-            @apply bg-color-qui text-color-pri;
+            @apply bg-color-qui text-slate-900;
         }
 
         .mobile-inactive {
-            @apply bg-color-qua text-color-pri;
+            @apply bg-white text-slate-700 hover:bg-slate-50;
         }
     }
 }
 
 .btn-primary {
-    @apply bg-color-qua text-color-pri font-semibold hover:bg-color-ter hover:border hover:border-color-qui transition-all duration-500;
+    @apply inline-flex items-center justify-center bg-color-ter text-white font-semibold rounded-full px-5 py-2.5 shadow-sm shadow-slate-400/20 hover:bg-[#465f80] hover:shadow transition-all duration-200 active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900;
 }
 
 .btn-secondary {
-    @apply bg-color-pri border-none group-hover:bg-color-qui hover:font-bold hover:text-color-pri;
+    @apply inline-flex items-center justify-center bg-white text-slate-700 font-semibold rounded-full px-5 py-2.5 border border-slate-300 shadow-xs hover:bg-slate-50 hover:text-slate-900 hover:border-slate-400 transition-all duration-200 active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900;
+}
+
+.btn-cta {
+    @apply inline-flex items-center justify-center bg-[#d63f36] text-white font-bold rounded-full px-7 py-3.5 shadow-md shadow-red-200 hover:bg-red-600 hover:shadow-lg hover:shadow-red-200 transition-all duration-200 transform hover:-translate-y-0.5 active:translate-y-0 text-base md:text-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900;
 }
 
 .btn-delete {
-    @apply bg-red-500 text-white font-semibold hover:bg-red-700 transition-all duration-500;
+    @apply inline-flex items-center justify-center bg-rose-600 text-white font-semibold hover:bg-rose-700 rounded-full px-5 py-2.5 shadow-sm shadow-rose-500/20 transition-all duration-200 active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900;
 }
 
 .form {
@@ -97,7 +99,7 @@ body {
         @apply text-sm text-color-ter;
     }
     input, textarea {
-        @apply w-full px-3 py-2 rounded-lg border border-color-sec focus:outline-none;
+        @apply w-full px-3 py-2 rounded-lg border border-color-sec focus:outline-none focus:ring-2 focus:ring-color-ter/40 focus:border-color-ter;
     }
 
     #subscription > div {
@@ -109,23 +111,7 @@ body {
     }
 }
 
-table#subscriptions-table {
-    th,td {
-        @apply px-4 py-2;
-    }
-}
 
-.calculated {
-    @apply font-thin text-gray-300;
-}
-
-.chart-switch-button {
-    @apply border border-color-sec rounded-xl px-4 min-w-44 flex justify-center items-center;
-
-    .chart-switch-link {
-        @apply text-sm;
-    }
-}
 
 h1 {
     @apply text-2xl font-thin text-color-ter;

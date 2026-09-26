@@ -3,7 +3,7 @@
 {% block body %}
 
 <twig:ContentCenter width="w-full md:w-1/3 px-10 my-20">
-    <div class="form">
+    <div class="form" data-controller="timezone">
         {% for flash_error in app.flashes('verify_email_error') %}
             <div class="text-red-600" role="alert">{{ flash_error }}</div>
         {% endfor %}
@@ -12,7 +12,11 @@
 
         {{ form_start(registrationForm) }}
 
+        {{ form_widget(registrationForm.timezone, {'attr': {'data-timezone-target': 'field'}}) }}
+
         {{ form_row(registrationForm.email) }}
+
+        {{ form_row(registrationForm.mainCurrency) }}
 
         {{ form_row(registrationForm.plainPassword, {
             label: 'Password',

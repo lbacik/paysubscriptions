@@ -9,6 +9,10 @@ export default class extends Controller {
     static targets = ['menu'];
 
     toggle() {
-        this.menuTarget.classList.toggle('hidden');
+        const isHidden = this.menuTarget.classList.toggle('hidden');
+        const button = this.element.querySelector('[aria-expanded]');
+        if (button) {
+            button.setAttribute('aria-expanded', String(!isHidden));
+        }
     }
 }

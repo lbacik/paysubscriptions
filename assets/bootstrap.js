@@ -6,6 +6,9 @@ const app = startStimulusApp();
 import ChartClickController from './controllers/chart_click_controller.js';
 app.register('chart-click', ChartClickController);
 
+import ChartLegendController from './controllers/chart_legend_controller.js';
+app.register('chart-legend', ChartLegendController);
+
 import SelectMonthController from './controllers/select_month_controller.js';
 app.register('select-month', SelectMonthController);
 
@@ -29,3 +32,6 @@ app.register('subscription-table-modal', SubscriptionTableModalController);
 
 import CsrfProtectionController from './controllers/csrf_protection_controller.js';
 app.register('csrf-protection', CsrfProtectionController);
+
+import TimezoneController from './controllers/timezone_controller.js';
+app.register('timezone', TimezoneController);

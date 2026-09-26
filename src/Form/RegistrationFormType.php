@@ -3,8 +3,11 @@
 namespace App\Form;
 
 use App\Entity\User;
+use App\Service\CurrencyService;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
+use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
+use Symfony\Component\Form\Extension\Core\Type\HiddenType;
 use Symfony\Component\Form\Extension\Core\Type\PasswordType;
 use Symfony\Component\Form\Extension\Core\Type\RepeatedType;
 use Symfony\Component\Form\FormBuilderInterface;
@@ -18,10 +21,30 @@ use Symfony\Component\Validator\Constraints\PasswordStrengthValidator;
 
 class RegistrationFormType extends AbstractType
 {
+    public function __construct(
+        private readonly CurrencyService $currencies,
+    ) {
+    }
+
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
             ->add('email')
+            ->add('timezone', HiddenType::class, [
+                // Not mapped directly: the browser-supplied zone may be missing
+                // or invalid, in which case UTC is stored explicitly instead.
+                'mapped' => false,
+                'required' => false,
+            ])
+            ->add('mainCurrency', ChoiceType::class, [
+                'choices' => $this->currencies->getChoices(),
+                'label' => 'Main currency',
+                'help' => 'Totals are reported in this currency. You can change it later in your profile.',
+                'data' => 'USD',
+                'constraints' => [
+                    new NotBlank(message: 'Please select your main currency.'),
+                ],
+            ])
             ->add('agreeTerms', CheckboxType::class, [
                 'mapped' => false,
                 'constraints' => [
@@ -53,7 +76,11 @@ class RegistrationFormType extends AbstractType
                         'max' => 4096,
                     ]),
                     new PasswordStrength(),
-                    new NotCompromisedPassword(),
+                    // skipOnError: an outage of the haveibeenpwned API must
+                    // never turn a registration into an HTTP 500. When the
+                    // API is unreachable the password is accepted without the
+                    // breach check rather than failing the whole submission.
+                    new NotCompromisedPassword(skipOnError: true),
                 ],
             ])
         ;

@@ -36,7 +36,11 @@ class ChangePasswordFormType extends AbstractType
                             'max' => 4096,
                         ]),
                         new PasswordStrength(),
-                        new NotCompromisedPassword(),
+                        // skipOnError: an outage of the haveibeenpwned API must
+                        // never turn a password reset into an HTTP 500. When the
+                        // API is unreachable the password is accepted without the
+                        // breach check rather than failing the whole submission.
+                        new NotCompromisedPassword(skipOnError: true),
                     ],
                     'label' => 'New password',
                 ],

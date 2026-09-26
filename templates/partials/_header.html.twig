@@ -2,32 +2,27 @@
      data-controller="mobile-menu"
 >
     <div class="max-w-screen-xl flex flex-wrap items-center justify-between mx-auto p-4">
-        <div>
-            <a id="header-logo" href="{{ path('app_home') }}" class="flex items-center space-x-3 rtl:space-x-reverse">
-                <img src="{{ asset('images/paysubs-v3.png') }}" class="h-12" alt="PaySubscriptions Logo"/>
-                <span
-                        class="self-center text-2xl font-extralight tracking-wide whitespace-nowrap"
-                >{{ "service.name"|trans }}</span>
+        <div class="flex items-center space-x-3">
+            <a id="header-logo" href="{{ path('app_home') }}" class="flex items-center space-x-2.5">
+                <img src="{{ asset('images/paysubs-v3.png') }}" height="36" width="36" style="height: 36px; width: auto;" class="h-9 w-auto" alt="PaySubscriptions Logo"/>
+                <span class="self-center text-xl font-bold tracking-tight text-slate-900">{{ "service.name"|trans }}</span>
             </a>
-            <div class="flex justify-end -mt-2 font-mono text-color-ter font-thin">
-                <span class="px-4 rounded-xl text-xs">version {{ appVersion }}</span>
-            </div>
         </div>
 
         <div class="flex items-center md:order-2 space-x-3 md:space-x-0 rtl:space-x-reverse">
 
-            <div class="hidden lg:flex">
+            <div class="hidden lg:flex items-center space-x-2">
                 {% if is_granted('IS_AUTHENTICATED_FULLY') %}
                     {{ include('partials/_user_profile_menu.html.twig') }}
                 {% else %}
-                    <twig:Button class="mr-4" href="{{ path('app_login') }}">{{ 'user.login'|trans }}</twig:Button>
-                    <twig:Button href="{{ path('app_register') }}">{{ 'user.register'|trans }}</twig:Button>
+                    <a href="{{ path('app_login') }}" class="px-4 py-2 text-sm font-semibold text-slate-700 hover:text-slate-900 rounded-xl hover:bg-slate-100 transition-colors">{{ 'user.login'|trans }}</a>
+                    <a href="{{ path('app_register') }}" class="px-4 py-2 text-sm font-semibold text-white bg-slate-900 hover:bg-slate-800 rounded-xl shadow-sm transition-all">{{ 'user.register'|trans }}</a>
                 {% endif %}
             </div>
 
             <button data-collapse-toggle="navbar-main" type="button"
                     class="inline-flex items-center p-2 w-10 h-10 justify-center text-sm text-gray-500 rounded-lg lg:hidden hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-200"
-                    aria-controls="navbar-user"
+                    aria-controls="navbar-main"
                     aria-expanded="false"
                     data-action="mobile-menu#toggle"
             >
@@ -53,7 +48,7 @@
 
     <div
             class="absolute left-0 right-0 z-40 flex flex-col hidden"
-            data-target="mobile-menu.menu"
+            data-mobile-menu-target="menu"
     >
         <twig:MobileMenuElement route="app_home">{{ 'main_menu.home'|trans }}</twig:MobileMenuElement>
         <twig:MobileMenuElement route="app_docs">{{ 'main_menu.docs'|trans }}</twig:MobileMenuElement>
@@ -65,7 +60,7 @@
             <twig:MobileMenuElement route="app_logout">
                 <div class="flex flex-col">
                     <span class="text-lg">{{ app.user.email }}</span>
-                    <span class="text-color-qui">{{ 'user.logout'|trans }}</span>
+                    <span class="text-rose-700">{{ 'user.logout'|trans }}</span>
                 </div>
             </twig:MobileMenuElement>
         {% else %}

@@ -177,4 +177,8 @@ jobs:
           extensions: amqp, ctype, iconv, intl, pdo_mysql
           coverage: none
       - uses: ramsey/composer-install@v4
-      - run: composer outdated --direct --strict --minor-only
+      # dama/doctrine-test-bundle is pinned behind phpunit/phpunit: v8.6.0 conflicts
+      # with phpunit/phpunit <11.0, and we're still on ^9.5. It's not an actionable
+      # update until PHPUnit is upgraded, so it's excluded here to keep this job red
+      # only for updates we can actually take right now.
+      - run: composer outdated --direct --strict --minor-only --ignore=dama/doctrine-test-bundle

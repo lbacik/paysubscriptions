@@ -1,28 +1,86 @@
-<tr class="odd:bg-color-pri even:bg-blue-50 group hover:bg-color-qui hover:text-white">
-    <td class="group-hover:text-white">{{ loop.index }}</td>
-    <td class="group-hover:text-white">
-        <div>
+<tr class="hover:bg-slate-50/90 transition-colors group">
+    <td class="py-3.5 px-4 text-xs text-slate-500 font-medium">{{ loop.index }}</td>
+    <td class="py-3.5 px-4">
+        <div class="font-semibold text-slate-900">
             {{ subscription.name }}
+            {% if subscription.currency %}
+                <span class="ml-1 inline-flex items-center px-1.5 py-0.5 text-[10px] font-bold text-slate-600 bg-slate-100 rounded-md" title="{{ 'subscription.currency_title'|trans }}">{{ subscription.currency }}</span>
+            {% endif %}
         </div>
-        <div class="text-xs text-gray-400 group-hover:text-white">
-            from: {{ subscription.firstPayment ? subscription.firstPayment|date('Y-m-d') : '' }}
+        <div class="text-xs text-slate-500 mt-0.5">
+            {{ ('subscription.billing_cycle_' ~ subscription.billingCycle.value)|trans }}
         </div>
+        {% if subscription.notes %}
+            <div class="text-xs text-slate-500 mt-0.5 break-words">
+                {{ subscription.notes|length > 160 ? subscription.notes|slice(0, 160) ~ '…' : subscription.notes }}
+            </div>
+        {% endif %}
+        {% if mainCurrency is defined and mainCurrency and subscription.needsConvertedReview(mainCurrency) %}
+            <div class="text-xs text-amber-600 mt-0.5 font-medium">
+                <i class="fa-solid fa-triangle-exclamation text-[10px]"></i>
+                {{ 'subscription.converted_review_badge'|trans({'%old%': subscription.convertedCurrency, '%new%': mainCurrency}) }}
+            </div>
+        {% elseif mainCurrency is defined and mainCurrency and subscription.isPendingReview(mainCurrency) %}
+            <div class="text-xs text-amber-600 mt-0.5 font-medium">
+                <i class="fa-solid fa-triangle-exclamation text-[10px]"></i>
+                {{ 'subscription.converted_missing_badge'|trans({'%currency%': subscription.currency, '%new%': mainCurrency}) }}
+            </div>
+        {% elseif subscription.currency and mainCurrency is defined and mainCurrency
+            and subscription.currency != mainCurrency and subscription.hasConvertedAmount %}
+            <div class="text-xs text-slate-500 mt-0.5">
+                ≈ {{ subscription.convertedAmount|number_format(2, '.', ' ') }} {{ mainCurrency }} {{ 'subscription.converted_suffix'|trans }}
+            </div>
+        {% endif %}
     </td>
-    <td class="text-end {% if not subscription.monthly %}calculated{% endif %}">{{ subscription.monthlyCalculated|number_format(2, '.', ' ') }}</td>
-    <td class="text-end {% if subscription.monthly %}calculated{% endif %}">{{ subscription.yearlyCalculated|number_format(2, '.', ' ') }}</td>
-    <td class="flex flex-row space-x-2 items-center justify-end">
-        <twig:Button
-                styleType="secondary"
-                href="{{ path('app_subscription_edit', {'id': subscription.id}) }}"
-                data-turbo-frame="modal"
-        ><span class="span-underline">{{ "edit"|trans }}</span></twig:Button>
+    <td class="py-3.5 px-4">
+        {% if subscription.category %}
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-slate-600 bg-slate-50 border border-slate-200 rounded-full whitespace-nowrap">
+                <span class="inline-block w-2.5 h-2.5 rounded-full border border-slate-200"
+                      style="background-color: {{ subscription.category.color }}"></span>
+                {{ subscription.category.name }}
+            </span>
+        {% endif %}
+    </td>
+    <td class="py-3.5 px-4 text-end">
+        {% if mainCurrency is defined and mainCurrency and subscription.isPendingReview(mainCurrency) %}
+            <span class="text-slate-300 font-normal" title="{{ 'subscription.totals_exclude_review'|trans({'%count%': 1}) }}">—</span>
+        {% elseif subscription.isMonthly() %}
+            <span class="font-bold text-slate-900">{{ subscription.getReportingMonthlyCalculated(mainCurrency|default(null))|number_format(2, '.', ' ') }}</span>
+        {% else %}
+            <span class="text-xs text-slate-500 font-normal italic" title="Calculated from yearly plan">
+                ~{{ subscription.getReportingMonthlyCalculated(mainCurrency|default(null))|number_format(2, '.', ' ') }}
+            </span>
+        {% endif %}
+    </td>
+    <td class="py-3.5 px-4 text-end">
+        {% if mainCurrency is defined and mainCurrency and subscription.isPendingReview(mainCurrency) %}
+            <span class="text-slate-300 font-normal" title="{{ 'subscription.totals_exclude_review'|trans({'%count%': 1}) }}">—</span>
+        {% elseif subscription.isYearly() %}
+            <span class="font-bold text-slate-900">{{ subscription.getReportingYearlyCalculated(mainCurrency|default(null))|number_format(2, '.', ' ') }}</span>
+        {% else %}
+            <span class="text-xs text-slate-500 font-normal italic" title="Calculated from monthly plan">
+                ~{{ subscription.getReportingYearlyCalculated(mainCurrency|default(null))|number_format(2, '.', ' ') }}
+            </span>
+        {% endif %}
+    </td>
+    <td class="py-3.5 px-4 text-end whitespace-nowrap">
+        <span class="text-xs font-semibold text-slate-700">{{ next_renewal(subscription)|date('Y-m-d') }}</span>
+    </td>
+    <td class="py-3.5 px-4 text-end">
+        <div class="inline-flex items-center gap-1.5 justify-end">
+            <a href="{{ path('app_subscription_edit', {'id': subscription.id}) }}"
+               data-turbo-frame="modal"
+               class="inline-flex items-center px-2.5 py-1 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white border border-slate-200 hover:bg-slate-50 rounded-lg shadow-2xs transition-all">
+                <i class="fa-solid fa-pen text-[10px] mr-1.5 text-slate-400"></i>
+                {{ "edit"|trans }}
+            </a>
 
-        <twig:Button
-                styleType="secondary"
-                href="{{ path('app_subscription_delete', {'id': subscription.id}) }}"
-                data-turbo-frame="modal"
-        >
-            <span class="span-underline">{{ 'delete'|trans }}</span>
-        </twig:Button>
+            <a href="{{ path('app_subscription_delete', {'id': subscription.id}) }}"
+               data-turbo-frame="modal"
+               class="inline-flex items-center px-2.5 py-1 text-xs font-semibold text-rose-600 hover:text-rose-700 bg-white border border-rose-200/80 hover:bg-rose-50 rounded-lg shadow-2xs transition-all">
+                <i class="fa-solid fa-trash text-[10px] mr-1.5 text-rose-400"></i>
+                {{ 'delete'|trans }}
+            </a>
+        </div>
     </td>
 </tr>

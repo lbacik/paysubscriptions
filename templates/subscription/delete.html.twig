@@ -15,14 +15,14 @@
             <div class="text-center text-color-qua text-lg">
                 {{ subscription.name }}
             </div>
-            <div class="text-color-qui font-bold text-center">
+            <div class="text-rose-700 font-bold text-center">
                 {{ 'operation_cant_be_undone'|trans }}
             </div>
         </div>
         <form method="post" action="{{ path('app_subscription_delete', {'id': subscription.id}) }}">
             <div class="flex flex-row items-center justify-end space-x-2 pt-5">
                 <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ subscription.id) }}">
-                <twig:Button href="{{ path('app_dashboard') }}">{{ 'cancel'|trans }}</twig:Button>
+                <twig:Button styleType="secondary" href="{{ path('app_dashboard') }}">{{ 'cancel'|trans }}</twig:Button>
                 <twig:Button styleType="delete">{{ button_label|default('Delete') }}</twig:Button>
             </div>
         </form>

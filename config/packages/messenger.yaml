@@ -69,3 +69,8 @@ when@test:
                 # is empty. The first test that creates the test schema or
                 # dispatches MailingSubscribe would hit the failure above.
                 newsletter: 'in-memory://'
+            routing:
+                # Emails send synchronously in tests (as in dev), so no
+                # messenger_messages table is needed and nothing leaks between
+                # tests: MailerAssertionsTrait observes every sent email.
+                Symfony\Component\Mailer\Messenger\SendEmailMessage: sync

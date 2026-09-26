@@ -1,47 +1,71 @@
-<footer class="py-10">
-    <div class="container mx-auto px-4">
-        <div class="flex flex-col justify-between items-center">
-
-            <div class="w-full md:w-3/4 m-auto border-t-2 border-color-sec border-double mb-16"></div>
-
-            <div class="flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-4 items-center w-full lg:w-2/3 justify-center">
-
-                <!-- Newsletter Subscription Form -->
-                <div class="w-full {% if app.request.attributes.get('_route') != 'app_pricing' %} md:w-4/5 h-fit {% else %} md:w-2/3 min-w-[500px] {% endif %} bg-color-sec px-8 pt-6 pb-6 rounded-xl">
-                    <div class="w-full">
-                        <h2 class="text-lg font-semibold mb-4">Subscribe to Newsletter</h2>
-                        <form name="newsletter" action="{{ path('app_newsletter_subscribe') }}" method="POST">
-                            <div class="flex flex-col md:flex-row">
-                                <input type="email"
-                                       name="email"
-                                       placeholder="Enter your email"
-                                       class="p-2 rounded-md mb-2 md:mb-0 md:mr-2 flex-1"
-                                />
-                                <input type="hidden" name="_token" value="{{ csrf_token('newsletter') }}"/>
-                                <twig:Button type="submit" class="w-auto">Subscribe</twig:Button>
-                            </div>
-                        </form>
-                        <div class="mt-4 text-xs text-color-qua">As for the time being all subscriptions will be added to the <a class="font-bold underline" href="https://gprodb.com">gprodb.com</a> newsletter</div>
-                    </div>
+<footer class="mt-auto border-t border-slate-200/80 bg-white py-12 text-slate-600">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
+            
+            <!-- Column 1: Brand & Tagline -->
+            <div class="md:col-span-5 space-y-3">
+                <a href="{{ path('app_home') }}" class="flex items-center space-x-2.5">
+                    <img src="{{ asset('images/paysubs-v3.png') }}" height="32" width="32" style="height: 32px; width: auto;" class="h-8 w-auto" alt="PaySubscriptions Logo"/>
+                    <span class="text-lg font-bold text-slate-900 tracking-tight">{{ "service.name"|trans }}</span>
+                </a>
+                <p class="text-sm text-slate-500 max-w-sm leading-relaxed">
+                    A focused subscription cost tracker for individuals and households. Know what you pay and act before it renews.
+                </p>
+                <div class="text-xs text-slate-500 pt-1 font-mono">
+                    PaySubscriptions {{ appVersion }}
                 </div>
+            </div>
 
-                {% if app.request.attributes.get('_route') != 'app_pricing' %}
-                    <div class="flex flex-col mx-auto w-fit text-center bg-green-50 px-5 py-5 font-handwriting2">
-                        <span class="font-bold bg-green-100 py-1 font-sans">Enjoying PaySubscriptions?</span>
-                        <div class="my-5 flex items-center justify-center">
-                            <a href="https://www.buymeacoffee.com/lbacik" target="_blank"><img
-                                        src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png"
-                                        alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;"></a>
-                        </div>
-                        Thank you for your support and for using PaySubscriptions!
+            <!-- Column 2: Navigation Links -->
+            <div class="md:col-span-3 space-y-2.5 text-sm">
+                <div class="font-bold text-slate-900 text-xs uppercase tracking-wider mb-3">Navigation</div>
+                <div><a href="{{ path('app_home') }}" class="hover:text-slate-900 transition-colors">{{ 'main_menu.home'|trans }}</a></div>
+                <div><a href="{{ path('app_docs') }}" class="hover:text-slate-900 transition-colors">{{ 'main_menu.about'|trans }}</a></div>
+                <div><a href="{{ path('app_pricing') }}" class="hover:text-slate-900 transition-colors">{{ 'main_menu.pricing'|trans }}</a></div>
+                <div><a href="{{ path('app_dashboard') }}" class="hover:text-slate-900 transition-colors">{{ 'main_menu.dashboard'|trans }}</a></div>
+                <div><a href="{{ path('app_contact') }}" class="hover:text-slate-900 transition-colors">{{ 'main_menu.contact'|trans }}</a></div>
+            </div>
+
+            <!-- Column 3: Newsletter Form -->
+            <div class="md:col-span-4 bg-slate-50 p-5 rounded-2xl border border-slate-200/80">
+                <div class="font-bold text-slate-900 text-sm mb-1">Product Updates</div>
+                <p class="text-xs text-slate-500 mb-3 leading-relaxed">
+                    Subscribe for occasional updates on development progress and new releases.
+                </p>
+                <form name="newsletter" action="{{ path('app_newsletter_subscribe') }}" method="POST" class="space-y-2">
+                    <div class="flex flex-col sm:flex-row gap-2">
+                        <label for="newsletter-email" class="sr-only">Email address</label>
+                        <input type="email"
+                               id="newsletter-email"
+                               name="email"
+                               required
+                               placeholder="Enter your email"
+                               autocomplete="email"
+                               class="text-sm px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-color-ter/30 flex-1 bg-white"
+                        />
+                        <input type="hidden" name="_token" value="{{ csrf_token('newsletter') }}"/>
+                        <button type="submit" class="px-4 py-2 text-sm font-semibold text-white bg-color-qua hover:bg-slate-800 rounded-xl transition-colors shrink-0">
+                            Subscribe
+                        </button>
                     </div>
-                {% endif %}
+                </form>
+                <div class="mt-2.5 text-[11px] text-slate-500">
+                    Subscriptions are handled via our shared <a class="underline hover:text-slate-600" href="https://gprodb.com" target="_blank" rel="noopener noreferrer">gprodb.com</a> newsletter list.
+                </div>
             </div>
 
         </div>
-        <!-- Footer Bottom -->
-        <div class="text-center mt-10">
-            <p class="text-gray-400 text-sm">&copy; 2024 PaySubscriptions. All rights reserved.</p>
+
+        <!-- Footer Bottom Bar -->
+        <div class="mt-12 pt-6 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-2">
+            <div>
+                &copy; {{ "now"|date("Y") }} PaySubscriptions. All rights reserved.
+            </div>
+            <div class="flex items-center space-x-4">
+                <a href="{{ path('app_docs') }}" class="hover:text-slate-600 transition-colors">About</a>
+                <a href="{{ path('app_privacy') }}" class="hover:text-slate-600 transition-colors">Privacy</a>
+                <a href="{{ path('app_contact') }}" class="hover:text-slate-600 transition-colors">Contact</a>
+            </div>
         </div>
     </div>
 </footer>

@@ -1,0 +1,61 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ 'account.delete_title'|trans }} - {{ "service.tab"|trans }}{% endblock %}
+
+{% block body %}
+    <twig:ContentCenter class="mt-10 mb-16" width="w-full px-4 md:px-0 md:w-1/2 lg:w-2/5">
+        <h1 class="mb-6 font-bold text-2xl text-slate-900 text-center">
+            {{ 'account.delete_title'|trans }}
+        </h1>
+
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-5">
+            <p class="text-sm text-slate-600 leading-relaxed">
+                {{ 'account.delete_intro'|trans }}
+            </p>
+
+            <div class="text-sm text-slate-600 leading-relaxed">
+                <div class="font-semibold text-slate-900 mb-1">{{ 'account.delete_will_remove'|trans }}</div>
+                <ul class="list-disc list-inside space-y-1">
+                    <li>{{ 'account.delete_removes_profile'|trans }}</li>
+                    <li>{{ 'account.delete_removes_subscriptions'|trans }}</li>
+                    <li>{{ 'account.delete_removes_limits'|trans }}</li>
+                    <li>{{ 'account.delete_removes_reset_requests'|trans }}</li>
+                    <li>{{ 'account.delete_removes_reminders'|trans }}</li>
+                </ul>
+            </div>
+
+            <div class="text-color-qui font-bold text-center">
+                {{ 'operation_cant_be_undone'|trans }}
+            </div>
+
+            <div class="text-xs text-slate-500 leading-relaxed bg-slate-50 border border-slate-200 rounded-xl p-4">
+                {{ 'account.delete_newsletter_note'|trans({'%url%': 'https://gprodb.com'})|raw }}
+            </div>
+
+            <div class="text-sm text-slate-600 leading-relaxed bg-blue-50 border border-blue-200/80 rounded-xl p-4 space-y-2">
+                <div class="font-semibold text-slate-900">{{ 'account.export_title'|trans }}</div>
+                <p>{{ 'account.export_intro'|trans }}</p>
+                <a href="{{ path('app_contact') }}" class="inline-block font-semibold text-color-ter underline hover:text-slate-900">{{ 'account.export_cta'|trans }}</a>
+            </div>
+
+            <form method="post" action="{{ path('app_account_delete_confirm') }}" class="space-y-4">
+                <input type="hidden" name="_token" value="{{ csrf_token('delete_account') }}">
+
+                <label class="flex items-start gap-3 text-sm text-slate-700 cursor-pointer">
+                    <input type="checkbox"
+                           name="confirm"
+                           value="1"
+                           required
+                           class="mt-1 h-4 w-4 rounded border-slate-300 accent-rose-600 focus:ring-2 focus:ring-rose-200"
+                    />
+                    <span>{{ 'account.delete_confirm_label'|trans }}</span>
+                </label>
+
+                <div class="flex flex-row items-center justify-end space-x-2 pt-2">
+                    <twig:Button styleType="secondary" href="{{ path('app_dashboard') }}">{{ 'cancel'|trans }}</twig:Button>
+                    <twig:Button styleType="delete">{{ 'account.delete_submit'|trans }}</twig:Button>
+                </div>
+            </form>
+        </div>
+    </twig:ContentCenter>
+{% endblock %}

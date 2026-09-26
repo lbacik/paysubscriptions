@@ -1,14 +1,16 @@
 <!DOCTYPE html>
-<html>
+<html lang="{{ app.request.locale|default('en') }}">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}{{ "service.tab"|trans }}{% endblock %}</title>
     <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('images/apple-touch-icon.png') }}">
     <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('images/favicon-32x32.png') }}">
     <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('images/favicon-16x16.png') }}">
     <link rel="manifest" href="{{ asset('images/site.webmanifest') }}">
-    <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Indie+Flower&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Patrick+Hand&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <script src="https://cloud.umami.is/script.js"
             data-website-id="92804189-0611-44c6-9151-3ccee0e35284" defer></script>
@@ -23,12 +25,12 @@
         {% block importmap %}{{ importmap('app') }}{% endblock %}
     {% endblock %}
 </head>
-<body class="flex flex-col h-screen" data-turbo="true">
+<body class="flex flex-col min-h-screen bg-color-pri font-sans text-color-qua antialiased selection:bg-color-sec selection:text-color-qua" data-turbo="true">
 {{ include('partials/_header.html.twig') }}
 
-<div class="flex-1">
+<main class="flex-1">
     {% block body %}{% endblock %}
-</div>
+</main>
 
 {{ include('dashboard/_dialog.html.twig') }}
 
