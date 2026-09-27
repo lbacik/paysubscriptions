@@ -1,0 +1,282 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "PaySubscriptions API",
+    "version": "1.0.0",
+    "description": "Versioned REST API for User-owned resources. v1 read slice covers ExpenseCategory collection and detail (issue #89). Write-error statuses 409/422 belong to later CRUD slices and are not returned by these read endpoints. Additive backward-compatible changes stay within v1; breaking changes require a new version."
+  },
+  "servers": [
+    {
+      "url": "/api/v1"
+    }
+  ],
+  "security": [
+    {
+      "paySubsOAuth2": [
+        "api:full"
+      ]
+    }
+  ],
+  "paths": {
+    "/expense-categories": {
+      "get": {
+        "operationId": "listExpenseCategories",
+        "summary": "List the authenticated User's expense categories",
+        "description": "User-owned collection ordered by name with no pagination or filters in v1. Scoped to the bearer token User; never returns another User's records.",
+        "security": [
+          {
+            "paySubsOAuth2": [
+              "api:full"
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Owned categories ordered by name.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ExpenseCategory"
+                  }
+                },
+                "example": [
+                  {
+                    "id": "0190a1b2-c3d4-7e5f-8901-23456789abcd",
+                    "name": "Apple",
+                    "color": "#222222",
+                    "createdAt": "2026-09-01T10:00:00+00:00",
+                    "updatedAt": "2026-09-01T10:00:00+00:00"
+                  }
+                ]
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/expense-categories/{id}": {
+      "get": {
+        "operationId": "getExpenseCategory",
+        "summary": "Fetch one owned expense category",
+        "description": "Missing, malformed, or foreign IDs return 404 without disclosing another User's data.",
+        "security": [
+          {
+            "paySubsOAuth2": [
+              "api:full"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ExpenseCategory UUID.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The owned category.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExpenseCategory"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/CategoryNotFound"
+          }
+        }
+      }
+    },
+    "/openapi.json": {
+      "get": {
+        "operationId": "getOpenApiDocument",
+        "summary": "Published v1 OpenAPI contract",
+        "security": [
+          {
+            "paySubsOAuth2": [
+              "api:full"
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The v1 OpenAPI document.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "paySubsOAuth2": {
+        "type": "oauth2",
+        "description": "User-delegated authorization code with S256 PKCE. Manually registered clients only; explicit scope api:full; 15-minute access tokens issued by this server.",
+        "flows": {
+          "authorizationCode": {
+            "authorizationUrl": "/authorize",
+            "tokenUrl": "/token",
+            "refreshUrl": "/token",
+            "scopes": {
+              "api:full": "Full read/write access to the approving User's data."
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "ExpenseCategory": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "color",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Server-generated UUID."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 100,
+            "description": "Unique per User."
+          },
+          "color": {
+            "type": "string",
+            "pattern": "^#[0-9a-fA-F]{6}$",
+            "description": "Hex color swatch, e.g. #577399."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Problem": {
+        "type": "object",
+        "required": [
+          "type",
+          "title",
+          "status",
+          "detail",
+          "code"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "format": "uri",
+            "description": "Stable problem type URI."
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "type": "integer"
+          },
+          "detail": {
+            "type": "string",
+            "description": "Safe human-readable detail; never leaks another User's data."
+          },
+          "code": {
+            "type": "string",
+            "description": "Stable machine-readable code, e.g. category_not_found."
+          },
+          "errors": {
+            "type": "array",
+            "description": "Field-level violations for 422 responses (write operations, later slices).",
+            "items": {
+              "type": "object",
+              "required": [
+                "field",
+                "message"
+              ],
+              "properties": {
+                "field": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "responses": {
+      "Unauthorized": {
+        "description": "Missing or invalid bearer token.",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "Valid token without api:full scope, unapproved client, or ineligible account.",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        }
+      },
+      "CategoryNotFound": {
+        "description": "Missing, malformed, or foreign category ID.",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        }
+      }
+    }
+  }
+}

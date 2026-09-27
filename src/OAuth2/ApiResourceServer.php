@@ -34,12 +34,24 @@ class ApiResourceServer extends ResourceServer
     {
         $validated = parent::validateAuthenticatedRequest($request);
 
-        $this->assertIssuerAndAudience($request);
+        $clientId = $this->assertIssuerAndAudience($request);
+
+        // Signature, expiry, and revocation were already verified by the parent.
+        // League's BearerTokenValidator treats `aud` as the client identifier,
+        // but API v1 tokens carry the API audience there and the real client in
+        // the `client_id` claim (see ApiAccessTokenEntity). Repair the PSR-7
+        // attribute so downstream authentication sees the actual client.
+        if (null !== $clientId && '' !== $clientId) {
+            $validated = $validated->withAttribute('oauth_client_id', $clientId);
+        }
 
         return $validated;
     }
 
-    private function assertIssuerAndAudience(ServerRequestInterface $request): void
+    /**
+     * @return string|null the real client identifier from the `client_id` claim
+     */
+    private function assertIssuerAndAudience(ServerRequestInterface $request): ?string
     {
         $header = $request->getHeaderLine('authorization');
         $jwt = trim((string) preg_replace('/^\s*Bearer\s/i', '', $header));
@@ -62,6 +74,10 @@ class ApiResourceServer extends ResourceServer
         if ($token->claims()->get('iss') !== $this->issuer) {
             throw OAuthServerException::accessDenied('The access token issuer is not this authorization server.');
         }
+
+        $clientId = $token->claims()->get('client_id');
+
+        return \is_string($clientId) && '' !== $clientId ? $clientId : null;
     }
 
 }
