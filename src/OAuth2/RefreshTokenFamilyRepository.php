@@ -59,6 +59,7 @@ final class RefreshTokenFamilyRepository implements RefreshTokenRepositoryInterf
     public function __construct(
         private readonly RefreshTokenRepositoryInterface $inner,
         private readonly EntityManagerInterface $em,
+        private readonly OpaqueTokenDecryptor $decryptor,
     ) {
     }
 
@@ -89,6 +90,76 @@ final class RefreshTokenFamilyRepository implements RefreshTokenRepositoryInterf
         }
 
         $this->inner->revokeRefreshToken($tokenId);
+    }
+
+    /**
+     * Revokes the whole usable family behind one client-facing (opaque,
+     * encrypted) refresh-token value (issue #92): the presented token and
+     * every other usable token of its family become unusable, so only fresh
+     * authorization helps.
+     *
+     * Returns the revoked family, or null for unknown values
+     * (self-contained access tokens, malformed input) and for tokens owned
+     * by another client, which are left untouched. Callers answer success
+     * either way, so the endpoint never discloses token ownership.
+     */
+    public function revokeByOpaqueToken(string $opaqueToken, ?string $expectedClientId = null): ?OAuthRefreshFamily
+    {
+        $family = $this->findFamilyByOpaqueToken($opaqueToken);
+        if (null === $family) {
+            return null;
+        }
+
+        if (null !== $expectedClientId && $family->getClientId() !== $expectedClientId) {
+            return null;
+        }
+
+        $this->revokeFamily($family);
+
+        return $family;
+    }
+
+    /**
+     * Finds the usable family behind one client-facing (opaque, encrypted)
+     * refresh-token value, or null when the value is unknown or not a
+     * refresh token this server issued (issue #92).
+     */
+    public function findFamilyByOpaqueToken(string $opaqueToken): ?OAuthRefreshFamily
+    {
+        $payload = $this->decryptor->decryptToArray($opaqueToken);
+        $tokenId = $payload['refresh_token_id'] ?? null;
+        if (!\is_string($tokenId) || '' === $tokenId) {
+            return null;
+        }
+
+        $link = $this->em->find(OAuthRefreshFamilyToken::class, $tokenId);
+
+        return $link?->getFamily();
+    }
+
+    /**
+     * Revokes every usable refresh-token family for one (User, client) pair
+     * (issue #92): User disconnect takes effect on refresh immediately.
+     * Already-issued self-contained access tokens stay valid until their
+     * short expiry. Returns the number of families revoked.
+     */
+    public function revokeFamiliesForUserClient(User $user, string $clientId): int
+    {
+        $families = $this->em->getRepository(OAuthRefreshFamily::class)->findBy([
+            'user' => $user,
+            'clientId' => $clientId,
+        ]);
+
+        $revoked = 0;
+        foreach ($families as $family) {
+            if ($family->isRevoked()) {
+                continue;
+            }
+            $this->revokeFamily($family);
+            ++$revoked;
+        }
+
+        return $revoked;
     }
 
     public function isRefreshTokenRevoked(string $tokenId): bool
