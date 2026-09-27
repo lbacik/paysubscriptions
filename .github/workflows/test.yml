@@ -305,9 +305,19 @@ jobs:
   # WCAG 2.1 AA axe scan (issue #52). Blocking: fails on any violation.
   # Mirrors docs/accessibility.md local reproduction: test-kernel server via
   # the php -S router, fixture credentials, reCAPTCHA test keys.
+  #
+  # Restricted to main and to the release gate: this scan is by far the
+  # slowest job in the file (Chromium install + a real server boot), and
+  # `push: branches: ['**']` above means it would otherwise run on every
+  # commit to every feature branch. `develop` -> `main` is a pure promotion
+  # (see the header comment), so scanning every intermediate develop push
+  # buys nothing a scan of the merge commit on main doesn't already cover.
+  # `github.event_name == 'workflow_call'` keeps it in the tag-build gate
+  # release.yml drives, where github.ref is refs/tags/vX, not refs/heads/main.
   accessibility:
     name: Accessibility
     runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_call'
 
     services:
       mysql:
