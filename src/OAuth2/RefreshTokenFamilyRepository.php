@@ -194,6 +194,32 @@ final class RefreshTokenFamilyRepository implements RefreshTokenRepositoryInterf
     }
 
     /**
+     * Revokes every active refresh-token family (issue #94).
+     *
+     * This is the emergency response to a suspected signing-key compromise:
+     * with the old verification key unpublished, forged access tokens already
+     * fail validation, and revoking all families additionally kills every
+     * legitimate session, so clients must authorize again. Families are marked
+     * revoked (never deleted) and every token link is superseded with its
+     * bundle row revoked, mirroring the single-family path. Outstanding
+     * authorization codes are left to their 10-minute expiry: redeeming one
+     * mints a new-key family for whoever completed the authorize dance, which
+     * the runbook accepts to avoid stranding in-flight clients.
+     *
+     * @return int the number of families revoked
+     */
+    public function revokeAllFamilies(): int
+    {
+        $families = $this->em->getRepository(OAuthRefreshFamily::class)->findBy(['revoked' => false]);
+
+        foreach ($families as $family) {
+            $this->revokeFamily($family);
+        }
+
+        return \count($families);
+    }
+
+    /**
      * Rejects revoked, absolutely expired, and idle-expired families,
      * revoking the family on expiry so no later use can succeed. Also rejects
      * families whose User is gone or ineligible and whose client is gone,

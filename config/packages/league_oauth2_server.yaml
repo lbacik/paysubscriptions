@@ -24,6 +24,11 @@ league_oauth2_server:
         persist_access_token: false
     resource_server:
         public_key: '%env(resolve:OAUTH_PUBLIC_KEY)%'
+        # Clock-skew tolerance for access-token verification (issue #94).
+        # Must stay in step with App\OAuth2\OAuth2Config::CLOCK_SKEW_LEEWAY:
+        # the key-ring validator builds its own verifiers from that constant,
+        # and the rotation overlap window assumes this exact leeway.
+        jwt_leeway: PT60S
     scopes:
         # API v1 has a single coarse scope. The bundle requires a non-empty
         # default, so an omitted `scope` parameter would silently default to

@@ -62,6 +62,9 @@ services:
         arguments:
             $inner: '@App\OAuth2\ApiAccessTokenRepository.inner'
             $issuer: '%app.oauth2.issuer%'
+            # Key identifier carried in the `kid` header of every new access
+            # token (issue #94). Empty means legacy mode: no `kid` header.
+            $keyId: '%env(OAUTH_KEY_ID)%'
 
     # Refresh-token families (issue #91): single-use rotation, replayed-token
     # revocation, and the 30-day idle / 90-day absolute family deadlines.
@@ -70,11 +73,20 @@ services:
         arguments:
             $inner: '@App\OAuth2\RefreshTokenFamilyRepository.inner'
 
+    # Signing-key rotation (issue #94): the resource server verifies against
+    # the current public key plus, while a rotation is in flight, the previous
+    # one selected by the token's `kid` header. The previous key arrives as a
+    # raw env string (path or contents, like the bundle's own key settings)
+    # and is only loaded when non-empty, so deployments without a rotation in
+    # flight configure nothing. Dropping it ends the old key immediately.
     App\OAuth2\ApiResourceServer:
         arguments:
             $accessTokenRepository: '@league.oauth2_server.repository.access_token'
             $publicKey: '@app.oauth2.resource_public_key'
             $issuer: '%app.oauth2.issuer%'
+            $keyId: '%env(OAUTH_KEY_ID)%'
+            $previousPublicKey: '%env(OAUTH_PREVIOUS_PUBLIC_KEY)%'
+            $previousKeyId: '%env(OAUTH_PREVIOUS_KEY_ID)%'
     League\OAuth2\Server\ResourceServer: '@App\OAuth2\ApiResourceServer'
 
     # Public verification key for the API resource server. The permission
