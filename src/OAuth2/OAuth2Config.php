@@ -31,6 +31,19 @@ final class OAuth2Config
      */
     public const API_AUDIENCE = 'urn:paysubscriptions:api:v1';
 
+    /**
+     * Idle lifetime of a refresh-token family: 30 days without use expires
+     * the family (issue #91). Mirrors the `refresh_token_ttl` authorization
+     * server setting so bundle token expiry and family bookkeeping agree.
+     */
+    public const REFRESH_IDLE_DAYS = 30;
+
+    /**
+     * Absolute lifetime of a refresh-token family: no later than 90 days
+     * after initial authorization, and refreshing never extends it (#91).
+     */
+    public const REFRESH_ABSOLUTE_DAYS = 90;
+
     private function __construct()
     {
     }
