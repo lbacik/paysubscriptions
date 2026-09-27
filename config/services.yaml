@@ -46,14 +46,21 @@ services:
     # please note that last definitions always *replace* previous ones
     App\Service\RecaptchaVerifierInterface: '@App\Service\RecaptchaVerifier'
 
-    # OAuth2 API v1 wiring (issue #88). The listeners self-register through
-    # #[AsEventListener]; the repository decorator and the resource server
-    # swap need explicit definitions below.
+    # OAuth2 API v1 wiring (issues #88, #91). The listeners self-register
+    # through #[AsEventListener]; the repository decorators and the resource
+    # server swap need explicit definitions below.
     App\OAuth2\ApiAccessTokenRepository:
         decorates: 'league.oauth2_server.repository.access_token'
         arguments:
             $inner: '@App\OAuth2\ApiAccessTokenRepository.inner'
             $issuer: '%app.oauth2.issuer%'
+
+    # Refresh-token families (issue #91): single-use rotation, replayed-token
+    # revocation, and the 30-day idle / 90-day absolute family deadlines.
+    App\OAuth2\RefreshTokenFamilyRepository:
+        decorates: 'league.oauth2_server.repository.refresh_token'
+        arguments:
+            $inner: '@App\OAuth2\RefreshTokenFamilyRepository.inner'
 
     App\OAuth2\ApiResourceServer:
         arguments:

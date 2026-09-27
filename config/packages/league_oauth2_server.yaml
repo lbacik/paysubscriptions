@@ -8,6 +8,11 @@ league_oauth2_server:
         # other grant is disabled — client credentials in particular must never
         # yield access to User-owned data (decisions #82, #86).
         access_token_ttl: PT15M
+        # Refresh-token families (issue #91): 30 days without use expires the
+        # family; the 90-day absolute deadline is enforced by
+        # App\OAuth2\RefreshTokenFamilyRepository, which caps rotated tokens
+        # instead of extending it.
+        refresh_token_ttl: P30D
         enable_client_credentials_grant: false
         # Both grants are disabled by default and will be removed in 2.0. Enable them only if you need them.
         enable_password_grant: false
