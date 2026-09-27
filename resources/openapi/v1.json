@@ -3,7 +3,7 @@
   "info": {
     "title": "PaySubscriptions API",
     "version": "1.0.0",
-    "description": "Versioned REST API for User-owned resources. v1 covers ExpenseCategory collection/detail reads (issue #89) plus collection POST and detail PATCH/DELETE writes: writes accept name and #RRGGBB color only, PATCH changes supplied fields only, name collisions and in-use deletes return 409, constraint violations return 422 with field errors. It also covers Subscription collection and detail reads with explicit stateless navigation (issue #96), and the dashboard snapshot report (issue #99); write-error statuses 409/422 do not apply to these read endpoints. Additive backward-compatible changes stay within v1; breaking changes require a new version."
+    "description": "Versioned REST API for User-owned resources. v1 covers ExpenseCategory collection/detail reads (issue #89) plus collection POST and detail PATCH/DELETE writes: writes accept name and #RRGGBB color only, PATCH changes supplied fields only, name collisions and in-use deletes return 409, constraint violations return 422 with field errors. It also covers Subscription collection and detail reads with explicit stateless navigation (issue #96) plus collection POST and detail DELETE writes (issue #97): writes accept the same editable data as the web experience with server-controlled ids/timestamps/currency stamps, the default-category rule, manual converted amounts, and the per-User Subscription limit (409 on conflict, 422 on invalid data), and the dashboard snapshot report (issue #99); write-error statuses 409/422 do not apply to the read-only report endpoint. Additive backward-compatible changes stay within v1; breaking changes require a new version."
   },
   "servers": [
     {
@@ -359,6 +359,60 @@
             "$ref": "#/components/responses/Forbidden"
           }
         }
+      },
+      "post": {
+        "operationId": "createSubscription",
+        "summary": "Create a subscription for the authenticated User",
+        "description": "Accepts the same editable data as the web experience: name, billingCycle, amount, date-only nextPayment, currency, convertedAmount, notes, and categoryId. Owner, id, timestamps, convertedCurrency, and pendingReview are server-controlled. An omitted categoryId follows the default-category rule; an explicitly supplied missing or foreign categoryId is rejected as an invalid field without disclosure. Currency defaults to the User's confirmed main currency; cross-currency Subscriptions require a positive manual convertedAmount. Reaching the User's Subscription limit returns 409.",
+        "security": [
+          {
+            "paySubsOAuth2": [
+              "api:full"
+            ]
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubscriptionCreate"
+              },
+              "example": {
+                "name": "Netflix",
+                "billingCycle": "monthly",
+                "amount": 15.99,
+                "nextPayment": "2026-04-05",
+                "currency": "USD",
+                "categoryId": "0190a1b2-c3d4-7e5f-8901-23456789abce"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The created subscription.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Subscription"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/SubscriptionLimitReached"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationFailed"
+          }
+        }
       }
     },
     "/subscriptions/{id}": {
@@ -395,6 +449,44 @@
                 }
               }
             }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/SubscriptionNotFound"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteSubscription",
+        "summary": "Delete an owned subscription",
+        "description": "Only the authenticated User's own Subscription is deleted. Missing, malformed, or foreign IDs return 404 without disclosing another User's data.",
+        "security": [
+          {
+            "paySubsOAuth2": [
+              "api:full"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Subscription UUID.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The subscription was deleted."
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
@@ -607,6 +699,63 @@
           }
         },
         "description": "Partial update: only supplied fields change."
+      },
+      "SubscriptionCreate": {
+        "type": "object",
+        "required": [
+          "name",
+          "billingCycle",
+          "amount",
+          "nextPayment"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 255,
+            "description": "Subscription name."
+          },
+          "billingCycle": {
+            "type": "string",
+            "enum": ["monthly", "yearly"],
+            "description": "Exactly one billing cycle per Subscription; the amount is priced per that cycle."
+          },
+          "amount": {
+            "type": "number",
+            "format": "double",
+            "exclusiveMinimum": 0,
+            "description": "Positive amount charged per billing cycle."
+          },
+          "nextPayment": {
+            "type": "string",
+            "format": "date",
+            "description": "User-entered next known payment date (date-only, YYYY-MM-DD)."
+          },
+          "currency": {
+            "type": "string",
+            "description": "ISO 4217 currency code; defaults to the User's confirmed main currency when omitted.",
+            "nullable": true
+          },
+          "convertedAmount": {
+            "type": "number",
+            "format": "double",
+            "exclusiveMinimum": 0,
+            "description": "Manually supplied positive converted amount in the User's main currency; required for cross-currency Subscriptions and rejected for same-currency ones.",
+            "nullable": true
+          },
+          "categoryId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ExpenseCategory UUID owned by the same User. Omitted values follow the default-category rule; missing or foreign IDs are rejected as an invalid field."
+          },
+          "notes": {
+            "type": "string",
+            "maxLength": 2000,
+            "description": "Optional notes.",
+            "nullable": true
+          }
+        },
+        "description": "Writable fields for creating a subscription. Owner, id, timestamps, convertedCurrency, and pendingReview are server-controlled."
       },
       "Subscription": {
         "type": "object",
@@ -951,6 +1100,16 @@
           }
         }
       },
+      "SubscriptionLimitReached": {
+        "description": "The User already reached their maximum number of subscriptions.",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        }
+      },
       "CategoryNotFound": {
         "description": "Missing, malformed, or foreign category ID.",
         "content": {
@@ -962,7 +1121,7 @@
         }
       },
       "ValidationFailed": {
-        "description": "Name/color constraint violations, with field-level errors.",
+        "description": "Field constraint violations, with field-level errors.",
         "content": {
           "application/problem+json": {
             "schema": {
