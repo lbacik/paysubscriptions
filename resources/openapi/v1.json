@@ -3,7 +3,7 @@
   "info": {
     "title": "PaySubscriptions API",
     "version": "1.0.0",
-    "description": "Versioned REST API for User-owned resources. v1 covers ExpenseCategory collection/detail reads (issue #89) plus collection POST and detail PATCH/DELETE writes: writes accept name and #RRGGBB color only, PATCH changes supplied fields only, name collisions and in-use deletes return 409, constraint violations return 422 with field errors. It also covers Subscription collection and detail reads with explicit stateless navigation (issue #96); write-error statuses 409/422 do not apply to these read endpoints. Additive backward-compatible changes stay within v1; breaking changes require a new version."
+    "description": "Versioned REST API for User-owned resources. v1 covers ExpenseCategory collection/detail reads (issue #89) plus collection POST and detail PATCH/DELETE writes: writes accept name and #RRGGBB color only, PATCH changes supplied fields only, name collisions and in-use deletes return 409, constraint violations return 422 with field errors. It also covers Subscription collection and detail reads with explicit stateless navigation (issue #96), and the dashboard snapshot report (issue #99); write-error statuses 409/422 do not apply to these read endpoints. Additive backward-compatible changes stay within v1; breaking changes require a new version."
   },
   "servers": [
     {
@@ -408,6 +408,117 @@
         }
       }
     },
+    "/reports/dashboard": {
+      "get": {
+        "operationId": "getDashboardReport",
+        "summary": "Current dashboard snapshot: summary cards plus one chart mode",
+        "description": "Stateless snapshot of the authenticated User's Subscriptions reusing the web dashboard calculations. Summary mirrors SubscriptionService::getTotals() plus the User limit; chart series mirror ChartService numeric data with basis/visibility metadata instead of Chart.js options. Pending-review cross-currency Subscriptions stay in counts but are excluded from monetary totals and charts. The month selector applies only to the monthly direct view (monthly Subscriptions plus yearly ones whose next-payment month matches). No year, date-range, payment-history, or forecast semantics.",
+        "security": [
+          {
+            "paySubsOAuth2": [
+              "api:full"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "name": "chartMode",
+            "in": "query",
+            "required": false,
+            "description": "Chart view: twelve-month charge distribution (bar), monthly doughnut (monthly), or yearly doughnut (yearly). Defaults to bar.",
+            "schema": {
+              "type": "string",
+              "enum": ["bar", "monthly", "yearly"],
+              "default": "bar"
+            }
+          },
+          {
+            "name": "basis",
+            "in": "query",
+            "required": false,
+            "description": "Direct-cycle charges (direct) or normalized equivalents (equivalent). The bar view supports direct only; monthly equivalent uses per-Subscription monthly calculations over all reportable Subscriptions; yearly equivalent uses yearly calculations. Defaults to direct.",
+            "schema": {
+              "type": "string",
+              "enum": ["direct", "equivalent"],
+              "default": "direct"
+            }
+          },
+          {
+            "name": "categoryId",
+            "in": "query",
+            "required": false,
+            "description": "Optional User-owned ExpenseCategory UUID filter; omit for all categories. Unknown, malformed, or foreign IDs return 404 without disclosing another User's data.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "month",
+            "in": "query",
+            "required": false,
+            "description": "Month of the year (1-12) used only by the monthly direct view. Any other use, or a value outside 1-12, returns 422.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 12
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Summary cards, numeric chart data with visibility metadata, and the applied filters.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardReport"
+                },
+                "example": {
+                  "summary": {
+                    "monthly": 15.99,
+                    "yearly": 120.0,
+                    "monthlyEquivalent": 25.99,
+                    "yearlyEquivalent": 311.88,
+                    "count": 2,
+                    "limit": 30,
+                    "currency": "USD",
+                    "pendingReview": 0
+                  },
+                  "chart": {
+                    "mode": "monthly",
+                    "basis": "monthly_direct",
+                    "currency": "USD",
+                    "labels": ["Netflix"],
+                    "data": [15.99],
+                    "empty": false,
+                    "hiddenCount": 1,
+                    "hiddenCycle": "yearly"
+                  },
+                  "filters": {
+                    "chartMode": "monthly",
+                    "basis": "direct",
+                    "categoryId": null,
+                    "month": null
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/CategoryNotFound"
+          },
+          "422": {
+            "$ref": "#/components/responses/InvalidFilter"
+          }
+        }
+      }
+    },
     "/openapi.json": {
       "get": {
         "operationId": "getOpenApiDocument",
@@ -619,6 +730,145 @@
           }
         }
       },
+      "DashboardReport": {
+        "type": "object",
+        "required": ["summary", "chart", "filters"],
+        "properties": {
+          "summary": {
+            "type": "object",
+            "description": "Summary-card values from SubscriptionService::getTotals() plus the User limit. Pending-review cross-currency Subscriptions are counted but excluded from monetary fields.",
+            "required": ["monthly", "yearly", "monthlyEquivalent", "yearlyEquivalent", "count", "limit", "currency", "pendingReview"],
+            "properties": {
+              "monthly": {
+                "type": "number",
+                "description": "Direct monthly-cycle total in the main currency."
+              },
+              "yearly": {
+                "type": "number",
+                "description": "Direct yearly-cycle total in the main currency."
+              },
+              "monthlyEquivalent": {
+                "type": "number",
+                "description": "Normalized monthly total (direct monthly plus yearly divided by 12)."
+              },
+              "yearlyEquivalent": {
+                "type": "number",
+                "description": "Normalized yearly total (direct yearly plus monthly multiplied by 12)."
+              },
+              "count": {
+                "type": "integer",
+                "description": "Subscription count including pending-review items."
+              },
+              "limit": {
+                "type": "integer",
+                "description": "User subscription limit."
+              },
+              "currency": {
+                "type": "string",
+                "nullable": true,
+                "description": "Main-currency label, or null when no main currency is confirmed."
+              },
+              "pendingReview": {
+                "type": "integer",
+                "description": "Cross-currency Subscriptions pending converted-amount review."
+              }
+            }
+          },
+          "chart": {
+            "type": "object",
+            "description": "Numeric chart data with visibility metadata. Bar mode carries per-month labels and per-Subscription datasets; monthly/yearly modes carry parallel labels and values. No Chart.js styling or options are exposed.",
+            "required": ["mode", "basis", "currency", "labels", "empty", "hiddenCount", "hiddenCycle"],
+            "properties": {
+              "mode": {
+                "type": "string",
+                "enum": ["bar", "monthly", "yearly"]
+              },
+              "basis": {
+                "type": "string",
+                "enum": ["charges", "monthly_direct", "monthly_equivalent", "yearly_direct", "yearly_equivalent"],
+                "description": "Bar always reports per-month charges; doughnut modes report direct-cycle or normalized-equivalent values."
+              },
+              "currency": {
+                "type": "string",
+                "nullable": true,
+                "description": "Main-currency label, or null when no main currency is confirmed."
+              },
+              "labels": {
+                "type": "array",
+                "description": "Month names for bar mode, Subscription names for monthly/yearly modes.",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "datasets": {
+                "type": "array",
+                "description": "Bar mode only: one numeric twelve-value series per reportable Subscription.",
+                "items": {
+                  "type": "object",
+                  "required": ["label", "data"],
+                  "properties": {
+                    "label": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "number"
+                      }
+                    }
+                  }
+                }
+              },
+              "data": {
+                "type": "array",
+                "description": "Monthly/yearly modes only: values parallel to labels.",
+                "items": {
+                  "type": "number"
+                }
+              },
+              "empty": {
+                "type": "boolean",
+                "description": "True when the active view draws no series."
+              },
+              "hiddenCount": {
+                "type": "integer",
+                "description": "Reportable Subscriptions excluded by the direct-cycle view."
+              },
+              "hiddenCycle": {
+                "type": "string",
+                "nullable": true,
+                "enum": ["monthly", "yearly", null],
+                "description": "Billing cycle hidden by the direct view, or null when nothing is hidden."
+              }
+            }
+          },
+          "filters": {
+            "type": "object",
+            "required": ["chartMode", "basis", "categoryId", "month"],
+            "properties": {
+              "chartMode": {
+                "type": "string",
+                "enum": ["bar", "monthly", "yearly"]
+              },
+              "basis": {
+                "type": "string",
+                "enum": ["direct", "equivalent"]
+              },
+              "categoryId": {
+                "type": "string",
+                "format": "uuid",
+                "nullable": true
+              },
+              "month": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 12,
+                "nullable": true
+              }
+            }
+          }
+        }
+      },
       "Problem": {
         "type": "object",
         "required": [
@@ -650,7 +900,7 @@
           },
           "errors": {
             "type": "array",
-            "description": "Field-level violations for 422 responses (write operations, later slices).",
+            "description": "Field-level violations for 422 responses (report filters; write operations in later slices).",
             "items": {
               "type": "object",
               "required": [
@@ -733,6 +983,16 @@
       },
       "CategoryInUse": {
         "description": "The category is still used by Subscriptions; reassign them first.",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        }
+      },
+      "InvalidFilter": {
+        "description": "Invalid report filter: unknown chart mode or basis, misplaced or out-of-range month, or equivalent basis with the bar view. Carries code invalid_filter with field-level errors.",
         "content": {
           "application/problem+json": {
             "schema": {
