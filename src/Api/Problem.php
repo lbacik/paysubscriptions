@@ -25,6 +25,7 @@ final class Problem
     public const CATEGORY_IN_USE = 'category_in_use';
     public const VALIDATION_FAILED = 'validation_failed';
     public const SUBSCRIPTION_NOT_FOUND = 'subscription_not_found';
+    public const INVALID_FILTER = 'invalid_filter';
     public const INVALID_TOKEN = 'invalid_token';
     public const NOT_FOUND = 'not_found';
 
