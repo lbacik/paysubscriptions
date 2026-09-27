@@ -79,3 +79,9 @@ services:
             $keyPath: '%env(resolve:OAUTH_PUBLIC_KEY)%'
             $passPhrase: ~
             $keyPermissionsCheck: false
+
+    # Discovery publishes this same public key as a JWK Set (issue #90). Only
+    # the public key is ever wired here, so private material cannot leak.
+    App\OAuth2\JwksProvider:
+        arguments:
+            $publicKeyPath: '%env(resolve:OAUTH_PUBLIC_KEY)%'
