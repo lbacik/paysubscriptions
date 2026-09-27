@@ -20,6 +20,7 @@ final class ApiAccessTokenRepository implements AccessTokenRepositoryInterface
     public function __construct(
         private readonly AccessTokenRepositoryInterface $inner,
         private readonly string $issuer,
+        private readonly ?string $keyId = null,
     ) {
     }
 
@@ -28,7 +29,7 @@ final class ApiAccessTokenRepository implements AccessTokenRepositoryInterface
         array $scopes,
         ?string $userIdentifier = null,
     ): AccessTokenEntityInterface {
-        $accessToken = new ApiAccessTokenEntity($this->issuer, OAuth2Config::API_AUDIENCE);
+        $accessToken = new ApiAccessTokenEntity($this->issuer, OAuth2Config::API_AUDIENCE, $this->keyId);
         $accessToken->setClient($clientEntity);
         if (null !== $userIdentifier && '' !== $userIdentifier) {
             $accessToken->setUserIdentifier($userIdentifier);

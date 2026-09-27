@@ -22,6 +22,11 @@ use RuntimeException;
  * authorization-server issuer and the PaySubscriptions API audience, plus the
  * client identifier: every token states who issued it, what API it opens, who
  * it was issued to (client), and whose data it opens (User subject).
+ *
+ * Since issue #94 every token also carries the signing-key identifier (`kid`
+ * header) of the key that signed it, so the resource server can pick the
+ * right verification key during a rotation. An empty key identifier omits the
+ * header (legacy mode, e.g. an operator who has not configured OAUTH_KEY_ID).
  */
 final class ApiAccessTokenEntity implements AccessTokenEntityInterface
 {
@@ -34,6 +39,7 @@ final class ApiAccessTokenEntity implements AccessTokenEntityInterface
     public function __construct(
         private readonly string $issuer,
         private readonly string $audience,
+        private readonly ?string $keyId = null,
     ) {
     }
 
@@ -51,7 +57,7 @@ final class ApiAccessTokenEntity implements AccessTokenEntityInterface
     {
         $this->initJwtConfiguration();
 
-        return $this->jwtConfiguration->builder()
+        $builder = $this->jwtConfiguration->builder()
             ->issuedBy($this->issuer)
             ->permittedFor($this->audience)
             ->identifiedBy($this->getIdentifier())
@@ -60,8 +66,13 @@ final class ApiAccessTokenEntity implements AccessTokenEntityInterface
             ->expiresAt($this->getExpiryDateTime())
             ->relatedTo($this->getUserIdentifier() ?? $this->getClient()->getIdentifier())
             ->withClaim('scopes', $this->getScopes())
-            ->withClaim('client_id', $this->getClient()->getIdentifier())
-            ->getToken($this->jwtConfiguration->signer(), $this->jwtConfiguration->signingKey());
+            ->withClaim('client_id', $this->getClient()->getIdentifier());
+
+        if (null !== $this->keyId && '' !== $this->keyId) {
+            $builder = $builder->withHeader('kid', $this->keyId);
+        }
+
+        return $builder->getToken($this->jwtConfiguration->signer(), $this->jwtConfiguration->signingKey());
     }
 
     private function initJwtConfiguration(): void

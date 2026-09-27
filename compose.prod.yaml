@@ -79,6 +79,29 @@ services:
       MAINTENANCE_MODE: "${MAINTENANCE_MODE:-0}"
       GOOGLE_RECAPTCHA_SITE_KEY: "${GOOGLE_RECAPTCHA_SITE_KEY:?GOOGLE_RECAPTCHA_SITE_KEY is required}"
       GOOGLE_RECAPTCHA_SECRET: "${GOOGLE_RECAPTCHA_SECRET:?GOOGLE_RECAPTCHA_SECRET is required}"
+      # OAuth2 signing and encryption material (issue #94, procedures in
+      # docs/oauth-key-rotation.md). Values are container-local: either paths
+      # to key files baked or mounted into the image, or the raw PEM/key
+      # contents inline. Deliberately defaulted rather than required: the API
+      # release gates (#100) promote these to required once the API serves
+      # production traffic, but failing every deploy before then would block
+      # unrelated releases. An empty value leaves the OAuth endpoints
+      # unusable (they fail at key load) while the rest of the app converges.
+      OAUTH_PRIVATE_KEY: "${OAUTH_PRIVATE_KEY:-}"
+      OAUTH_PUBLIC_KEY: "${OAUTH_PUBLIC_KEY:-}"
+      OAUTH_PASSPHRASE: "${OAUTH_PASSPHRASE:-}"
+      OAUTH_ENCRYPTION_KEY: "${OAUTH_ENCRYPTION_KEY:-}"
+      # Key identifier minted into every access token's `kid` header. Change
+      # to a fresh label with each signing-key rotation; keep in step with
+      # whichever key the *_KEY paths above point at.
+      OAUTH_KEY_ID: "${OAUTH_KEY_ID:-v1}"
+      # Previous verification key while a routine rotation is in flight;
+      # empty the rest of the time (and always after an emergency rotation).
+      OAUTH_PREVIOUS_PUBLIC_KEY: "${OAUTH_PREVIOUS_PUBLIC_KEY:-}"
+      OAUTH_PREVIOUS_KEY_ID: "${OAUTH_PREVIOUS_KEY_ID:-}"
+      # Public identifier carried as the `iss` claim of every access token.
+      # Should match the production base URL so tokens are self-describing.
+      OAUTH2_ISSUER: "${OAUTH2_ISSUER:-https://paysubscriptions.com}"
       # nginx-proxy / acme-companion discovery. VIRTUAL_PORT is explicit because
       # the FrankenPHP image exposes four ports (80, 443, 443/udp and Caddy's
       # admin API on 2019); with more than one exposed port nginx-proxy falls
