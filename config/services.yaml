@@ -49,6 +49,14 @@ services:
     # OAuth2 API v1 wiring (issues #88, #91). The listeners self-register
     # through #[AsEventListener]; the repository decorators and the resource
     # server swap need explicit definitions below.
+    # RFC 7009 revocation (issue #92) decrypts opaque client-facing refresh
+    # tokens with the same authorization-server encryption key the bundle
+    # uses (see League's EncryptionKeyPass for the plain/defuse switch).
+    App\OAuth2\OpaqueTokenDecryptor:
+        arguments:
+            $encryptionKey: '%league.oauth2_server.encryption_key%'
+            $encryptionKeyType: '%league.oauth2_server.encryption_key.type%'
+
     App\OAuth2\ApiAccessTokenRepository:
         decorates: 'league.oauth2_server.repository.access_token'
         arguments:

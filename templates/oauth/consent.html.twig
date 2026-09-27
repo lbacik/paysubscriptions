@@ -21,9 +21,27 @@
                 </p>
             </div>
 
+            {% if grants is defined and grants is not empty %}
+                <div class="rounded-lg border border-color-sec p-4">
+                    <p class="font-semibold text-color-qua">Already approved</p>
+                    <ul id="approved-clients" class="mt-2 space-y-1 text-sm text-color-ter">
+                        {% for grant in grants %}
+                            <li>{{ grant.clientName }} <span class="text-xs">({{ grant.clientId }})</span></li>
+                        {% endfor %}
+                    </ul>
+                    <p class="mt-2 text-sm text-color-ter">
+                        Manage or disconnect them under
+                        <a href="{{ path('app_connected_apps') }}" class="underline">connected applications</a>.
+                    </p>
+                </div>
+            {% endif %}
+
             <p class="text-sm text-color-ter">
                 Your choice is remembered for this application. You will be asked
-                again if its identity or requested permissions change.
+                again if its identity or requested permissions change. You can
+                disconnect it at any time under
+                <a href="{{ path('app_connected_apps') }}" class="underline">connected applications</a>;
+                access tokens already issued stay valid for up to 15 minutes afterwards.
             </p>
 
             <form method="post" action="{{ authorize_url }}" class="flex gap-3">

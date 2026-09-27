@@ -32,11 +32,12 @@ final class FirewallTest extends WebTestCase
 
         self::assertSame(
             // oauth2_token stays sessionless on purpose: the OAuth2 token
-            // endpoint authenticates the client itself (PKCE for public
-            // clients, the secret for confidential ones), so no session
-            // firewall may interpose. It is deliberately NOT part of
-            // EXEMPT_PATTERNS below: /token is reachable there by design.
-            ['dev' => self::EXEMPT_PATTERNS[0], 'assets' => self::EXEMPT_PATTERNS[1], 'oauth2_token' => '^/token$'],
+            // and revocation endpoints authenticate the client themselves
+            // (PKCE/client_id for public clients, the secret for
+            // confidential ones), so no session firewall may interpose. It
+            // is deliberately NOT part of EXEMPT_PATTERNS below: /token and
+            // /revoke are reachable there by design.
+            ['dev' => self::EXEMPT_PATTERNS[0], 'assets' => self::EXEMPT_PATTERNS[1], 'oauth2_token' => '^/(token|revoke)$'],
             $unauthenticatedPatterns,
         );
     }

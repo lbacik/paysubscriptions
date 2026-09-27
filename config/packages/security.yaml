@@ -26,9 +26,10 @@ security:
             pattern: ^/assets/
             security: false
         oauth2_token:
-            # The OAuth2 token endpoint must stay reachable without a session:
-            # public clients exchange authorization codes here with PKCE only.
-            pattern: ^/token$
+            # The OAuth2 token and revocation endpoints must stay reachable
+            # without a session: public clients exchange authorization codes
+            # here with PKCE only and revoke refresh tokens with client_id.
+            pattern: ^/(token|revoke)$
             security: false
         api:
             # Bearer-token API boundary, separate from the session-based web

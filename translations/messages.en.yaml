@@ -7,6 +7,7 @@ user:
   register: "Sign up"
   settings: "Settings"
   profile: "Profile"
+  connected_apps: "Connected applications"
   subscriptions: "Subscriptions (CRUD)"
   email: "Email"
   password: "Password"
@@ -50,6 +51,12 @@ profile:
   title: "Profile"
   save: "Save"
   first_confirmation_hint: "Please confirm your main currency. Totals will be reported in this currency."
+connected_apps:
+  title: "Connected applications"
+  notice: "Disconnecting an application stops it from refreshing or obtaining new access immediately, and it will ask for your consent again. Access tokens already issued stay valid until they expire, at most 15 minutes after you disconnect."
+  empty: "No applications have access to your data."
+  disconnect: "Disconnect"
+  back_to_profile: "Back to your profile"
 dashboard:
   title: "Dashboard"
   subtitle: "Track your subscriptions, spending trends, and projected costs"

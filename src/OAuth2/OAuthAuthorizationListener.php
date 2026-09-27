@@ -98,7 +98,7 @@ final class OAuthAuthorizationListener
             }
         }
 
-        $event->setResponse(new Response($this->renderConsent($request, $client->getName(), $client->getIdentifier())));
+        $event->setResponse(new Response($this->renderConsent($request, $user, $client->getName(), $client->getIdentifier())));
     }
 
     /**
@@ -169,14 +169,22 @@ final class OAuthAuthorizationListener
         $this->em->flush();
     }
 
-    private function renderConsent(Request $request, string $clientName, string $clientId): string
+    private function renderConsent(Request $request, User $user, string $clientName, string $clientId): string
     {
+        // Other applications this User already approved, so the screen shows
+        // the full grant picture next to the new request (issue #92).
+        $grants = array_values(array_filter(
+            $this->consents->findBy(['user' => $user], ['updatedAt' => 'DESC']),
+            static fn (OAuthConsent $grant): bool => $grant->getClientId() !== $clientId,
+        ));
+
         return $this->twig->render('oauth/consent.html.twig', [
             'client_name' => $clientName,
             'client_id' => $clientId,
             'scope' => OAuth2Config::SCOPE_FULL,
             'authorize_url' => $request->getUri(),
             'csrf_token' => $this->csrf->getToken('oauth_consent')->getValue(),
+            'grants' => $grants,
         ]);
     }
 }
