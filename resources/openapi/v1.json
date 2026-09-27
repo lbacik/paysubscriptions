@@ -3,7 +3,7 @@
   "info": {
     "title": "PaySubscriptions API",
     "version": "1.0.0",
-    "description": "Versioned REST API for User-owned resources. v1 covers ExpenseCategory collection/detail reads (issue #89) plus collection POST and detail PATCH/DELETE writes: writes accept name and #RRGGBB color only, PATCH changes supplied fields only, name collisions and in-use deletes return 409, constraint violations return 422 with field errors. It also covers Subscription collection and detail reads with explicit stateless navigation (issue #96) plus collection POST and detail DELETE writes (issue #97): writes accept the same editable data as the web experience with server-controlled ids/timestamps/currency stamps, the default-category rule, manual converted amounts, and the per-User Subscription limit (409 on conflict, 422 on invalid data), and the dashboard snapshot report (issue #99); write-error statuses 409/422 do not apply to the read-only report endpoint. Additive backward-compatible changes stay within v1; breaking changes require a new version."
+    "description": "Versioned REST API for User-owned resources. v1 covers ExpenseCategory collection/detail reads (issue #89) plus collection POST and detail PATCH/DELETE writes: writes accept name and #RRGGBB color only, PATCH changes supplied fields only, name collisions and in-use deletes return 409, constraint violations return 422 with field errors. It also covers Subscription collection and detail reads with explicit stateless navigation (issue #96) plus collection POST, detail PATCH (issue #98), and detail DELETE writes (issue #97): writes accept the same editable data as the web experience with server-controlled ids/timestamps/currency stamps, the default-category rule, manual converted amounts, and the per-User Subscription limit (409 on conflict, 422 on invalid data); PATCH is atomic and partial, with write-only confirmConvertedFor reviewing converted amounts (409 on currency mismatch), and the dashboard snapshot report (issue #99); write-error statuses 409/422 do not apply to the read-only report endpoint. Additive backward-compatible changes stay within v1; breaking changes require a new version."
   },
   "servers": [
     {
@@ -498,6 +498,70 @@
             "$ref": "#/components/responses/SubscriptionNotFound"
           }
         }
+      },
+      "patch": {
+        "operationId": "updateSubscription",
+        "summary": "Partially update an owned subscription",
+        "description": "Atomic partial update: only supplied fields change and omitted fields keep their values. Optional notes/convertedAmount may be cleared with explicit null only when the patched Subscription stays valid; required fields, the owner, and the UUID can never be cleared or changed. An unrelated edit preserves pendingReview; changing currency drops a converted figure entered for the old currency. Supplying convertedAmount together with write-only confirmConvertedFor reviews even an unchanged figure: a confirmation matching the current main currency stamps it, a mismatched one returns 409 and applies nothing. confirmConvertedFor is never stored or returned. Missing, malformed, or foreign Subscription IDs return 404 without disclosure; invalid or foreign category IDs return 422 without disclosure.",
+        "security": [
+          {
+            "paySubsOAuth2": [
+              "api:full"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Subscription UUID.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubscriptionUpdate"
+              },
+              "example": {
+                "name": "Netflix Premium"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The updated subscription.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Subscription"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/SubscriptionNotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/CurrencyConflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationFailed"
+          }
+        }
       }
     },
     "/reports/dashboard": {
@@ -756,6 +820,62 @@
           }
         },
         "description": "Writable fields for creating a subscription. Owner, id, timestamps, convertedCurrency, and pendingReview are server-controlled."
+      },
+      "SubscriptionUpdate": {
+        "type": "object",
+        "minProperties": 1,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 255,
+            "description": "Subscription name. Cannot be cleared."
+          },
+          "billingCycle": {
+            "type": "string",
+            "enum": ["monthly", "yearly"],
+            "description": "Exactly one billing cycle per Subscription; the amount is priced per that cycle. Cannot be cleared."
+          },
+          "amount": {
+            "type": "number",
+            "format": "double",
+            "exclusiveMinimum": 0,
+            "description": "Positive amount charged per billing cycle. Cannot be cleared."
+          },
+          "nextPayment": {
+            "type": "string",
+            "format": "date",
+            "description": "User-entered next known payment date (date-only, YYYY-MM-DD). Cannot be cleared."
+          },
+          "currency": {
+            "type": "string",
+            "description": "ISO 4217 currency code. Changing currency drops a converted figure entered for the old currency.",
+            "nullable": true
+          },
+          "convertedAmount": {
+            "type": "number",
+            "format": "double",
+            "exclusiveMinimum": 0,
+            "description": "Manually supplied positive converted amount in the User's main currency. May be cleared with null only when the patched Subscription stays valid.",
+            "nullable": true
+          },
+          "confirmConvertedFor": {
+            "type": "string",
+            "description": "Write-only confirmation reviewing the supplied convertedAmount against a main currency: a match with the current main currency stamps the review even for an unchanged figure, a mismatch returns 409. Requires convertedAmount, is never stored, and never appears on reads."
+          },
+          "categoryId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ExpenseCategory UUID owned by the same User. Cannot be cleared; missing or foreign IDs are rejected as an invalid field."
+          },
+          "notes": {
+            "type": "string",
+            "maxLength": 2000,
+            "description": "Optional notes. May be cleared with null.",
+            "nullable": true
+          }
+        },
+        "description": "Atomic partial update: only supplied fields change. Owner, id, timestamps, convertedCurrency, and pendingReview are server-controlled and ignored."
       },
       "Subscription": {
         "type": "object",
@@ -1049,7 +1169,7 @@
           },
           "errors": {
             "type": "array",
-            "description": "Field-level violations for 422 responses (report filters; write operations in later slices).",
+            "description": "Field-level violations for 422 responses (report filters and write operations).",
             "items": {
               "type": "object",
               "required": [
@@ -1102,6 +1222,16 @@
       },
       "SubscriptionLimitReached": {
         "description": "The User already reached their maximum number of subscriptions.",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        }
+      },
+      "CurrencyConflict": {
+        "description": "The converted amount was confirmed against a different main currency than the current one; nothing was applied.",
         "content": {
           "application/problem+json": {
             "schema": {
