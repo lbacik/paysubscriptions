@@ -7,7 +7,11 @@ namespace App\Controller\Api\V1;
 use App\Api\Problem;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Enum\BillingCycle;
+use App\Exception\SubscriptionLimitReachedException;
+use App\Repository\ExpenseCategoryRepository;
 use App\Repository\SubscriptionRepository;
+use App\Service\CurrencyService;
 use App\Service\SubscriptionListState;
 use App\Service\SubscriptionService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -16,9 +20,11 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Uid\Uuid;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 /**
- * Read-only Subscription endpoints for API v1 (issue #96).
+ * Subscription endpoints for API v1: reads (issue #96) plus collection POST
+ * and detail DELETE (issue #97).
  *
  * Collection and detail are scoped to the bearer token User and returned as
  * ordinary `application/json`. Navigation is explicit and stateless: the
@@ -27,6 +33,17 @@ use Symfony\Component\Uid\Uuid;
  * session's list state (SubscriptionListState) is never read or written here.
  * Missing, malformed, or foreign IDs return 404 `application/problem+json`
  * without disclosing another User's data.
+ *
+ * Writes accept the same editable data as the web experience — name,
+ * billingCycle, amount, date-only nextPayment, currency, convertedAmount,
+ * notes, and categoryId — and reuse the same service rules: server-controlled
+ * owner/UUID/timestamps/convertedCurrency/pendingReview, the default-category
+ * selection and creation rule for an omitted category, confirmed-main-currency
+ * defaulting with manual converted amounts, legacy no-main-currency behavior,
+ * and the per-User Subscription limit (409 on conflict, including a lost race
+ * under concurrent creates). An explicitly supplied missing or foreign
+ * category is rejected as an invalid field (422) without disclosure.
+ * Constraint violations return 422 with field-level `errors`.
  */
 #[Route('/api/v1/subscriptions')]
 class SubscriptionController extends AbstractController
@@ -36,6 +53,8 @@ class SubscriptionController extends AbstractController
     public function __construct(
         private readonly SubscriptionRepository $subscriptions,
         private readonly SubscriptionService $service,
+        private readonly ExpenseCategoryRepository $categories,
+        private readonly ValidatorInterface $validator,
     ) {
     }
 
@@ -138,6 +157,330 @@ class SubscriptionController extends AbstractController
         }
 
         return $subscription;
+    }
+
+    #[Route('', name: 'api_v1_subscriptions_create', methods: ['POST'])]
+    public function create(Request $request): JsonResponse
+    {
+        $user = $this->getUser();
+        if (!$user instanceof User) {
+            return $this->unauthorized();
+        }
+
+        $data = $this->decodeJson($request);
+        if (null === $data) {
+            return $this->validationFailed('Request body must be a JSON object.');
+        }
+
+        // Invalid data stays 422 even when the limit is also reached: every
+        // field check below runs before the limit gate in service->add().
+        [$errors, $subscription] = $this->validateFields($data, $user);
+        if ([] !== $errors || null === $subscription) {
+            return $this->validationFailed('The given data did not pass validation.', $errors);
+        }
+
+        try {
+            $this->service->add($subscription);
+        } catch (SubscriptionLimitReachedException) {
+            // The per-User Subscription limit — including a lost race under
+            // concurrent creates, which the service serializes atomically.
+            return new JsonResponse(
+                Problem::body(
+                    Problem::SUBSCRIPTION_LIMIT_REACHED,
+                    'Subscription limit reached',
+                    Response::HTTP_CONFLICT,
+                    'You have reached the maximum number of subscriptions.',
+                ),
+                Response::HTTP_CONFLICT,
+                ['Content-Type' => 'application/problem+json'],
+            );
+        } catch (\LogicException) {
+            // Category ownership was already established above (an omitted
+            // category follows the default rule, an explicit one was checked
+            // against the owner's own records), so a remaining logic error
+            // means category state changed mid-request. Report it as an
+            // invalid field without disclosure, never as a conflict.
+            return $this->validationFailed('The given data did not pass validation.', [
+                ['field' => 'categoryId', 'message' => 'The selected category is invalid.'],
+            ]);
+        } catch (\InvalidArgumentException $exception) {
+            // Defense-in-depth: the currency rules were already validated
+            // above, so this only fires if state changed mid-request.
+            return $this->validationFailed('The given data did not pass validation.', [
+                ['field' => 'convertedAmount', 'message' => $exception->getMessage()],
+            ]);
+        }
+
+        return new JsonResponse(
+            self::serialize($subscription, $user->getMainCurrency()),
+            Response::HTTP_CREATED,
+        );
+    }
+
+    #[Route('/{id}', name: 'api_v1_subscriptions_delete', methods: ['DELETE'])]
+    public function delete(string $id): Response
+    {
+        $user = $this->getUser();
+        if (!$user instanceof User) {
+            return $this->unauthorized();
+        }
+
+        $subscription = $this->findOwned($user, $id);
+        if (null === $subscription) {
+            return $this->subscriptionNotFound();
+        }
+
+        $this->subscriptions->remove($subscription);
+
+        return new Response('', Response::HTTP_NO_CONTENT);
+    }
+
+    /**
+     * Decodes a JSON object body. Returns null when the body is not a JSON
+     * object (malformed JSON, empty body, or a JSON scalar/array).
+     *
+     * @return array<string, mixed>|null
+     */
+    private function decodeJson(Request $request): ?array
+    {
+        $content = trim($request->getContent());
+        if ('' === $content || str_starts_with($content, '[')) {
+            return null;
+        }
+
+        try {
+            $data = json_decode($content, true, 512, JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            return null;
+        }
+
+        // `{}` decodes to `[]`, which is a valid (field-less) payload here;
+        // every top-level JSON array was rejected by the `[` guard above.
+        return \is_array($data) ? $data : null;
+    }
+
+    /**
+     * Validates the writable create fields against the same rules the web
+     * experience enforces: required name/billingCycle/amount/date-only
+     * nextPayment, optional ISO 4217 currency, optional positive manual
+     * converted amount, optional notes, and an optional owned categoryId. An
+     * explicitly supplied missing, malformed, or foreign categoryId is an
+     * invalid field (422) without disclosure; an omitted category is valid
+     * and follows the default-category rule on save. Every other field
+     * (owner, UUID, timestamps, convertedCurrency, pendingReview) is ignored.
+     *
+     * @param array<string, mixed> $data
+     *
+     * @return array{0: list<array{field: string, message: string}>, 1: ?Subscription} Field errors with the
+     *         validated candidate (null when structural checks already failed, so the caller never builds twice)
+     */
+    private function validateFields(array $data, User $user): array
+    {
+        $errors = [];
+
+        $name = $data['name'] ?? null;
+        if (!\is_string($name) || trim($name) === '') {
+            $errors[] = ['field' => 'name', 'message' => 'This value should not be blank.'];
+        }
+
+        $cycle = $data['billingCycle'] ?? null;
+        if (!\is_string($cycle) || null === BillingCycle::tryFrom($cycle)) {
+            $errors[] = ['field' => 'billingCycle', 'message' => 'This value should be either "monthly" or "yearly".'];
+        }
+
+        $amount = $data['amount'] ?? null;
+        if (!\is_int($amount) && !\is_float($amount)) {
+            $errors[] = ['field' => 'amount', 'message' => 'This value should be a number.'];
+        }
+
+        $nextPayment = $data['nextPayment'] ?? null;
+        if (!\is_string($nextPayment) || null === self::parseDateOnly($nextPayment)) {
+            $errors[] = ['field' => 'nextPayment', 'message' => 'This value should be a date in YYYY-MM-DD format.'];
+        }
+
+        if (\array_key_exists('currency', $data) && null !== $data['currency']) {
+            $currency = $data['currency'];
+            if (!\is_string($currency) || !CurrencyService::isValidCode($currency)) {
+                $errors[] = ['field' => 'currency', 'message' => 'This value is not a valid ISO 4217 currency code.'];
+            }
+        }
+
+        if (\array_key_exists('convertedAmount', $data) && null !== $data['convertedAmount']) {
+            $converted = $data['convertedAmount'];
+            if (!\is_int($converted) && !\is_float($converted)) {
+                $errors[] = ['field' => 'convertedAmount', 'message' => 'This value should be a number.'];
+            } elseif ((float) $converted <= 0) {
+                $errors[] = ['field' => 'convertedAmount', 'message' => 'Converted amount must be positive.'];
+            }
+        }
+
+        if (\array_key_exists('notes', $data) && null !== $data['notes'] && !\is_string($data['notes'])) {
+            $errors[] = ['field' => 'notes', 'message' => 'This value should be of type string.'];
+        }
+
+        // An explicitly supplied category must resolve to one of the owner's
+        // own records; anything else is invalid without saying which.
+        if (\array_key_exists('categoryId', $data) && null !== $data['categoryId'] && '' !== $data['categoryId']) {
+            $categoryId = $data['categoryId'];
+            if (!\is_string($categoryId) || null === $this->findOwnedCategory($user, $categoryId)) {
+                $errors[] = ['field' => 'categoryId', 'message' => 'The selected category is invalid.'];
+            }
+        }
+
+        if ([] !== $errors) {
+            usort($errors, static fn (array $a, array $b): int => [$a['field'], $a['message']] <=> [$b['field'], $b['message']]);
+
+            return [$errors, null];
+        }
+
+        // Structural checks passed: run the shared entity constraints (name
+        // length, positive amount, notes length) and the currency behavior
+        // (main-currency defaulting, required cross-currency converted amount,
+        // no same-currency duplicate, legacy passthrough) on a candidate.
+        $candidate = $this->buildSubscription($data, $user);
+        $mainCurrency = $user->getMainCurrency();
+
+        if ($candidate->getCurrency() === null && CurrencyService::normalizeCode($mainCurrency) !== null) {
+            $candidate->setCurrency($mainCurrency);
+        }
+
+        foreach ($this->validator->validate($candidate) as $violation) {
+            $field = ltrim((string) $violation->getPropertyPath(), '.');
+            $errors[] = ['field' => $field, 'message' => (string) $violation->getMessage()];
+        }
+
+        // Validate before stamping, like the web form: a same-currency
+        // duplicate is a violation, not silently dropped input.
+        foreach ($candidate->validateConverted($mainCurrency, true) as $message) {
+            $errors[] = ['field' => self::convertedViolationField($message), 'message' => $message];
+        }
+
+        usort($errors, static fn (array $a, array $b): int => [$a['field'], $a['message']] <=> [$b['field'], $b['message']]);
+
+        return [$errors, $candidate];
+    }
+
+    /**
+     * Builds an unsaved Subscription from validated payload data. The owner is
+     * set on the owning side only (as the web form does), the category stays
+     * null when omitted so the service applies the default rule, and
+     * server-controlled convertedCurrency is never taken from the payload.
+     *
+     * @param array<string, mixed> $data
+     */
+    private function buildSubscription(array $data, User $user): Subscription
+    {
+        $subscription = (new Subscription())
+            ->setName((string) ($data['name'] ?? ''))
+            ->setBillingCycle(BillingCycle::tryFrom((string) ($data['billingCycle'] ?? '')) ?? BillingCycle::Monthly)
+            ->setAmount(isset($data['amount']) && (\is_int($data['amount']) || \is_float($data['amount'])) ? (float) $data['amount'] : null)
+            ->setCurrency(isset($data['currency']) && \is_string($data['currency']) ? $data['currency'] : null)
+            ->setNotes(isset($data['notes']) && \is_string($data['notes']) ? $data['notes'] : null);
+        $subscription->setConvertedAmount(
+            isset($data['convertedAmount']) && (\is_int($data['convertedAmount']) || \is_float($data['convertedAmount']))
+                ? (float) $data['convertedAmount']
+                : null,
+        );
+
+        $nextPayment = isset($data['nextPayment']) && \is_string($data['nextPayment'])
+            ? self::parseDateOnly($data['nextPayment'])
+            : null;
+        $subscription->setNextPayment($nextPayment);
+
+        if (\array_key_exists('categoryId', $data) && null !== $data['categoryId'] && '' !== $data['categoryId']
+            && \is_string($data['categoryId'])
+        ) {
+            $subscription->setCategory($this->findOwnedCategory($user, $data['categoryId']));
+        }
+
+        $subscription->setOwner($user);
+
+        return $subscription;
+    }
+
+    private function findOwnedCategory(User $user, string $id): ?\App\Entity\ExpenseCategory
+    {
+        if (!Uuid::isValid($id)) {
+            return null;
+        }
+
+        $category = $this->categories->find(Uuid::fromString($id));
+        if (null === $category || !$category->isOwnedBy($user)) {
+            return null;
+        }
+
+        return $category;
+    }
+
+    private static function parseDateOnly(string $value): ?\DateTimeImmutable
+    {
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $value)) {
+            return null;
+        }
+
+        $date = \DateTimeImmutable::createFromFormat('!Y-m-d', $value);
+        if (false === $date || $date->format('Y-m-d') !== $value) {
+            return null;
+        }
+
+        return $date;
+    }
+
+    private static function convertedViolationField(string $message): string
+    {
+        if (str_contains($message, 'select a currency') || str_starts_with($message, 'Currency "')) {
+            return 'currency';
+        }
+
+        return 'convertedAmount';
+    }
+
+    private function unauthorized(): JsonResponse
+    {
+        return new JsonResponse(
+            Problem::body(
+                Problem::UNAUTHORIZED,
+                'Authentication required',
+                Response::HTTP_UNAUTHORIZED,
+                'Authentication is required to access this resource.',
+            ),
+            Response::HTTP_UNAUTHORIZED,
+            ['Content-Type' => 'application/problem+json'],
+        );
+    }
+
+    private function subscriptionNotFound(): JsonResponse
+    {
+        return new JsonResponse(
+            Problem::body(
+                Problem::SUBSCRIPTION_NOT_FOUND,
+                'Subscription not found',
+                Response::HTTP_NOT_FOUND,
+                'No subscription with this identifier.',
+            ),
+            Response::HTTP_NOT_FOUND,
+            ['Content-Type' => 'application/problem+json'],
+        );
+    }
+
+    /**
+     * @param list<array{field: string, message: string}> $errors
+     */
+    private function validationFailed(string $detail, array $errors = []): JsonResponse
+    {
+        $extra = [] !== $errors ? ['errors' => $errors] : [];
+
+        return new JsonResponse(
+            Problem::body(
+                Problem::VALIDATION_FAILED,
+                'Validation failed',
+                Response::HTTP_UNPROCESSABLE_ENTITY,
+                $detail,
+                $extra,
+            ),
+            Response::HTTP_UNPROCESSABLE_ENTITY,
+            ['Content-Type' => 'application/problem+json'],
+        );
     }
 
     /**
