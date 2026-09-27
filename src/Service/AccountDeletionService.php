@@ -4,9 +4,14 @@ declare(strict_types=1);
 
 namespace App\Service;
 
+use App\Entity\OAuthConsent;
+use App\Entity\OAuthRefreshFamily;
+use App\Entity\OAuthRefreshFamilyToken;
 use App\Entity\ResetPasswordRequest;
 use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
+use League\Bundle\OAuth2ServerBundle\Model\AuthorizationCode;
+use League\Bundle\OAuth2ServerBundle\Model\RefreshToken;
 
 /**
  * Permanently removes a User and every application record owned by them.
@@ -16,6 +21,12 @@ use Doctrine\ORM\EntityManagerInterface;
  *   (cascade remove on User::$limits) via the ORM remove cascade.
  * - Reset-password requests, which point at the User with a non-nullable
  *   foreign key and no cascade, so they are deleted explicitly first.
+ * - OAuth2 records (issue #93): remembered per-client consents (grants),
+ *   refresh-token families with their token links, the bundle's own
+ *   refresh-token rows (attributed only through those links), and pending
+ *   authorization codes. Family rows would cascade with the User, but they
+ *   are removed explicitly so the bundle rows keyed by their links can be
+ *   collected first.
  * - Reminder preferences/state: no dedicated columns or tables exist for
  *   these yet, so there is nothing extra to delete today beyond the User
  *   row itself. When the reminder slices land, their account-owned state
@@ -53,6 +64,7 @@ class AccountDeletionService
         try {
             $this->removeOwned($user, ResetPasswordRequest::class, 'user');
             $this->deleteOwnedRecordsIfSupported($user);
+            $this->removeOAuthRecords($user, $email);
             $this->purgeQueuedAccountMessages($email);
 
             $this->entityManager->remove($user);
@@ -79,6 +91,58 @@ class AccountDeletionService
             }
 
             $this->removeOwned($user, $class, $field);
+        }
+    }
+
+    /**
+     * Removes the deleted account's OAuth2 grants and token records: the
+     * remembered per-client consents, every refresh-token family with its
+     * token links, the bundle's own refresh-token rows (which carry no User
+     * attribution of their own and are keyed here through the links), and
+     * pending authorization codes. Links are removed before their families so
+     * the cleanup never depends on database cascade ordering within the
+     * flush.
+     */
+    private function removeOAuthRecords(User $user, string $email): void
+    {
+        $this->removeOwned($user, OAuthConsent::class, 'user');
+
+        $families = $this->entityManager->getRepository(OAuthRefreshFamily::class)->findBy(['user' => $user]);
+        $linkRepository = $this->entityManager->getRepository(OAuthRefreshFamilyToken::class);
+
+        $tokenIds = [];
+        $links = [];
+        foreach ($families as $family) {
+            foreach ($linkRepository->findBy(['family' => $family]) as $link) {
+                $links[] = $link;
+                $tokenId = $link->getTokenId();
+                if (\is_string($tokenId) && '' !== $tokenId) {
+                    $tokenIds[$tokenId] = true;
+                }
+            }
+        }
+
+        foreach ($links as $link) {
+            $this->entityManager->remove($link);
+        }
+
+        foreach ($families as $family) {
+            $this->entityManager->remove($family);
+        }
+
+        $bundleRefreshTokens = $this->entityManager->getRepository(RefreshToken::class);
+        foreach (array_keys($tokenIds) as $tokenId) {
+            $bundleToken = $bundleRefreshTokens->find($tokenId);
+            if (null !== $bundleToken) {
+                $this->entityManager->remove($bundleToken);
+            }
+        }
+
+        if ('' !== $email) {
+            $codes = $this->entityManager->getRepository(AuthorizationCode::class)->findBy(['userIdentifier' => $email]);
+            foreach ($codes as $code) {
+                $this->entityManager->remove($code);
+            }
         }
     }
 

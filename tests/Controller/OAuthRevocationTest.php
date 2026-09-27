@@ -4,18 +4,32 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller;
 
+use App\Entity\OAuthConsent;
+use App\Entity\OAuthRefreshFamily;
+use App\Entity\OAuthRefreshFamilyToken;
 use App\Entity\User;
+use App\OAuth2\ApiAccessTokenEntity;
 use App\OAuth2\OAuth2Config;
+use App\Service\AccountDeletionService;
 use App\Tests\DatabaseTestCase;
+use DateTimeImmutable;
+use League\Bundle\OAuth2ServerBundle\Entity\Client as ClientEntity;
 use League\Bundle\OAuth2ServerBundle\Manager\ClientManagerInterface;
+use League\Bundle\OAuth2ServerBundle\Model\AuthorizationCode;
 use League\Bundle\OAuth2ServerBundle\Model\Client;
+use League\Bundle\OAuth2ServerBundle\Model\RefreshToken;
 use League\Bundle\OAuth2ServerBundle\ValueObject\Grant;
 use League\Bundle\OAuth2ServerBundle\ValueObject\RedirectUri;
 use League\Bundle\OAuth2ServerBundle\ValueObject\Scope;
+use League\OAuth2\Server\CryptKey;
+use League\OAuth2\Server\Entities\ScopeEntityInterface;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
+use SymfonyCasts\Bundle\ResetPassword\ResetPasswordHelperInterface;
 
 /**
- * User disconnect and client-facing RFC 7009 revocation (issue #92).
+ * User disconnect, client-facing RFC 7009 revocation, and lifecycle
+ * revocation of refresh-token families (issues #92, #93).
  *
  * A User sees their approved clients and revokes each grant; a later
  * authorization asks for consent again and refresh fails. A client revokes
@@ -23,14 +37,27 @@ use Symfony\Component\HttpFoundation\Response;
  * retires the whole usable family but never claims to revoke self-contained
  * access tokens: already-issued access stays usable until its 15-minute
  * expiry.
+ *
+ * Changes that should end delegated access invalidate the affected families
+ * promptly while the independent web session keeps its own behavior:
+ * - changing or resetting a User password revokes that User's families;
+ * - disabling a client revokes its families (re-enabling does not restore);
+ * - deleting a client revokes its families (re-creating the id does not restore);
+ * - deleting a User removes grants and token records;
+ * - API requests resolve an existing, eligible User;
+ * - web logout ends the web session without disconnecting the CLI.
+ *
+ * Every revocation asserts isolation: unrelated Users and clients keep access.
  */
 final class OAuthRevocationTest extends DatabaseTestCase
 {
     private const CLIENT_ID = 'paysubs-cli';
     private const CLIENT_NAME = 'PaySubscriptions CLI';
     private const OTHER_CLIENT_ID = 'other-cli';
+    private const OTHER_CLIENT_NAME = 'Other CLI';
     private const REGISTERED_REDIRECT = 'http://127.0.0.1/callback';
     private const REDIRECT_URI = 'http://127.0.0.1:54123/callback';
+    private const ISSUER = 'http://localhost';
 
     private User $user;
     private string $verifier;
@@ -40,7 +67,7 @@ final class OAuthRevocationTest extends DatabaseTestCase
     {
         parent::setUp();
 
-        $this->user = $this->createUser('revoke-user@example.com', 'Fixture-Password-1', true);
+        $this->user = $this->createUser('revocation-user@example.com', 'Fixture-Password-1', true);
         $this->registerPublicClient();
 
         $this->verifier = rtrim(strtr(base64_encode(random_bytes(48)), '+/', '-_'), '=');
@@ -143,7 +170,7 @@ final class OAuthRevocationTest extends DatabaseTestCase
     public function testRevokeOnlyRemovesOwnGrant(): void
     {
         $other = $this->createUser('revoke-other@example.com', 'Fixture-Password-1', true);
-        $this->registerPublicClient(self::OTHER_CLIENT_ID, 'Other CLI');
+        $this->registerPublicClient(self::OTHER_CLIENT_ID, self::OTHER_CLIENT_NAME);
 
         $this->client->loginUser($this->user);
         $this->authorizeAndExchange();
@@ -219,7 +246,7 @@ final class OAuthRevocationTest extends DatabaseTestCase
 
     public function testConsentScreenListsOtherApprovedClients(): void
     {
-        $this->registerPublicClient(self::OTHER_CLIENT_ID, 'Other CLI');
+        $this->registerPublicClient(self::OTHER_CLIENT_ID, self::OTHER_CLIENT_NAME);
         $this->client->loginUser($this->user);
         $this->authorizeAndExchange();
 
@@ -266,7 +293,7 @@ final class OAuthRevocationTest extends DatabaseTestCase
 
     public function testRevokeWithWrongClientKeepsTokenUsable(): void
     {
-        $this->registerPublicClient(self::OTHER_CLIENT_ID, 'Other CLI');
+        $this->registerPublicClient(self::OTHER_CLIENT_ID, self::OTHER_CLIENT_NAME);
         $this->client->loginUser($this->user);
         $first = $this->authorizeAndExchange();
 
@@ -332,22 +359,266 @@ final class OAuthRevocationTest extends DatabaseTestCase
         self::assertResponseStatusCodeSame(Response::HTTP_BAD_REQUEST);
     }
 
+    public function testPasswordChangeRevokesRefreshFamilies(): void
+    {
+        $this->client->loginUser($this->user);
+        $first = $this->authorizeAndExchange();
+
+        $this->changePassword($this->user->getEmail(), 'Changed-Password-2!');
+
+        $this->refresh($first['refresh_token']);
+        self::assertResponseStatusCodeSame(Response::HTTP_BAD_REQUEST);
+        self::assertStringContainsString('invalid_grant', (string) $this->client->getResponse()->getContent());
+
+        self::assertTrue($this->newestFamilyForUser('revocation-user@example.com')->isRevoked());
+    }
+
+    public function testPasswordResetThroughHttpRevokesRefreshFamilies(): void
+    {
+        $this->client->loginUser($this->user);
+        $first = $this->authorizeAndExchange();
+
+        $helper = static::getContainer()->get(ResetPasswordHelperInterface::class);
+        $token = $helper->generateResetToken($this->freshUserByEmail('revocation-user@example.com'))->getToken();
+
+        $this->client->request('GET', '/reset-password/reset/'.$token);
+        $this->client->followRedirect();
+        $form = $this->client->getCrawler()->filter('form')->form([
+            'change_password_form[plainPassword][first]' => 'Reset-BatteryStaple99!',
+            'change_password_form[plainPassword][second]' => 'Reset-BatteryStaple99!',
+        ]);
+        $this->client->submit($form);
+        self::assertResponseRedirects('/login');
+
+        $this->refresh($first['refresh_token']);
+        self::assertResponseStatusCodeSame(Response::HTTP_BAD_REQUEST);
+        self::assertStringContainsString('invalid_grant', (string) $this->client->getResponse()->getContent());
+
+        // Fresh authorization after the reset issues a working family.
+        $this->login('revocation-user@example.com', 'Reset-BatteryStaple99!');
+        $second = $this->authorizeAndExchange();
+        $third = $this->refresh($second['refresh_token']);
+        self::assertResponseIsSuccessful();
+        self::assertArrayHasKey('access_token', $third);
+    }
+
+    public function testPasswordChangeLeavesOtherUsersFamiliesAlone(): void
+    {
+        $other = $this->createUser('other-user@example.com', 'Fixture-Password-1', true);
+
+        $this->client->loginUser($this->user);
+        $mine = $this->authorizeAndExchange();
+
+        $this->client->loginUser($other);
+        $theirs = $this->authorizeAndExchange();
+
+        $this->changePassword('revocation-user@example.com', 'Changed-Password-2!');
+
+        $this->refresh($mine['refresh_token']);
+        self::assertResponseStatusCodeSame(Response::HTTP_BAD_REQUEST);
+
+        $renewed = $this->refresh($theirs['refresh_token']);
+        self::assertResponseIsSuccessful();
+        self::assertArrayHasKey('access_token', $renewed);
+    }
+
+    public function testDisablingClientRevokesFamiliesAndReenablingDoesNotRestore(): void
+    {
+        $this->client->loginUser($this->user);
+        $first = $this->authorizeAndExchange();
+
+        $this->setClientActive(self::CLIENT_ID, false);
+
+        // A disabled client cannot refresh: its families were revoked
+        // immediately on deactivation…
+        $this->refresh($first['refresh_token']);
+        self::assertResponseStatusCodeSame(Response::HTTP_BAD_REQUEST);
+        self::assertStringContainsString('invalid_grant', (string) $this->client->getResponse()->getContent());
+
+        // …and the family was revoked immediately, so re-enabling the client
+        // does not resurrect the CLI session: fresh authorization is required.
+        self::assertTrue($this->newestFamilyForUser('revocation-user@example.com')->isRevoked());
+
+        $this->setClientActive(self::CLIENT_ID, true);
+        $this->refresh($first['refresh_token']);
+        self::assertResponseStatusCodeSame(Response::HTTP_BAD_REQUEST);
+        self::assertStringContainsString('invalid_grant', (string) $this->client->getResponse()->getContent());
+    }
+
+    public function testDisablingClientLeavesOtherClientsFamiliesAlone(): void
+    {
+        $this->registerPublicClient(self::OTHER_CLIENT_ID, self::OTHER_CLIENT_NAME);
+
+        $this->client->loginUser($this->user);
+        $mine = $this->authorizeAndExchange(self::CLIENT_ID);
+        $theirs = $this->authorizeAndExchange(self::OTHER_CLIENT_ID);
+
+        $this->setClientActive(self::CLIENT_ID, false);
+
+        $this->refresh($mine['refresh_token'], self::CLIENT_ID);
+        self::assertResponseStatusCodeSame(Response::HTTP_BAD_REQUEST);
+        self::assertStringContainsString('invalid_grant', (string) $this->client->getResponse()->getContent());
+
+        $renewed = $this->refresh($theirs['refresh_token'], self::OTHER_CLIENT_ID);
+        self::assertResponseIsSuccessful();
+        self::assertArrayHasKey('access_token', $renewed);
+    }
+
+    public function testDeletingClientRevokesFamilies(): void
+    {
+        $this->client->loginUser($this->user);
+        $first = $this->authorizeAndExchange();
+
+        // Reboot into a fresh entity manager before removing the client, just
+        // like the operator's `delete-client` console command runs in its own
+        // process: the exchange request's managed authorization-code entity
+        // must not share persistence context with the removal.
+        $this->client->request('GET', '/login');
+
+        $manager = static::getContainer()->get(ClientManagerInterface::class);
+        $manager->remove($manager->find(self::CLIENT_ID));
+
+        $this->refresh($first['refresh_token']);
+        self::assertResponseStatusCodeSame(Response::HTTP_UNAUTHORIZED);
+        self::assertTrue($this->newestFamilyForUser('revocation-user@example.com')->isRevoked());
+
+        // Re-creating the same identifier must not resurrect the old family.
+        $this->registerPublicClient();
+        $this->refresh($first['refresh_token']);
+        self::assertResponseStatusCodeSame(Response::HTTP_BAD_REQUEST);
+        self::assertStringContainsString('invalid_grant', (string) $this->client->getResponse()->getContent());
+    }
+
+    public function testDeletingUserRemovesGrantsAndTokenRecords(): void
+    {
+        $other = $this->createUser('survivor@example.com', 'Fixture-Password-1', true);
+        $this->registerPublicClient(self::OTHER_CLIENT_ID, self::OTHER_CLIENT_NAME);
+
+        $this->client->loginUser($this->user);
+        $mine = $this->authorizeAndExchange();
+        // Leave one authorization code pending (authorized, never exchanged).
+        $this->authorizeOnly();
+
+        $this->client->loginUser($other);
+        $theirs = $this->authorizeAndExchange(self::OTHER_CLIENT_ID);
+
+        $familyIds = $this->familyIdsForUser('revocation-user@example.com');
+        self::assertNotEmpty($familyIds);
+        $tokenIds = $this->tokenIdsForFamilies($familyIds);
+        self::assertNotEmpty($tokenIds);
+
+        // Delete through the real account flow.
+        $this->client->loginUser($this->freshUserByEmail('revocation-user@example.com'));
+        $crawler = $this->client->request('GET', '/account/delete');
+        $form = $crawler->selectButton('Delete my account permanently')->form();
+        $form['confirm']->tick();
+        $this->client->submit($form);
+        self::assertResponseRedirects('/');
+
+        $em = $this->freshEm();
+        self::assertNull($em->getRepository(User::class)->findOneBy(['email' => 'revocation-user@example.com']));
+        self::assertSame([], $em->getRepository(OAuthConsent::class)->findBy(['clientId' => self::CLIENT_ID]));
+        self::assertSame([], $em->getRepository(OAuthRefreshFamily::class)->findBy(['clientId' => self::CLIENT_ID]));
+        self::assertSame([], $em->getRepository(AuthorizationCode::class)->findBy(['userIdentifier' => 'revocation-user@example.com']));
+        foreach ($tokenIds as $tokenId) {
+            self::assertNull($em->find(RefreshToken::class, $tokenId), 'Bundle refresh token '.$tokenId.' must be gone.');
+        }
+
+        // The deleted User's CLI session is dead…
+        $this->refresh($mine['refresh_token']);
+        self::assertResponseStatusCodeSame(Response::HTTP_BAD_REQUEST);
+
+        // …while the surviving User keeps working.
+        $renewed = $this->refresh($theirs['refresh_token'], self::OTHER_CLIENT_ID);
+        self::assertResponseIsSuccessful();
+        self::assertArrayHasKey('access_token', $renewed);
+        self::assertNotNull($em->getRepository(User::class)->findOneBy(['email' => 'survivor@example.com']));
+    }
+
+    public function testApiRejectsDeletedUsersAccessToken(): void
+    {
+        $this->client->loginUser($this->user);
+        $tokens = $this->authorizeAndExchange();
+
+        static::getContainer()->get(AccountDeletionService::class)->delete(
+            $this->freshUserByEmail('revocation-user@example.com')
+        );
+
+        $this->client->request('GET', '/api/v1/expense-categories', [], [], [
+            'HTTP_Authorization' => 'Bearer '.$tokens['access_token'],
+        ]);
+        self::assertResponseStatusCodeSame(Response::HTTP_UNAUTHORIZED);
+    }
+
+    public function testApiRejectsUnverifiedUsersAccessToken(): void
+    {
+        $this->createUser('unverified@example.com', 'Fixture-Password-1', false);
+        $this->registerPublicClient(self::OTHER_CLIENT_ID, self::OTHER_CLIENT_NAME);
+
+        // Control: a verified User reaches the resource.
+        $this->client->request('GET', '/api/v1/expense-categories', [], [], [
+            'HTTP_Authorization' => 'Bearer '.$this->craftToken('revocation-user@example.com'),
+        ]);
+        self::assertResponseIsSuccessful();
+
+        $this->client->request('GET', '/api/v1/expense-categories', [], [], [
+            'HTTP_Authorization' => 'Bearer '.$this->craftToken('unverified@example.com'),
+        ]);
+        self::assertResponseStatusCodeSame(Response::HTTP_FORBIDDEN);
+    }
+
+    public function testWebLogoutKeepsCliRefreshWorking(): void
+    {
+        $this->client->loginUser($this->user);
+        $tokens = $this->authorizeAndExchange();
+
+        $this->client->request('GET', '/logout');
+        self::assertResponseRedirects();
+
+        // The web session is over…
+        $this->client->request('GET', '/dashboard');
+        self::assertResponseRedirects('/login');
+
+        // …but the CLI session survives: refresh works and the new access
+        // token still opens the API.
+        $renewed = $this->refresh($tokens['refresh_token']);
+        self::assertResponseIsSuccessful();
+        self::assertArrayHasKey('access_token', $renewed);
+
+        $this->client->request('GET', '/api', [], [], [
+            'HTTP_Authorization' => 'Bearer '.$renewed['access_token'],
+        ]);
+        self::assertResponseIsSuccessful();
+    }
+
+    private function changePassword(string $email, string $newPlainPassword): void
+    {
+        $em = $this->freshEm();
+        $user = $em->getRepository(User::class)->findOneBy(['email' => $email]);
+        self::assertNotNull($user);
+
+        /** @var UserPasswordHasherInterface $hasher */
+        $hasher = static::getContainer()->get(UserPasswordHasherInterface::class);
+        $user->setPassword($hasher->hashPassword($user, $newPlainPassword));
+        $em->flush();
+        $em->clear();
+    }
+
+    private function setClientActive(string $identifier, bool $active): void
+    {
+        $manager = static::getContainer()->get(ClientManagerInterface::class);
+        $client = $manager->find($identifier);
+        self::assertNotNull($client);
+        $client->setActive($active);
+        $manager->save($client);
+    }
+
     /**
      * @return array{token_type: string, expires_in: int, access_token: string, refresh_token: string}
      */
     private function authorizeAndExchange(string $clientId = self::CLIENT_ID): array
     {
-        $url = $this->authorizeUrl($clientId);
-        $crawler = $this->client->request('GET', $url);
-
-        if (Response::HTTP_FOUND === $this->client->getResponse()->getStatusCode()) {
-            $code = $this->codeFromRedirect();
-        } else {
-            $csrf = $crawler->filter('input[name="_csrf_token"]')->attr('value');
-            self::assertNotNull($csrf);
-            $this->client->request('POST', $url, ['decision' => 'allow', '_csrf_token' => $csrf]);
-            $code = $this->codeFromRedirect();
-        }
+        $code = $this->authorizeOnly($clientId);
 
         $params = [
             'grant_type' => 'authorization_code',
@@ -365,6 +636,22 @@ final class OAuthRevocationTest extends DatabaseTestCase
 
         /** @var array{token_type: string, expires_in: int, access_token: string, refresh_token: string} */
         return json_decode((string) $this->client->getResponse()->getContent(), true);
+    }
+
+    private function authorizeOnly(string $clientId = self::CLIENT_ID): string
+    {
+        $url = $this->authorizeUrl($clientId);
+        $crawler = $this->client->request('GET', $url);
+
+        if (Response::HTTP_FOUND === $this->client->getResponse()->getStatusCode()) {
+            return $this->codeFromRedirect();
+        }
+
+        $csrf = $crawler->filter('input[name="_csrf_token"]')->attr('value');
+        self::assertNotNull($csrf);
+        $this->client->request('POST', $url, ['decision' => 'allow', '_csrf_token' => $csrf]);
+
+        return $this->codeFromRedirect();
     }
 
     /**
@@ -394,7 +681,7 @@ final class OAuthRevocationTest extends DatabaseTestCase
             'client_id' => $clientId,
             'redirect_uri' => self::REDIRECT_URI,
             'scope' => OAuth2Config::SCOPE_FULL,
-            'state' => 'revoke-state',
+            'state' => 'revocation-state',
             'code_challenge' => $this->challenge,
             'code_challenge_method' => 'S256',
         ]);
@@ -428,16 +715,100 @@ final class OAuthRevocationTest extends DatabaseTestCase
         self::assertResponseRedirects('/profile/connected-apps');
     }
 
+    /**
+     * Loads the User through the current container's entity manager: after the
+     * test client reboots the kernel between requests, DatabaseTestCase::$em
+     * belongs to the previous container and its entities are unknown to the
+     * current one.
+     */
+    private function freshUserByEmail(string $email): User
+    {
+        $user = $this->freshEm()->getRepository(User::class)->findOneBy(['email' => $email]);
+        self::assertNotNull($user);
+
+        return $user;
+    }
+
+    private function newestFamilyForUser(string $email): OAuthRefreshFamily
+    {
+        $em = $this->freshEm();
+        $user = $em->getRepository(User::class)->findOneBy(['email' => $email]);
+        self::assertNotNull($user);
+
+        // findBy (persister path), not a DQL entity parameter: DQL binds the
+        // User in its 36-char string form, which matches nothing against the
+        // binary(16) UUID column.
+        $families = $em->getRepository(OAuthRefreshFamily::class)->findBy(['user' => $user], ['issuedAt' => 'DESC'], 1);
+        self::assertNotEmpty($families);
+        $family = $families[0];
+
+        self::assertInstanceOf(OAuthRefreshFamily::class, $family);
+
+        return $family;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function familyIdsForUser(string $email): array
+    {
+        $em = $this->freshEm();
+        $user = $em->getRepository(User::class)->findOneBy(['email' => $email]);
+        self::assertNotNull($user);
+
+        $families = $em->getRepository(OAuthRefreshFamily::class)->findBy(['user' => $user]);
+
+        return array_map(static fn (OAuthRefreshFamily $family): string => (string) $family->getId(), $families);
+    }
+
+    /**
+     * @param list<string> $familyIds
+     *
+     * @return list<string>
+     */
+    private function tokenIdsForFamilies(array $familyIds): array
+    {
+        $em = $this->freshEm();
+        $links = $em->getRepository(OAuthRefreshFamilyToken::class)->findAll();
+
+        $ids = [];
+        foreach ($links as $link) {
+            $family = $link->getFamily();
+            if (null !== $family && \in_array((string) $family->getId(), $familyIds, true)) {
+                $ids[] = (string) $link->getTokenId();
+            }
+        }
+
+        return array_values(array_unique($ids));
+    }
+
+    private function craftToken(string $userIdentifier): string
+    {
+        $entity = new ApiAccessTokenEntity(self::ISSUER, OAuth2Config::API_AUDIENCE);
+        $entity->setIdentifier(bin2hex(random_bytes(16)));
+        $clientEntity = new ClientEntity();
+        $clientEntity->setIdentifier(self::CLIENT_ID);
+        $clientEntity->setName(self::CLIENT_NAME);
+        $entity->setClient($clientEntity);
+        $entity->setUserIdentifier($userIdentifier);
+        $entity->addScope(new RevocationTestScope(OAuth2Config::SCOPE_FULL));
+        $entity->setExpiryDateTime(new DateTimeImmutable('+15 minutes'));
+        $entity->setPrivateKey(new CryptKey($this->privateKeyPath()));
+
+        return $entity->toString();
+    }
+
     private function registerPublicClient(
         string $identifier = self::CLIENT_ID,
         string $name = self::CLIENT_NAME,
+        array $scopes = [OAuth2Config::SCOPE_FULL],
     ): void {
         $manager = static::getContainer()->get(ClientManagerInterface::class);
 
         $client = new Client($name, $identifier, null);
         $client->setRedirectUris(new RedirectUri(self::REGISTERED_REDIRECT));
         $client->setGrants(new Grant('authorization_code'), new Grant('refresh_token'));
-        $client->setScopes(new Scope(OAuth2Config::SCOPE_FULL));
+        $client->setScopes(...array_map(static fn (string $scope): Scope => new Scope($scope), $scopes));
         $manager->save($client);
     }
 
@@ -451,5 +822,27 @@ final class OAuthRevocationTest extends DatabaseTestCase
         $client->setGrants(new Grant('authorization_code'), new Grant('refresh_token'));
         $client->setScopes(new Scope(OAuth2Config::SCOPE_FULL));
         $manager->save($client);
+    }
+
+    private function privateKeyPath(): string
+    {
+        return static::getContainer()->getParameter('kernel.project_dir').'/tests/Fixtures/oauth/private.pem';
+    }
+}
+
+final class RevocationTestScope implements ScopeEntityInterface
+{
+    public function __construct(private readonly string $identifier)
+    {
+    }
+
+    public function getIdentifier(): string
+    {
+        return $this->identifier;
+    }
+
+    public function jsonSerialize(): string
+    {
+        return $this->identifier;
     }
 }

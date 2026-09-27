@@ -10,6 +10,8 @@ use App\Entity\User;
 use DateInterval;
 use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\EntityNotFoundException;
+use League\Bundle\OAuth2ServerBundle\Manager\ClientManagerInterface;
 use League\OAuth2\Server\Entities\RefreshTokenEntityInterface;
 use League\OAuth2\Server\Exception\OAuthServerException;
 use League\OAuth2\Server\Repositories\RefreshTokenRepositoryInterface;
@@ -60,6 +62,7 @@ final class RefreshTokenFamilyRepository implements RefreshTokenRepositoryInterf
         private readonly RefreshTokenRepositoryInterface $inner,
         private readonly EntityManagerInterface $em,
         private readonly OpaqueTokenDecryptor $decryptor,
+        private readonly ClientManagerInterface $clients,
     ) {
     }
 
@@ -192,13 +195,20 @@ final class RefreshTokenFamilyRepository implements RefreshTokenRepositoryInterf
 
     /**
      * Rejects revoked, absolutely expired, and idle-expired families,
-     * revoking the family on expiry so no later use can succeed.
+     * revoking the family on expiry so no later use can succeed. Also rejects
+     * families whose User is gone or ineligible and whose client is gone,
+     * disabled, or no longer approved for api:full (issue #93): lifecycle
+     * revocation normally marks such families first, and this check closes
+     * the gap fail-closed — revoking the family — when it did not.
      */
     private function assertFamilyUsable(OAuthRefreshFamily $family, DateTimeImmutable $now): void
     {
         if ($family->isRevoked()) {
             throw OAuthServerException::invalidRefreshToken('The refresh token family has been revoked.');
         }
+
+        $this->assertUserEligible($family);
+        $this->assertClientApproved($family);
 
         $absoluteExpiresAt = $family->getAbsoluteExpiresAt();
         if (null === $absoluteExpiresAt || $now >= $absoluteExpiresAt) {
@@ -213,6 +223,53 @@ final class RefreshTokenFamilyRepository implements RefreshTokenRepositoryInterf
                 $this->revokeFamily($family);
                 throw OAuthServerException::invalidRefreshToken('The refresh token family expired without use.');
             }
+        }
+    }
+
+    /**
+     * The family must still belong to an existing, eligible (verified) User.
+     * Account deletion normally removes the family with the User; this check
+     * fails closed when it did not.
+     */
+    private function assertUserEligible(OAuthRefreshFamily $family): void
+    {
+        try {
+            $user = $family->getUser();
+            $eligible = null !== $user && $user->isVerified();
+        } catch (EntityNotFoundException) {
+            $eligible = false;
+        }
+
+        if (!$eligible) {
+            $this->revokeFamily($family);
+            throw OAuthServerException::invalidRefreshToken('The User behind this authorization no longer exists.');
+        }
+    }
+
+    /**
+     * The family client must still be registered, active, and approved for
+     * api:full. Disabling a client normally revokes its families first; this
+     * check fails closed — revoking the family — when it did not, and also
+     * covers client deletion and scope narrowing.
+     */
+    private function assertClientApproved(OAuthRefreshFamily $family): void
+    {
+        $client = $this->clients->find((string) $family->getClientId());
+
+        $approved = null !== $client && $client->isActive();
+        if ($approved) {
+            $approved = false;
+            foreach ($client->getScopes() as $scope) {
+                if (OAuth2Config::SCOPE_FULL === (string) $scope) {
+                    $approved = true;
+                    break;
+                }
+            }
+        }
+
+        if (!$approved) {
+            $this->revokeFamily($family);
+            throw OAuthServerException::invalidRefreshToken('The client behind this authorization is no longer approved.');
         }
     }
 
