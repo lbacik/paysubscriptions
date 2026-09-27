@@ -4,20 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Api\V1;
 
-use App\Entity\User;
-use App\OAuth2\ApiAccessTokenEntity;
-use App\OAuth2\OAuth2Config;
 use App\Service\ExpenseCategoryService;
-use App\Tests\DatabaseTestCase;
 use DateTimeImmutable;
-use League\Bundle\OAuth2ServerBundle\Entity\Client as ClientEntity;
-use League\Bundle\OAuth2ServerBundle\Manager\ClientManagerInterface;
-use League\Bundle\OAuth2ServerBundle\Model\Client;
-use League\Bundle\OAuth2ServerBundle\ValueObject\Grant;
-use League\Bundle\OAuth2ServerBundle\ValueObject\RedirectUri;
-use League\Bundle\OAuth2ServerBundle\ValueObject\Scope;
-use League\OAuth2\Server\CryptKey;
-use League\OAuth2\Server\Entities\ScopeEntityInterface;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -26,14 +14,8 @@ use Symfony\Component\HttpFoundation\Response;
  * Seam: public HTTP interface GET /api/v1/expense-categories (+ detail).
  * Behavior is observed through status, content-type, and body only.
  */
-final class ExpenseCategoryApiTest extends DatabaseTestCase
+final class ExpenseCategoryApiTest extends ExpenseCategoryApiTestCase
 {
-    private const CLIENT_ID = 'paysubs-cli';
-    private const ISSUER = 'http://localhost';
-
-    private User $user;
-    private User $other;
-
     protected function setUp(): void
     {
         parent::setUp();
@@ -375,62 +357,5 @@ final class ExpenseCategoryApiTest extends DatabaseTestCase
 
         self::assertResponseStatusCodeSame(Response::HTTP_UNAUTHORIZED);
         self::assertResponseHeaderSame('Content-Type', 'application/problem+json');
-    }
-
-    private function craftToken(
-        ?string $userIdentifier,
-        string $issuer = self::ISSUER,
-        string $audience = OAuth2Config::API_AUDIENCE,
-        ?DateTimeImmutable $expiry = null,
-        string $scope = OAuth2Config::SCOPE_FULL,
-        string $clientId = self::CLIENT_ID,
-    ): string {
-        $entity = new ApiAccessTokenEntity($issuer, $audience);
-        $entity->setIdentifier(bin2hex(random_bytes(16)));
-        $clientEntity = new ClientEntity();
-        $clientEntity->setIdentifier($clientId);
-        $clientEntity->setName('PaySubscriptions CLI');
-        $entity->setClient($clientEntity);
-        if (null !== $userIdentifier) {
-            $entity->setUserIdentifier($userIdentifier);
-        }
-        $entity->addScope(new ApiTestScope($scope));
-        $entity->setExpiryDateTime($expiry ?? new DateTimeImmutable('+15 minutes'));
-        $entity->setPrivateKey(new CryptKey($this->privateKeyPath()));
-
-        return $entity->toString();
-    }
-
-    private function registerPublicClient(): void
-    {
-        $manager = static::getContainer()->get(ClientManagerInterface::class);
-
-        $client = new Client('PaySubscriptions CLI', self::CLIENT_ID, null);
-        $client->setRedirectUris(new RedirectUri('http://127.0.0.1/callback'));
-        $client->setGrants(new Grant('authorization_code'), new Grant('refresh_token'));
-        $client->setScopes(new Scope(OAuth2Config::SCOPE_FULL));
-        $manager->save($client);
-    }
-
-    private function privateKeyPath(): string
-    {
-        return static::getContainer()->getParameter('kernel.project_dir').'/tests/Fixtures/oauth/private.pem';
-    }
-}
-
-final class ApiTestScope implements ScopeEntityInterface
-{
-    public function __construct(private readonly string $identifier)
-    {
-    }
-
-    public function getIdentifier(): string
-    {
-        return $this->identifier;
-    }
-
-    public function jsonSerialize(): string
-    {
-        return $this->identifier;
     }
 }

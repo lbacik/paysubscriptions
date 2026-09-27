@@ -21,6 +21,9 @@ final class Problem
     public const INSUFFICIENT_SCOPE = 'insufficient_scope';
     public const ACCOUNT_INACTIVE = 'account_inactive';
     public const CATEGORY_NOT_FOUND = 'category_not_found';
+    public const CATEGORY_NAME_CONFLICT = 'category_name_conflict';
+    public const CATEGORY_IN_USE = 'category_in_use';
+    public const VALIDATION_FAILED = 'validation_failed';
     public const INVALID_TOKEN = 'invalid_token';
     public const NOT_FOUND = 'not_found';
 
