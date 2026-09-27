@@ -528,7 +528,10 @@ final class OAuthRevocationTest extends DatabaseTestCase
         $this->refresh($mine['refresh_token']);
         self::assertResponseStatusCodeSame(Response::HTTP_BAD_REQUEST);
 
-        // …while the surviving User keeps working.
+        // …while the surviving User's grants, families, and CLI session keep working.
+        $check = $this->freshEm();
+        self::assertCount(1, $check->getRepository(OAuthConsent::class)->findBy(['clientId' => self::OTHER_CLIENT_ID]));
+        self::assertCount(1, $check->getRepository(OAuthRefreshFamily::class)->findBy(['clientId' => self::OTHER_CLIENT_ID]));
         $renewed = $this->refresh($theirs['refresh_token'], self::OTHER_CLIENT_ID);
         self::assertResponseIsSuccessful();
         self::assertArrayHasKey('access_token', $renewed);

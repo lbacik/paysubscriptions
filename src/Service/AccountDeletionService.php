@@ -26,7 +26,9 @@ use League\Bundle\OAuth2ServerBundle\Model\RefreshToken;
  *   refresh-token rows (attributed only through those links), and pending
  *   authorization codes. Family rows would cascade with the User, but they
  *   are removed explicitly so the bundle rows keyed by their links can be
- *   collected first.
+ *   collected first. Already-issued access tokens are stateless and stay
+ *   valid until their short expiry (decision #86); with the families gone,
+ *   no refresh can extend them.
  * - Reminder preferences/state: no dedicated columns or tables exist for
  *   these yet, so there is nothing extra to delete today beyond the User
  *   row itself. When the reminder slices land, their account-owned state

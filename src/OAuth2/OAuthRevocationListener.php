@@ -18,8 +18,8 @@ use League\Bundle\OAuth2ServerBundle\Model\AbstractClient;
  *
  * A password write (change, reset, or hash upgrade) and a client
  * deactivation or removal all flow through the entity manager, so a single
- * flush listener catches every path — including future ones — without each
- * caller remembering to revoke:
+ * flush listener catches every ORM path — including future ones that persist
+ * through the entity manager — without each caller remembering to revoke:
  *
  * - `onFlush` only collects: Users whose `password` field changed and client
  *   identifiers that were deactivated (`active` true → false) or deleted;
@@ -44,7 +44,7 @@ final class OAuthRevocationListener
     /**
      * @var array<string, true>
      */
-    private array $revokedClientIds = [];
+    private array $pendingClientIds = [];
 
     public function __construct(
         private readonly RefreshFamilyRevoker $revoker,
@@ -61,7 +61,7 @@ final class OAuthRevocationListener
             }
 
             if ($entity instanceof AbstractClient && $this->deactivated($unitOfWork, $entity)) {
-                $this->revokedClientIds[$entity->getIdentifier()] = true;
+                $this->pendingClientIds[$entity->getIdentifier()] = true;
             }
         }
 
@@ -69,23 +69,23 @@ final class OAuthRevocationListener
             if ($entity instanceof AbstractClient) {
                 // A removed identifier must not resurrect its families when a
                 // client is later re-created under the same identifier.
-                $this->revokedClientIds[$entity->getIdentifier()] = true;
+                $this->pendingClientIds[$entity->getIdentifier()] = true;
             }
         }
     }
 
     public function postFlush(PostFlushEventArgs $args): void
     {
-        if ([] === $this->passwordChangedUsers && [] === $this->revokedClientIds) {
+        if ([] === $this->passwordChangedUsers && [] === $this->pendingClientIds) {
             return;
         }
 
         // Drain first: the revoker flushes, which re-enters this listener, and
         // the nested pass must observe empty collections.
         $users = $this->passwordChangedUsers;
-        $clientIds = array_keys($this->revokedClientIds);
+        $clientIds = array_keys($this->pendingClientIds);
         $this->passwordChangedUsers = [];
-        $this->revokedClientIds = [];
+        $this->pendingClientIds = [];
 
         foreach ($users as $user) {
             $this->revoker->revokeForUser($user);
