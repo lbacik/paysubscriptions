@@ -23,8 +23,8 @@ use Symfony\Component\Uid\Uuid;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 /**
- * Subscription endpoints for API v1: reads (issue #96) plus collection POST
- * and detail DELETE (issue #97).
+ * Subscription endpoints for API v1: reads (issue #96) plus collection POST,
+ * detail PATCH (issue #98), and detail DELETE (issue #97).
  *
  * Collection and detail are scoped to the bearer token User and returned as
  * ordinary `application/json`. Navigation is explicit and stateless: the
@@ -44,6 +44,18 @@ use Symfony\Component\Validator\Validator\ValidatorInterface;
  * under concurrent creates). An explicitly supplied missing or foreign
  * category is rejected as an invalid field (422) without disclosure.
  * Constraint violations return 422 with field-level `errors`.
+ *
+ * PATCH changes only supplied fields and is atomic: omitted fields keep their
+ * values, optional notes/convertedAmount may be cleared with explicit null
+ * only when the patched record stays valid, and required fields, the owner,
+ * and the UUID can never be cleared or changed. Converted-amount review
+ * follows the web reconciliation (a re-entered figure is stamped, a figure
+ * kept across a currency change is dropped, an untouched stale figure keeps
+ * its stamp), except that supplying convertedAmount together with the
+ * write-only confirmConvertedFor reviews even an unchanged figure: a
+ * confirmation matching the current main currency stamps it, a mismatched one
+ * returns 409 and applies nothing. confirmConvertedFor is never stored or
+ * returned.
  */
 #[Route('/api/v1/subscriptions')]
 class SubscriptionController extends AbstractController
@@ -134,6 +146,123 @@ class SubscriptionController extends AbstractController
                 Response::HTTP_NOT_FOUND,
                 ['Content-Type' => 'application/problem+json'],
             );
+        }
+
+        return new JsonResponse(self::serialize($subscription, $user->getMainCurrency()), Response::HTTP_OK);
+    }
+
+    #[Route('/{id}', name: 'api_v1_subscriptions_update', methods: ['PATCH'])]
+    public function update(Request $request, string $id): JsonResponse
+    {
+        $user = $this->getUser();
+        if (!$user instanceof User) {
+            return $this->unauthorized();
+        }
+
+        $subscription = $this->findOwned($user, $id);
+        if (null === $subscription) {
+            return $this->subscriptionNotFound();
+        }
+
+        $data = $this->decodeJson($request);
+        if (null === $data) {
+            return $this->validationFailed('Request body must be a JSON object.');
+        }
+
+        if (!$this->suppliesPatchableField($data)) {
+            return $this->validationFailed('No updatable fields supplied. Send any of "name", "billingCycle", "amount", "nextPayment", "currency", "convertedAmount", "confirmConvertedFor", "categoryId" or "notes".');
+        }
+
+        $mainCurrency = $user->getMainCurrency();
+        $errors = $this->validatePatchStructure($data);
+
+        $hasConverted = \array_key_exists('convertedAmount', $data);
+        $convertedCleared = $hasConverted && null === $data['convertedAmount'];
+        $hasConfirm = \array_key_exists('confirmConvertedFor', $data) && null !== $data['confirmConvertedFor'];
+
+        // An explicitly cleared currency (null) is only structural when no
+        // main currency is confirmed; otherwise the Subscription would lose a
+        // required value, so reject it before the service would default it.
+        if (\array_key_exists('currency', $data) && null === $data['currency']
+            && CurrencyService::normalizeCode($mainCurrency) !== null
+        ) {
+            $errors[] = ['field' => 'currency', 'message' => 'This value should not be null.'];
+        }
+
+        if ($hasConfirm && !$hasConverted) {
+            $errors[] = ['field' => 'confirmConvertedFor', 'message' => 'Confirming a converted amount requires convertedAmount.'];
+        } elseif ($hasConfirm && $convertedCleared) {
+            $errors[] = ['field' => 'confirmConvertedFor', 'message' => 'A cleared converted amount cannot be confirmed.'];
+        } elseif ($hasConfirm && CurrencyService::normalizeCode($mainCurrency) === null) {
+            $errors[] = ['field' => 'confirmConvertedFor', 'message' => 'There is no confirmed main currency to review against.'];
+        }
+
+        $confirmInvalid = false;
+        foreach ($errors as $error) {
+            if ($error['field'] === 'confirmConvertedFor') {
+                $confirmInvalid = true;
+
+                break;
+            }
+        }
+
+        // A structurally valid but mismatched confirmation is a conflict, not
+        // a validation error: the client reviewed the figure against the wrong
+        // main currency, so nothing is applied — even when other fields are
+        // also invalid.
+        if ($hasConfirm && !$confirmInvalid && CurrencyService::normalizeCode($mainCurrency) !== null
+            && CurrencyService::normalizeCode((string) $data['confirmConvertedFor']) !== CurrencyService::normalizeCode($mainCurrency)
+        ) {
+            return new JsonResponse(
+                Problem::body(
+                    Problem::CURRENCY_CONFLICT,
+                    'Converted amount currency conflict',
+                    Response::HTTP_CONFLICT,
+                    sprintf(
+                        'The converted amount was confirmed for %s, but your current main currency is %s.',
+                        CurrencyService::normalizeCode((string) $data['confirmConvertedFor']),
+                        CurrencyService::normalizeCode($mainCurrency),
+                    ),
+                ),
+                Response::HTTP_CONFLICT,
+                ['Content-Type' => 'application/problem+json'],
+            );
+        }
+
+        // Validate on a detached copy first so a failure leaves the managed
+        // record — and the database — untouched (atomic PATCH). Structural and
+        // candidate violations merge so one invalid field never hides another.
+        $originalCurrency = $subscription->getCurrency();
+        $originalConverted = $subscription->getConvertedAmount();
+
+        $candidate = clone $subscription;
+        $this->applySuppliedFields($candidate, $data, $user);
+        $this->reconcilePatchConverted($candidate, $originalCurrency, $originalConverted, $mainCurrency, $hasConfirm && !$confirmInvalid, $convertedCleared);
+
+        $errors = array_merge($errors, $this->validateCandidate($candidate, $mainCurrency));
+        if ([] !== $errors) {
+            usort($errors, static fn (array $a, array $b): int => [$a['field'], $a['message']] <=> [$b['field'], $b['message']]);
+
+            return $this->validationFailed('The given data did not pass validation.', $errors);
+        }
+
+        $this->applySuppliedFields($subscription, $data, $user);
+        $this->reconcilePatchConverted($subscription, $originalCurrency, $originalConverted, $mainCurrency, $hasConfirm && !$confirmInvalid, $convertedCleared);
+
+        try {
+            $this->service->update($subscription);
+        } catch (\LogicException) {
+            // Category state changed mid-request after the ownership check
+            // above: report it as an invalid field without disclosure.
+            return $this->validationFailed('The given data did not pass validation.', [
+                ['field' => 'categoryId', 'message' => 'The selected category is invalid.'],
+            ]);
+        } catch (\InvalidArgumentException $exception) {
+            // Defense-in-depth: the currency rules were already validated
+            // above, so this only fires if state changed mid-request.
+            return $this->validationFailed('The given data did not pass validation.', [
+                ['field' => 'convertedAmount', 'message' => $exception->getMessage()],
+            ]);
         }
 
         return new JsonResponse(self::serialize($subscription, $user->getMainCurrency()), Response::HTTP_OK);
@@ -233,6 +362,206 @@ class SubscriptionController extends AbstractController
         $this->subscriptions->remove($subscription);
 
         return new Response('', Response::HTTP_NO_CONTENT);
+    }
+
+    private const PATCHABLE_FIELDS = ['name', 'billingCycle', 'amount', 'nextPayment', 'currency', 'convertedAmount', 'confirmConvertedFor', 'categoryId', 'notes'];
+
+    private function suppliesPatchableField(array $data): bool
+    {
+        foreach (self::PATCHABLE_FIELDS as $field) {
+            if (\array_key_exists($field, $data)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Structural checks for the supplied PATCH fields only: omitted fields are
+     * never touched, so only present values are type-checked here. Entity and
+     * currency rules run later on the patched candidate.
+     *
+     * @param array<string, mixed> $data
+     *
+     * @return list<array{field: string, message: string}>
+     */
+    private function validatePatchStructure(array $data): array
+    {
+        $errors = [];
+
+        if (\array_key_exists('name', $data)) {
+            if (null === $data['name']) {
+                $errors[] = ['field' => 'name', 'message' => 'This value should not be null.'];
+            } elseif (!\is_string($data['name']) || trim($data['name']) === '') {
+                $errors[] = ['field' => 'name', 'message' => 'This value should not be blank.'];
+            }
+        }
+
+        if (\array_key_exists('billingCycle', $data)) {
+            if (null === $data['billingCycle']) {
+                $errors[] = ['field' => 'billingCycle', 'message' => 'This value should not be null.'];
+            } elseif (!\is_string($data['billingCycle']) || null === BillingCycle::tryFrom($data['billingCycle'])) {
+                $errors[] = ['field' => 'billingCycle', 'message' => 'This value should be either "monthly" or "yearly".'];
+            }
+        }
+
+        if (\array_key_exists('amount', $data)) {
+            if (null === $data['amount']) {
+                $errors[] = ['field' => 'amount', 'message' => 'This value should not be null.'];
+            } elseif (!\is_int($data['amount']) && !\is_float($data['amount'])) {
+                $errors[] = ['field' => 'amount', 'message' => 'This value should be a number.'];
+            }
+        }
+
+        if (\array_key_exists('nextPayment', $data)) {
+            if (null === $data['nextPayment']) {
+                $errors[] = ['field' => 'nextPayment', 'message' => 'This value should not be null.'];
+            } elseif (!\is_string($data['nextPayment']) || null === self::parseDateOnly($data['nextPayment'])) {
+                $errors[] = ['field' => 'nextPayment', 'message' => 'This value should be a date in YYYY-MM-DD format.'];
+            }
+        }
+
+        if (\array_key_exists('currency', $data) && null !== $data['currency']) {
+            if (!\is_string($data['currency']) || !CurrencyService::isValidCode($data['currency'])) {
+                $errors[] = ['field' => 'currency', 'message' => 'This value is not a valid ISO 4217 currency code.'];
+            }
+        }
+
+        if (\array_key_exists('convertedAmount', $data) && null !== $data['convertedAmount']) {
+            if (!\is_int($data['convertedAmount']) && !\is_float($data['convertedAmount'])) {
+                $errors[] = ['field' => 'convertedAmount', 'message' => 'This value should be a number.'];
+            } elseif ((float) $data['convertedAmount'] <= 0) {
+                $errors[] = ['field' => 'convertedAmount', 'message' => 'Converted amount must be positive.'];
+            }
+        }
+
+        if (\array_key_exists('notes', $data) && null !== $data['notes'] && !\is_string($data['notes'])) {
+            $errors[] = ['field' => 'notes', 'message' => 'This value should be of type string.'];
+        }
+
+        // A supplied category must resolve to one of the owner's own records;
+        // anything else — including an explicit null or empty value that would
+        // clear the required category — is invalid without disclosure. The
+        // ownership lookup needs the User, so it runs in validateCandidate();
+        // here only the clear attempt is rejected structurally.
+        if (\array_key_exists('categoryId', $data) && (!\is_string($data['categoryId']) || '' === $data['categoryId'])) {
+            $errors[] = ['field' => 'categoryId', 'message' => 'The selected category is invalid.'];
+        }
+
+        if (\array_key_exists('confirmConvertedFor', $data) && null !== $data['confirmConvertedFor']) {
+            if (!\is_string($data['confirmConvertedFor']) || !CurrencyService::isValidCode($data['confirmConvertedFor'])) {
+                $errors[] = ['field' => 'confirmConvertedFor', 'message' => 'This value is not a valid ISO 4217 currency code.'];
+            }
+        }
+
+        return $errors;
+    }
+
+    /**
+     * Applies the structurally valid supplied fields to the target. Omitted
+     * fields keep their values; server-controlled fields are never read here.
+     *
+     * @param array<string, mixed> $data
+     */
+    private function applySuppliedFields(Subscription $target, array $data, User $user): void
+    {
+        if (\array_key_exists('name', $data) && \is_string($data['name'])) {
+            $target->setName($data['name']);
+        }
+
+        if (\array_key_exists('billingCycle', $data) && \is_string($data['billingCycle'])
+            && null !== BillingCycle::tryFrom($data['billingCycle'])
+        ) {
+            $target->setBillingCycle(BillingCycle::tryFrom($data['billingCycle']));
+        }
+
+        if (\array_key_exists('amount', $data) && (\is_int($data['amount']) || \is_float($data['amount']))) {
+            $target->setAmount((float) $data['amount']);
+        }
+
+        if (\array_key_exists('nextPayment', $data) && \is_string($data['nextPayment'])
+            && null !== self::parseDateOnly($data['nextPayment'])
+        ) {
+            $target->setNextPayment(self::parseDateOnly($data['nextPayment']));
+        }
+
+        if (\array_key_exists('currency', $data)) {
+            $target->setCurrency(\is_string($data['currency']) ? $data['currency'] : null);
+        }
+
+        if (\array_key_exists('convertedAmount', $data)) {
+            $converted = $data['convertedAmount'];
+            $target->setConvertedAmount(\is_int($converted) || \is_float($converted) ? (float) $converted : null);
+        }
+
+        if (\array_key_exists('notes', $data)) {
+            $target->setNotes(\is_string($data['notes']) ? $data['notes'] : null);
+        }
+
+        if (\array_key_exists('categoryId', $data) && \is_string($data['categoryId']) && '' !== $data['categoryId']) {
+            $target->setCategory($this->findOwnedCategory($user, $data['categoryId']));
+        }
+    }
+
+    /**
+     * Reconciles converted input after a PATCH: an explicit confirmation
+     * against the current main currency reviews even an unchanged figure,
+     * while without one the shared web rules apply (a re-entered figure is
+     * stamped, a figure kept across a currency change is dropped so it is
+     * never reused, and an untouched stale figure keeps its old stamp).
+     */
+    private function reconcilePatchConverted(
+        Subscription $target,
+        ?string $originalCurrency,
+        ?float $originalConverted,
+        ?string $mainCurrency,
+        bool $forceReview,
+        bool $convertedCleared,
+    ): void {
+        if ($convertedCleared) {
+            $target->setConvertedAmount(null);
+            $target->setConvertedCurrency(null);
+
+            return;
+        }
+
+        if ($forceReview) {
+            $target->setConvertedCurrency($mainCurrency);
+
+            return;
+        }
+
+        $target->reconcileConverted($originalCurrency, $originalConverted, $mainCurrency);
+    }
+
+    /**
+     * Runs the shared entity constraints and the save-time currency behavior
+     * on the patched candidate, plus the ownership check for a supplied
+     * categoryId.
+     *
+     * @return list<array{field: string, message: string}>
+     */
+    private function validateCandidate(Subscription $candidate, ?string $mainCurrency): array
+    {
+        $errors = [];
+
+        foreach ($this->validator->validate($candidate) as $violation) {
+            $field = ltrim((string) $violation->getPropertyPath(), '.');
+            $errors[] = ['field' => $field, 'message' => (string) $violation->getMessage()];
+        }
+
+        foreach ($candidate->validateConverted($mainCurrency, true) as $message) {
+            $errors[] = ['field' => self::convertedViolationField($message), 'message' => $message];
+        }
+
+        if (null === $candidate->getCategory()) {
+            $errors[] = ['field' => 'categoryId', 'message' => 'The selected category is invalid.'];
+        }
+
+        usort($errors, static fn (array $a, array $b): int => [$a['field'], $a['message']] <=> [$b['field'], $b['message']]);
+
+        return $errors;
     }
 
     /**
