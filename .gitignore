@@ -33,3 +33,7 @@ config/reference.php
 ###> paysubscriptions/a11y-scan ###
 /tests/accessibility/node_modules/
 ###< paysubscriptions/a11y-scan ###
+
+###> league/oauth2-server-bundle ###
+/config/jwt/*.pem
+###< league/oauth2-server-bundle ###

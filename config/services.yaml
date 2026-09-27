@@ -13,6 +13,9 @@ parameters:
     mailingProviderRoutingKey: '%env(MAILING_PROVIDER_ROUTING_KEY)%'
     google_recaptcha_site_key: '%env(GOOGLE_RECAPTCHA_SITE_KEY)%'
     google_recaptcha_secret: '%env(GOOGLE_RECAPTCHA_SECRET)%'
+    # Public identifier of this authorization server, carried as the `iss`
+    # claim of every access token and enforced by the API resource server.
+    app.oauth2.issuer: '%env(OAUTH2_ISSUER)%'
 
 services:
     # default configuration for services in *this* file
@@ -42,3 +45,30 @@ services:
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
     App\Service\RecaptchaVerifierInterface: '@App\Service\RecaptchaVerifier'
+
+    # OAuth2 API v1 wiring (issue #88). The listeners self-register through
+    # #[AsEventListener]; the repository decorator and the resource server
+    # swap need explicit definitions below.
+    App\OAuth2\ApiAccessTokenRepository:
+        decorates: 'league.oauth2_server.repository.access_token'
+        arguments:
+            $inner: '@App\OAuth2\ApiAccessTokenRepository.inner'
+            $issuer: '%app.oauth2.issuer%'
+
+    App\OAuth2\ApiResourceServer:
+        arguments:
+            $accessTokenRepository: '@league.oauth2_server.repository.access_token'
+            $publicKey: '@app.oauth2.resource_public_key'
+            $issuer: '%app.oauth2.issuer%'
+    League\OAuth2\Server\ResourceServer: '@App\OAuth2\ApiResourceServer'
+
+    # Public verification key for the API resource server. The permission
+    # check is disabled on purpose: league's heuristic targets private keys,
+    # while a public key is world-readable (644) by design. A misplaced
+    # private key would still be caught by the authorization server wiring.
+    app.oauth2.resource_public_key:
+        class: League\OAuth2\Server\CryptKey
+        arguments:
+            $keyPath: '%env(resolve:OAUTH_PUBLIC_KEY)%'
+            $passPhrase: ~
+            $keyPermissionsCheck: false
