@@ -1,0 +1,44 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Authorize application{% endblock %}
+
+{% block body %}
+    <twig:ContentCenter width="w-full md:w-1/2 px-10 my-20">
+        <h1 class="mb-6 font-thin text-lg text-color-qua text-right border-b border-color-sec">Authorize application</h1>
+
+        <div class="space-y-6">
+            <p class="text-color-qua">
+                <strong>{{ client_name }}</strong>
+                <span class="text-sm text-color-ter">({{ client_id }})</span>
+                is requesting full access to your PaySubscriptions data.
+            </p>
+
+            <div class="rounded-lg border border-color-sec p-4">
+                <p class="font-semibold text-color-qua">Full access ({{ scope }})</p>
+                <p class="text-sm text-color-ter">
+                    Read, create, change, and delete your subscriptions, expense
+                    categories, and reports. Only approve applications you trust.
+                </p>
+            </div>
+
+            <p class="text-sm text-color-ter">
+                Your choice is remembered for this application. You will be asked
+                again if its identity or requested permissions change.
+            </p>
+
+            <form method="post" action="{{ authorize_url }}" class="flex gap-3">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                <button type="submit"
+                        name="decision"
+                        value="allow"
+                        class="btn-cta"
+                >Allow full access</button>
+                <button type="submit"
+                        name="decision"
+                        value="deny"
+                        class="btn-secondary"
+                >Deny</button>
+            </form>
+        </div>
+    </twig:ContentCenter>
+{% endblock %}

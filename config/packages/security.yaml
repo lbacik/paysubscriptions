@@ -25,6 +25,20 @@ security:
             # adopted Encore, so no such directory or route exists to protect.
             pattern: ^/assets/
             security: false
+        oauth2_token:
+            # The OAuth2 token endpoint must stay reachable without a session:
+            # public clients exchange authorization codes here with PKCE only.
+            pattern: ^/token$
+            security: false
+        api:
+            # Bearer-token API boundary, separate from the session-based web
+            # login in `main`. Stateless so no session is ever created from an
+            # API request; the bundle's oauth2 authenticator validates the
+            # signed access token (App\OAuth2 additionally enforces the API
+            # audience and issuer claim).
+            pattern: ^/api
+            stateless: true
+            oauth2: true
         main:
             lazy: true
             provider: app_user_provider
@@ -51,6 +65,16 @@ security:
 
     # Note: Only the *first* matching rule is applied
     access_control:
+        # OAuth2 authorization reuses the existing web login: anonymous Users
+        # are sent to /login first, and the full authorize URL (including the
+        # OAuth query) is restored as the post-login target.
+        - { path: ^/authorize$, roles: ROLE_USER }
+        # The API is deny-by-default: a request without a Bearer token skips
+        # the OAuth2 authenticator entirely, so without this rule anonymous
+        # traffic would fall through to the resource (issue #88). Every /api
+        # caller — including docs and entrypoint — presents a User-delegated
+        # token; sibling issues carve out anything that must stay public.
+        - { path: ^/api, roles: IS_AUTHENTICATED_FULLY }
         # - { path: ^/admin, roles: ROLE_ADMIN }
         # - { path: ^/profile, roles: ROLE_USER }
 
