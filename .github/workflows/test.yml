@@ -262,7 +262,7 @@ jobs:
           check http://127.0.0.1:8123/.well-known/oauth-authorization-server 200 authorization_endpoint
           check http://127.0.0.1:8123/.well-known/oauth-protected-resource 200 authorization_servers
           check http://127.0.0.1:8123/.well-known/jwks.json 200 '"kty":"RSA"'
-          check http://127.0.0.1:8123/api/v1/openapi.json 401 problems/unauthorized
+          check http://127.0.0.1:8123/api/v1/openapi.json 401 '"code":"unauthorized"'
           check http://127.0.0.1:8123/login 200 _csrf_token
           echo "runtime smoke passed"
 
