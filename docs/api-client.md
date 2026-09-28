@@ -54,10 +54,14 @@ Clients are manually approved: there is no self-service registration. Public
 - **Device authorization** (RFC 8628): no `device_authorization_endpoint`
   is advertised. The `/device-code` route answers `unsupported_grant_type`
   because the device grant is disabled; do not use it.
-- **Token revocation and introspection** (RFC 7009 / RFC 7662): no
-  `revocation_endpoint` is advertised. Consent and refresh-token families are
-  revoked through the app and take effect on refresh (short-lived access
-  tokens expire within 15 minutes).
+- **Token revocation** (RFC 7009): implemented at `POST /revoke` but no
+  `revocation_endpoint` is advertised in discovery — call the documented
+  URL (see `docs/api-operations.md` §5). Revoking a refresh token ends its
+  whole family; already-issued access tokens stay valid until their
+  15-minute expiry. Consent is revoked through the app (Profile →
+  Connected apps) and takes effect on refresh.
+- **Token introspection** (RFC 7662): no endpoint exists and none is
+  advertised.
 - **MCP endpoint**: no Model Context Protocol surface exists in API v1.
 - **Userinfo**: no OpenID Connect `userinfo_endpoint` is advertised; the API
   never operated as an OpenID provider.
