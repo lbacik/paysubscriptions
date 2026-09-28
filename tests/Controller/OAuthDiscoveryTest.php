@@ -43,8 +43,10 @@ final class OAuthDiscoveryTest extends DatabaseTestCase
         self::assertSame(['S256'], $metadata['code_challenge_methods_supported']);
         self::assertContains('none', $metadata['token_endpoint_auth_methods_supported']);
 
-        // v1 implements neither dynamic registration, nor revocation, nor
-        // device authorization: none of them may be advertised.
+        // Dynamic registration and device authorization are neither
+        // implemented nor advertised. Revocation is implemented at POST
+        // /revoke but deliberately not advertised, so clients call the
+        // documented URL instead of discovering it.
         self::assertArrayNotHasKey('registration_endpoint', $metadata);
         self::assertArrayNotHasKey('revocation_endpoint', $metadata);
         self::assertArrayNotHasKey('device_authorization_endpoint', $metadata);

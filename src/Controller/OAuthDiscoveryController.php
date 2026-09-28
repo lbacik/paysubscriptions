@@ -22,9 +22,11 @@ use Symfony\Component\Routing\Attribute\Route;
  * Every advertised capability is implemented: the `api:full` scope,
  * authorization_code + refresh_token grants, S256 PKCE, and public clients
  * authenticating with `none` (confidential clients with `client_secret_post`).
- * Dynamic client registration (RFC 7591), revocation (RFC 7009), device
- * authorization (RFC 8628), userinfo, and introspection have no endpoint in
- * v1 and are therefore absent from the documents.
+ * Dynamic client registration (RFC 7591), device authorization (RFC 8628),
+ * userinfo, and introspection have no endpoint in v1 and are therefore
+ * absent from the documents. Token revocation (RFC 7009) is implemented at
+ * POST /revoke but deliberately not advertised, so clients call the
+ * documented URL instead of discovering it (see docs/api-operations.md).
  */
 final class OAuthDiscoveryController extends AbstractController
 {
