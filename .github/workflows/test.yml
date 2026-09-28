@@ -170,6 +170,12 @@ jobs:
       - name: Install dependencies
         uses: ramsey/composer-install@v4
 
+      # base.html.twig requires the compiled asset; without this the runtime
+      # smoke below 500s on every page render, same as the Dockerfile build
+      # step and the other jobs that boot a real page.
+      - name: Build Tailwind CSS
+        run: php bin/console tailwind:build
+
       # The Dockerfile builds the production image from the same lockfile, so
       # a resolution that only works with dev packages ships a broken image.
       - name: Verify production dependency resolution
