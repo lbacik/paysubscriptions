@@ -85,6 +85,13 @@ class ExpenseCategory
 
     public function setOwner(?User $owner): static
     {
+        if (null !== $this->owner && null !== $owner && $this->owner !== $owner && !$this->isOwnedBy($owner)) {
+            // Re-parenting a persisted category would silently break the
+            // (owner, name) uniqueness invariant for both the old and the new
+            // owner; categories are never moved between accounts.
+            throw new \LogicException('An expense category cannot be moved to a different owner.');
+        }
+
         $this->owner = $owner;
 
         return $this;
@@ -141,10 +148,24 @@ class ExpenseCategory
 
     public function isOwnedBy(User $user): bool
     {
-        if (null === $this->owner || null === $this->owner->getId() || null === $user->getId()) {
-            return $this->owner?->getUserIdentifier() === $user->getUserIdentifier();
+        if (null === $this->owner) {
+            return false;
         }
 
-        return $this->owner->getId()->equals($user->getId());
+        if (null !== $this->owner->getId() && null !== $user->getId()) {
+            return $this->owner->getId()->equals($user->getId());
+        }
+
+        if ($this->owner === $user) {
+            return true;
+        }
+
+        // At least one side is unpersisted (no id yet): fall back to the
+        // unique account identifier — but two empty identifiers must never
+        // compare equal, or any two email-less users would own everything.
+        $mine = $this->owner->getUserIdentifier();
+        $theirs = $user->getUserIdentifier();
+
+        return '' !== $mine && $mine === $theirs;
     }
 }

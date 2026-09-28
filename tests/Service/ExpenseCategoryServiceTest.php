@@ -8,10 +8,12 @@ use App\Entity\ExpenseCategory;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\BillingCycle;
+use App\Exception\DuplicateCategoryNameException;
+use App\Repository\ExpenseCategoryRepository;
 use App\Service\ExpenseCategoryService;
 use App\Service\SubscriptionService;
 use App\Tests\DatabaseTestCase;
-use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
+use Symfony\Component\Uid\Uuid;
 
 /**
  * Needs a database: set DATABASE_URL (e.g. the CI migrations job's
@@ -68,6 +70,132 @@ final class ExpenseCategoryServiceTest extends DatabaseTestCase
         self::assertSame('#fe5f55', $default->getColor());
     }
 
+    public function testEnsureDefaultCategoryLoserSeesWinnerCommittedMidRequest(): void
+    {
+        $user = $this->createUser('racer@example.com');
+        // An unrelated unflushed change, proving the unit of work stays
+        // intact: the old recovery called EntityManager::clear() here, and a
+        // post-violation recovery cannot work at all (a failed flush closes
+        // the manager), so the race must be serialized, never recovered.
+        $user->setTimezone('Europe/Paris');
+
+        // The concurrent winner, committed before this request runs.
+        $winner = $this->categories->create($user, ExpenseCategory::DEFAULT_NAME, ExpenseCategory::DEFAULT_COLOR);
+
+        // Simulates the loser's pre-check running before the winner commit:
+        // the first two lookups (the read-only pre-check) see nothing, the
+        // in-transaction re-check under the owner lock sees the winner.
+        $repository = new class(static::getContainer()->get('doctrine')) extends ExpenseCategoryRepository {
+            public int $findCalls = 0;
+
+            public function findOneBy(array $criteria, ?array $orderBy = null): ?object
+            {
+                if (++$this->findCalls <= 2) {
+                    return null;
+                }
+
+                return parent::findOneBy($criteria, $orderBy);
+            }
+        };
+
+        $service = new ExpenseCategoryService($repository, $this->em);
+        $default = $service->ensureDefaultCategory($user);
+
+        self::assertSame($winner->getId()->toString(), $default->getId()->toString());
+
+        // Exactly one row: no duplicate was inserted.
+        self::assertSame(1, (int) $this->em->getConnection()->fetchOne(
+            'SELECT COUNT(*) FROM expense_category WHERE owner_id = ?',
+            [$user->getId()->toBinary()]
+        ));
+
+        // The manager stayed open with the owner (and its pending change)
+        // intact, so the surrounding write (e.g. the subscription being
+        // added) can still flush.
+        self::assertTrue($this->em->isOpen());
+        self::assertTrue($this->em->contains($user));
+        $this->em->flush();
+        self::assertSame('Europe/Paris', $this->freshUser('racer@example.com')?->getTimezone());
+    }
+
+    public function testCreateRecheckThrowsDomainExceptionWithManagerIntact(): void
+    {
+        $user = $this->createUser('owner@example.com');
+        $this->categories->create($user, 'Food', '#ff0000');
+
+        // The in-transaction re-check (under the owner lock) reports the
+        // taken name without ever attempting the INSERT, so unlike a
+        // post-violation recovery the manager stays open and usable.
+        try {
+            $this->categories->create($user, 'Food', '#00ff00');
+            self::fail('Creating a taken name must throw.');
+        } catch (DuplicateCategoryNameException $exception) {
+            self::assertStringContainsString('Food', $exception->getMessage());
+        }
+
+        self::assertTrue($this->em->isOpen());
+        self::assertTrue($this->em->contains($user));
+        self::assertCount(1, $user->getExpenseCategories());
+        self::assertSame(1, (int) $this->em->getConnection()->fetchOne(
+            'SELECT COUNT(*) FROM expense_category WHERE owner_id = ? AND name = ?',
+            [$user->getId()->toBinary(), 'Food']
+        ));
+    }
+
+    public function testCreateViolationTranslatesToDomainException(): void
+    {
+        $user = $this->createUser('owner@example.com');
+
+        // Simulates the loser's in-transaction check running before the
+        // winner's commit: the check sees nothing, the INSERT then hits a
+        // genuine unique-constraint violation, which must surface as the
+        // domain exception (last-resort translation, not a 500).
+        $repository = new class(static::getContainer()->get('doctrine')) extends ExpenseCategoryRepository {
+            public int $findCalls = 0;
+
+            public function findOneBy(array $criteria, ?array $orderBy = null): ?object
+            {
+                if (++$this->findCalls <= 1) {
+                    return null;
+                }
+
+                return parent::findOneBy($criteria, $orderBy);
+            }
+
+            public function save(ExpenseCategory $category): void
+            {
+                if (1 === $this->findCalls) {
+                    $this->getEntityManager()->getConnection()->insert('expense_category', [
+                        'id' => Uuid::v7()->toBinary(),
+                        'owner_id' => $category->getOwner()?->getId()?->toBinary(),
+                        'name' => $category->getName(),
+                        'color' => $category->getColor(),
+                        'created_at' => '2024-01-01 00:00:00',
+                        'updated_at' => '2024-01-01 00:00:00',
+                    ]);
+                }
+
+                parent::save($category);
+            }
+        };
+
+        $service = new ExpenseCategoryService($repository, $this->em);
+
+        try {
+            $service->create($user, 'Food', '#ff0000');
+            self::fail('A lost creation race must throw.');
+        } catch (DuplicateCategoryNameException $exception) {
+            self::assertStringContainsString('Food', $exception->getMessage());
+            self::assertNotNull($exception->getPrevious());
+        }
+
+        // The simulated winner was inserted on the same test-transaction
+        // connection, so the service-transaction rollback undoes it too (in
+        // production the winner committed in another connection and
+        // survives): the point here is the exception translation, which the
+        // re-check test above covers for row counts.
+    }
+
     public function testCreateRenameRecolor(): void
     {
         $user = $this->createUser('owner@example.com');
@@ -95,8 +223,10 @@ final class ExpenseCategoryServiceTest extends DatabaseTestCase
         // Same name for another user is fine.
         $this->categories->create($other, 'Food', '#00ff00');
 
-        // Same name twice for the same user is rejected.
-        $this->expectException(UniqueConstraintViolationException::class);
+        // Same name twice for the same user is rejected with a domain
+        // exception (not a raw DBAL one), so callers can render a form
+        // error / 409 instead of 500ing.
+        $this->expectException(DuplicateCategoryNameException::class);
         $this->categories->create($user, 'Food', '#0000ff');
     }
 

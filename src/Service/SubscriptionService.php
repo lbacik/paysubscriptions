@@ -6,6 +6,7 @@ namespace App\Service;
 
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Exception\CategoryOwnershipException;
 use App\Exception\SubscriptionLimitReachedException;
 use App\Repository\SubscriptionRepository;
 use App\Repository\UserRepository;
@@ -259,7 +260,7 @@ class SubscriptionService
     }
 
     /**
-     * @throws \LogicException when the assigned category belongs to another User
+     * @throws CategoryOwnershipException when the assigned category belongs to another User
      */
     public function assertCategoryOwnership(Subscription $subscription): void
     {
@@ -271,7 +272,7 @@ class SubscriptionService
         }
 
         if ($owner instanceof User && !$category->isOwnedBy($owner)) {
-            throw new \LogicException('The selected category does not belong to this account.');
+            throw new CategoryOwnershipException('The selected category does not belong to this account.');
         }
     }
 

@@ -675,6 +675,15 @@ class SubscriptionController extends AbstractController
 
         foreach ($this->validator->validate($candidate) as $violation) {
             $field = ltrim((string) $violation->getPropertyPath(), '.');
+
+            // An omitted categoryId stays null on the candidate so the
+            // service applies the default-category rule on save (a supplied
+            // but invalid id already returned above): the required-category
+            // violation would be a false positive here.
+            if ('category' === $field && null === $candidate->getCategory()) {
+                continue;
+            }
+
             $errors[] = ['field' => $field, 'message' => (string) $violation->getMessage()];
         }
 

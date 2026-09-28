@@ -7,6 +7,7 @@ namespace App\Controller\Api\V1;
 use App\Api\Problem;
 use App\Entity\ExpenseCategory;
 use App\Entity\User;
+use App\Exception\DuplicateCategoryNameException;
 use App\Repository\ExpenseCategoryRepository;
 use App\Service\ExpenseCategoryService;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
@@ -85,7 +86,7 @@ class ExpenseCategoryController extends AbstractController
 
         try {
             $category = $this->service->create($user, $name, $color);
-        } catch (UniqueConstraintViolationException) {
+        } catch (DuplicateCategoryNameException | UniqueConstraintViolationException) {
             // Lost a race with a concurrent request creating the same name
             // for this User: report the collision instead of 500ing.
             return $this->nameConflict($name);
@@ -156,7 +157,7 @@ class ExpenseCategoryController extends AbstractController
 
         try {
             $this->service->update($category, $name, $color);
-        } catch (UniqueConstraintViolationException) {
+        } catch (DuplicateCategoryNameException | UniqueConstraintViolationException) {
             // Lost a race with a concurrent request taking the same name for
             // this User: report the collision instead of 500ing.
             return $this->nameConflict($name);

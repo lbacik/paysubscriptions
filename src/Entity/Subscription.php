@@ -64,6 +64,7 @@ class Subscription
 
     #[ORM\ManyToOne(targetEntity: ExpenseCategory::class, inversedBy: 'subscriptions', cascade: ['persist'])]
     #[ORM\JoinColumn(nullable: false)]
+    #[Assert\NotNull]
     private ?ExpenseCategory $category = null;
 
     #[Gedmo\Timestampable(on: 'create')]
