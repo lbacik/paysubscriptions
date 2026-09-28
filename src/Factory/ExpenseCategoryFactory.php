@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace App\Factory;
 
 use App\Entity\ExpenseCategory;
-use Zenstruck\Foundry\Persistence\PersistentProxyObjectFactory;
+use Zenstruck\Foundry\Persistence\PersistentObjectFactory;
 
 /**
- * @extends PersistentProxyObjectFactory<ExpenseCategory>
+ * @extends PersistentObjectFactory<ExpenseCategory>
  */
-final class ExpenseCategoryFactory extends PersistentProxyObjectFactory
+final class ExpenseCategoryFactory extends PersistentObjectFactory
 {
     public static function class(): string
     {
