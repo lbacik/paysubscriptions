@@ -1,10 +1,10 @@
 # API v1 client guide (OAuth2 discovery and sign-in)
 
 How an approved client discovers the authorization server, signs a User in,
-and calls the protected API. Full CLI and operator workflows, including token
-refresh and revocation, are documented separately (issue #100); this guide
-covers discovery and the authorization-code flow the discovery documents
-advertise.
+and calls the protected API. Client registration, the shell PKCE walkthrough,
+token refresh and revocation, disconnect behavior, and every operator
+procedure (secret storage, rotation, migration rehearsal, rollback) live in
+the operations runbook, `docs/api-operations.md`.
 
 ## Discovery URLs
 

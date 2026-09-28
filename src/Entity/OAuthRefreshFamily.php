@@ -25,6 +25,7 @@ use Symfony\Component\Uid\Uuid;
  */
 #[ORM\Entity]
 #[ORM\Table(name: 'oauth_refresh_family')]
+#[ORM\Index(name: 'IDX_REFRESH_FAMILY_USER', fields: ['user'])]
 class OAuthRefreshFamily
 {
     #[ORM\Id]

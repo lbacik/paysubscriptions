@@ -12,7 +12,8 @@ name: Quality
 #      graduates to test.yml and is deleted from here rather than duplicated: an
 #      advisory copy of a gating check reports nothing the gate has not already
 #      blocked on, and pays a second composer install on every push to say it.
-#      Here: `schema-validate` and `twig-lint`.
+#      Here: `twig-lint`. (The `schema-validate` mapping check graduated to
+#      test.yml's `release-gates` job with issue #100.)
 #
 #   2. PERMANENT WATCHER - a check that goes red when *someone else* acts. Its
 #      red is news, not a defect, so it can never satisfy "held at zero" and must
@@ -61,40 +62,6 @@ env:
   PHP_VERSION: '8.4'
 
 jobs:
-  # WAITING ROOM. Red today: App\Entity\ResetPasswordRequest#id and
-  # App\Entity\Limits#id are mapped as type 'uuid' with
-  # #[ORM\CustomIdGenerator(class: 'doctrine.uuid_generator')], but no DBAL type
-  # named `uuid` is registered - config/packages/doctrine.yaml declares no
-  # dbal.types block. Two entities, so this is a small, finite number to drive to
-  # zero; once it is, this graduates into test.yml's `checks` job as one more
-  # step and is deleted from here.
-  #
-  # --skip-sync on purpose: this asks whether the *mappings* are coherent, which
-  # needs no database. Whether the migrated schema matches them is a different
-  # question, and test.yml's `migrations` job answers it against a real server.
-  schema-validate:
-    name: Doctrine mapping
-    runs-on: ubuntu-latest
-    continue-on-error: true
-    env:
-      APP_ENV: prod
-      APP_SECRET: ci
-      DATABASE_URL: "mysql://root:root@127.0.0.1:3306/paysub?serverVersion=8.4&charset=utf8mb4"
-      MESSENGER_TRANSPORT_DSN: 'amqp://guest:guest@127.0.0.1:5672/%2f/messages'
-      MAILER_DSN: 'null://null'
-      JSON_HUB_PROJECT: '00000000-0000-0000-0000-000000000000'
-      MAILING_PROVIDER_ROUTING_KEY: 'ci'
-    steps:
-      - uses: actions/checkout@v7
-      - uses: shivammathur/setup-php@v2
-        with:
-          php-version: ${{ env.PHP_VERSION }}
-          extensions: amqp, ctype, iconv, intl, pdo_mysql
-          coverage: none
-          ini-values: memory_limit=1G
-      - uses: ramsey/composer-install@v4
-      - run: php bin/console doctrine:schema:validate --skip-sync
-
   # WAITING ROOM, and the one entry here whose fix is not in src/. It fails
   # before reading any template: doctrine/doctrine-migrations-bundle registers a
   # Twig namespace pointing at vendor/doctrine/doctrine-migrations-bundle/
