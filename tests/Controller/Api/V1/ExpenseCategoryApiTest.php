@@ -357,5 +357,11 @@ final class ExpenseCategoryApiTest extends ExpenseCategoryApiTestCase
 
         self::assertResponseStatusCodeSame(Response::HTTP_UNAUTHORIZED);
         self::assertResponseHeaderSame('Content-Type', 'application/problem+json');
+
+        // The production deploy smoke greps for this exact code, so lock the
+        // shape here (issue #101): a bare 401 without the problem document
+        // would pass the status assertion but fail the release.
+        $body = json_decode((string) $this->client->getResponse()->getContent(), true);
+        self::assertSame('unauthorized', $body['code'] ?? null);
     }
 }

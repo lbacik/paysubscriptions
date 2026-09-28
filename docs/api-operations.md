@@ -189,7 +189,9 @@ After every deploy, in this order:
 
 1. `deploy.yml` already asserts: public `/login` renders with CSRF,
    the database answers from the web container, the three discovery
-   documents serve the correct issuer/audience/key, and
+   documents serve the correct issuer/audience/key, the versioned
+   OpenAPI document answers 401 with the `unauthorized` problem
+   document behind the bearer boundary, and
    `./bin/console app:api:preflight` passes inside the container
    (keys configured and readable, one JWKS key, discovery and contract
    routes registered, `v1.json` at contract version, database answers).
@@ -198,8 +200,9 @@ After every deploy, in this order:
    client, then disconnect it per §5):
 
 ```sh
-# token issuance (§3) → authenticated read → refresh (§4) → revocation (§5)
+# token issuance (§3) → authorized reads (resource + versioned contract) → refresh (§4) → revocation (§5)
 curl -fsS https://paysubscriptions.com/api/v1/expense-categories -H "Authorization: Bearer <ACCESS>"
+curl -fsS https://paysubscriptions.com/api/v1/openapi.json -H "Authorization: Bearer <ACCESS>" | php -r '$d=json_decode(stream_get_contents(STDIN),true); exit(($d["openapi"] ?? null) === "3.0.3" ? 0 : 1);'
 curl -fsS https://paysubscriptions.com/token -d grant_type=refresh_token -d client_id=<CLIENT_ID> -d refresh_token=<REFRESH>
 curl -fsS https://paysubscriptions.com/revoke -d token=<REFRESH> -d client_id=<CLIENT_ID>
 # the revoked refresh token must now fail closed:
@@ -212,6 +215,31 @@ curl -s -o /dev/null -w '%{http_code}\n' https://paysubscriptions.com/token \
    problem response, and web login; the blocking PHPUnit suite covers
    issuance, two-User isolation, refresh, revocation, report parity,
    and the web login/form flows on every push.
+
+### When a check fails (issue #101)
+
+A failed deploy smoke or a failed operator CLI path blocks acceptance:
+do not approve the release and do not tag a follow-up until the cause
+is found. There is no pilot or dark launch to fall back on — the
+pipeline ships one tagged image or nothing.
+
+1. Read the structured error logs first. In production every error is a
+   single JSON record on the container's stderr
+   (`docker compose -f compose.prod.yaml -p paysubscriptions logs web`);
+   correlate by timestamp with the failing check. These records never
+   carry tokens, authorization codes, signing or encryption material,
+   or User data — only statuses, route names, reminder/error ids, and
+   exception class/message pairs. If you suspect a signing-key
+   compromise from what you see, follow the emergency rotation in
+   `docs/oauth-key-rotation.md` instead of the next step.
+2. Roll back the image: `deploy.yml` → Run workflow → the previous
+   tag (image-only rollback per §8; the schema never rolls back and
+   every post-baseline migration is additive, so the old image runs
+   against the migrated schema).
+3. Re-run the §7 checks against the rolled-back stack, then fix
+   forward on a branch: the same checks run as blocking CI
+   (`release-gates` + the PHPUnit suite), so the failure must
+   reproduce there before another tag.
 
 ## 8. Migration rehearsal and image rollback
 
@@ -234,7 +262,7 @@ curl -s -o /dev/null -w '%{http_code}\n' https://paysubscriptions.com/token \
 - Never edit a deployed migration. Schema corrections ship as new
   migrations (see `Version20260927120001` for the pattern).
 
-## 9. Release checklist (one production release)
+## 9. Release checklist (one production release, issue #101)
 
 1. All of CI green: `checks`, `phpunit` (existing + new contract,
    additive-migration, and preflight tests), `migrations`,
@@ -244,5 +272,15 @@ curl -s -o /dev/null -w '%{http_code}\n' https://paysubscriptions.com/token \
    and problem errors, but the human review of wording and examples
    is part of the gate.
 3. Secrets provisioned per §6; rotation runbooks read once.
-4. Tag `v*` → image build → `deploy.yml` migrates, converges, and
-   runs the §7 checks. Then run the §7 operator sequence once.
+4. Create one `v*` tag only after steps 1–3 pass. The tag builds one
+   image (`release.yml`) and deploys it once (`deploy.yml`, which
+   migrates, converges, and runs the §7 checks). There is no pilot
+   or dark launch: the tagged pipeline is the rollout.
+5. After the deploy, run the §7 operator sequence once with the first
+   approved CLI: browser sign-in with loopback PKCE (§3), an
+   authorized read, a refresh (§4), and a disconnect (§5). Watch the
+   structured JSON error logs while it runs; they carry no tokens,
+   codes, keys, or User data by design (§7).
+6. A failed smoke or CLI path blocks acceptance and invokes the §7
+   failure procedure (logs → image rollback per §8 → fix forward in
+   CI), not a new tag.
