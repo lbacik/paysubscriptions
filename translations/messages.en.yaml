@@ -47,6 +47,7 @@ subscription:
   converted_review_badge: "Converted amount needs review (%old% → %new%)"
   converted_missing_badge: "Enter a converted amount in %new% (%currency% subscription)"
   totals_exclude_review: "%count% subscription(s) excluded pending converted-amount review"
+  category_will_be_created: 'No categories yet — a default "Subscriptions" category will be created when you save.'
 profile:
   title: "Profile"
   save: "Save"

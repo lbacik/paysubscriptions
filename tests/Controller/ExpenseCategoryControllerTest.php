@@ -10,6 +10,7 @@ use App\Entity\User;
 use App\Enum\BillingCycle;
 use App\Repository\ExpenseCategoryRepository;
 use App\Tests\DatabaseTestCase;
+use Symfony\Component\Uid\Uuid;
 
 /**
  * End-to-end coverage for category management and the subscription
@@ -34,8 +35,38 @@ final class ExpenseCategoryControllerTest extends DatabaseTestCase
     public function testAnonymousCategoryPagesRedirectToLogin(): void
     {
         $this->client->request('GET', '/category');
-
         self::assertResponseRedirects('/login');
+
+        $this->client->request('GET', '/category/new');
+        self::assertResponseRedirects('/login');
+
+        // Unknown ids 404 through the entity converter before the firewall
+        // runs, for anonymous users just like for signed-in ones.
+        $unknownId = Uuid::v4()->toRfc4122();
+        $this->client->request('GET', '/category/' . $unknownId . '/edit');
+        self::assertResponseStatusCodeSame(404);
+
+        $this->client->request('GET', '/category/' . $unknownId);
+        self::assertResponseStatusCodeSame(404);
+    }
+
+    public function testCategoryEditAndDeleteWithUnknownIdReturn404(): void
+    {
+        $user = $this->createUser('owner@example.com');
+        $this->client->loginUser($user);
+
+        $unknownId = Uuid::v4()->toRfc4122();
+
+        $this->client->request('GET', '/category/' . $unknownId . '/edit');
+        self::assertResponseStatusCodeSame(404);
+
+        $this->client->request('GET', '/category/' . $unknownId);
+        self::assertResponseStatusCodeSame(404);
+
+        // The destructive path 404s the same way: the entity converter runs
+        // before the voter/CSRF handling, so no token is needed here.
+        $this->client->request('POST', '/category/' . $unknownId);
+        self::assertResponseStatusCodeSame(404);
     }
 
     public function testUserCanCreateRenameAndDeleteOwnCategory(): void
@@ -141,6 +172,25 @@ final class ExpenseCategoryControllerTest extends DatabaseTestCase
         self::assertResponseStatusCodeSame(403);
     }
 
+    public function testVisitingNewSubscriptionFormCreatesNoCategory(): void
+    {
+        $user = $this->createUser('owner@example.com');
+        $this->client->loginUser($user);
+
+        // Repeated GETs (prefetchers, crawlers, navigation without
+        // submitting) must never persist a default category row.
+        $crawler = $this->client->request('GET', '/subscription/new');
+        self::assertResponseIsSuccessful();
+        $this->client->request('GET', '/subscription/new');
+        self::assertResponseIsSuccessful();
+
+        $repository = static::getContainer()->get(ExpenseCategoryRepository::class);
+        self::assertCount(0, $repository->findBy(['owner' => $user]));
+
+        // The empty select explains that saving creates the default.
+        self::assertStringContainsString('will be created when you save', $crawler->text());
+    }
+
     public function testNewSubscriptionFormCreatesDefaultCategoryForBrandNewUser(): void
     {
         $user = $this->createUser('owner@example.com');
@@ -149,11 +199,17 @@ final class ExpenseCategoryControllerTest extends DatabaseTestCase
         $crawler = $this->client->request('GET', '/subscription/new');
         self::assertResponseIsSuccessful();
 
+        // No categories yet: the select renders empty and nothing was
+        // persisted by the visit itself.
         $categoryField = $crawler->filter('select#subscription_category');
         self::assertCount(1, $categoryField);
-        self::assertStringContainsString(ExpenseCategory::DEFAULT_NAME, $categoryField->text());
+        self::assertCount(0, $categoryField->filter('option'));
 
-        // Submit without touching the category: the default is used.
+        $repository = static::getContainer()->get(ExpenseCategoryRepository::class);
+        self::assertCount(0, $repository->findBy(['owner' => $user]));
+
+        // Submit without touching the category: the default is created on
+        // submission and used.
         $this->client->submit($crawler->filter('form')->form([
             'subscription[name]' => 'Netflix',
             'subscription[billingCycle]' => BillingCycle::Monthly->value,

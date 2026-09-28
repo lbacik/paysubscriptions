@@ -6,6 +6,9 @@
 
     {{ form_row(form.name) }}
     {{ form_row(form.category) }}
+    {% if form.category is defined and form.category.vars.choices|length == 0 %}
+        <p class="mb-4 text-xs text-color-ter">{{ 'subscription.category_will_be_created'|trans }}</p>
+    {% endif %}
     {{ form_row(form.currency) }}
 
     <div class="flex flex-col sm:flex-row sm:justify-between sm:space-x-2">

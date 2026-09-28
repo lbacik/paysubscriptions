@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Entity\ExpenseCategory;
+use App\Exception\DuplicateCategoryNameException;
 use App\Form\ExpenseCategoryType;
 use App\Security\ExpenseCategoryVoter;
 use App\Service\ExpenseCategoryService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\Form\FormError;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -47,7 +49,19 @@ class ExpenseCategoryController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $this->categoryService->create($user, (string) $category->getName(), (string) $category->getColor());
+            try {
+                $this->categoryService->create($user, (string) $category->getName(), (string) $category->getColor());
+            } catch (DuplicateCategoryNameException) {
+                // Lost a race with a concurrent request taking the same name
+                // after UniqueEntity validation passed: re-render with a
+                // field error instead of 500ing.
+                $form->get('name')->addError(new FormError('You already have a category with this name.'));
+
+                return $this->render('category/new.html.twig', [
+                    'category' => $category,
+                    'form' => $form,
+                ], new Response(null, Response::HTTP_UNPROCESSABLE_ENTITY));
+            }
 
             $this->addFlash('success', 'Category created successfully');
 
@@ -73,8 +87,19 @@ class ExpenseCategoryController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $this->categoryService->rename($category, (string) $category->getName());
-            $this->categoryService->recolor($category, (string) $category->getColor());
+            try {
+                $this->categoryService->rename($category, (string) $category->getName());
+                $this->categoryService->recolor($category, (string) $category->getColor());
+            } catch (DuplicateCategoryNameException) {
+                // Same lost-race window as on create: the target name was
+                // taken after validation passed.
+                $form->get('name')->addError(new FormError('You already have a category with this name.'));
+
+                return $this->render('category/edit.html.twig', [
+                    'category' => $category,
+                    'form' => $form,
+                ], new Response(null, Response::HTTP_UNPROCESSABLE_ENTITY));
+            }
 
             $this->addFlash('success', 'Category updated successfully');
 
