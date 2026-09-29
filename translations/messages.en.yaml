@@ -17,6 +17,8 @@ user:
   please_login: "Please sign in"
   please_register: "Register"
   forgot_password: "Forgot your password?"
+  no_activation_email: "Didn't receive the activation email?"
+  resend_activation: "Resend activation email"
   provide_email: "Provide your email address"
   send_reset_link: "Send Reset Link"
 main_menu:

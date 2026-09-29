@@ -6,18 +6,31 @@ namespace App\Tests\Controller;
 
 use App\Message\MailingSubscribe;
 use App\Tests\DatabaseTestCase;
+use App\Tests\Double\FakeRecaptchaRequestMethod;
+use App\Tests\RateLimitTestHelper;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Messenger\Bridge\Amqp\Transport\AmqpStamp;
 use Symfony\Component\Messenger\Transport\InMemory\InMemoryTransport;
 
 /**
- * Newsletter signup validates the address and the CSRF token, then queues a
- * MailingSubscribe message on the `newsletter` transport. In the test
- * environment that transport is `in-memory://` (see the `when@test` override
- * in config/packages/messenger.yaml), so no broker is required and the test
- * inspects exactly what would have been published.
+ * Newsletter signup hardening (issue #143).
+ *
+ * Signup validates the address and the CSRF token, verifies an invisible
+ * reCAPTCHA (the contact-form pattern: enforced whenever keys are
+ * configured, which they always are under test), throttles per source IP,
+ * then queues a MailingSubscribe message on the `newsletter` transport. In
+ * the test environment that transport is `in-memory://` (see the `when@test`
+ * override in config/packages/messenger.yaml), so no broker is required and
+ * the test inspects exactly what would have been published.
+ *
+ * Success and captcha failure both redirect to the homepage — never to the
+ * `Referer` header, which is both an open-redirect vector and a 500 when the
+ * header is missing.
  */
 final class NewsletterTest extends DatabaseTestCase
 {
+    use RateLimitTestHelper;
+
     private const PROJECT_UUID = '00000000-0000-0000-0000-000000000000';
     private const ROUTING_KEY = 'test-routing-key';
 
@@ -34,6 +47,10 @@ final class NewsletterTest extends DatabaseTestCase
         // Originals are restored in tearDown() so nothing leaks into later tests.
         $this->pinEnv('JSON_HUB_PROJECT', self::PROJECT_UUID);
         $this->pinEnv('MAILING_PROVIDER_ROUTING_KEY', self::ROUTING_KEY);
+
+        // Limiter state survives in the cache across runs; the IP key below
+        // is fixed, so every test starts from a full burst.
+        $this->resetLimiter('limiter.newsletter_ip', '127.0.0.1');
     }
 
     protected function tearDown(): void
@@ -53,6 +70,8 @@ final class NewsletterTest extends DatabaseTestCase
         }
         $this->envBackup = [];
 
+        $this->restoreRateLimitEnv();
+
         parent::tearDown();
     }
 
@@ -63,12 +82,17 @@ final class NewsletterTest extends DatabaseTestCase
         $this->client->request(
             'POST',
             '/newsletter/subscribe',
-            ['email' => 'reader@example.com', '_token' => $token],
+            [
+                'email' => 'reader@example.com',
+                '_token' => $token,
+                'g-recaptcha-response' => FakeRecaptchaRequestMethod::VALID_TOKEN,
+            ],
             [],
             ['HTTP_REFERER' => 'http://localhost/pricing'],
         );
 
-        self::assertResponseRedirects('http://localhost/pricing');
+        // The Referer is ignored: success always lands on the homepage.
+        self::assertResponseRedirects('/');
 
         $sent = $this->newsletterTransport()->getSent();
         self::assertCount(1, $sent);
@@ -82,6 +106,86 @@ final class NewsletterTest extends DatabaseTestCase
         $stamp = $envelope->last(AmqpStamp::class);
         self::assertNotNull($stamp, 'expected a routing stamp for the mailing provider');
         self::assertSame(self::ROUTING_KEY, $stamp->getRoutingKey());
+    }
+
+    public function testMissingRefererRedirectsHomeWithout500(): void
+    {
+        $token = $this->newsletterCsrfToken();
+
+        // No Referer header at all: used to crash with a 500.
+        $this->client->request(
+            'POST',
+            '/newsletter/subscribe',
+            [
+                'email' => 'reader@example.com',
+                '_token' => $token,
+                'g-recaptcha-response' => FakeRecaptchaRequestMethod::VALID_TOKEN,
+            ],
+        );
+
+        self::assertResponseRedirects('/');
+        self::assertCount(1, $this->newsletterTransport()->getSent());
+    }
+
+    public function testFailedCaptchaRedirectsHomeAndQueuesNothing(): void
+    {
+        $token = $this->newsletterCsrfToken();
+
+        $this->client->request(
+            'POST',
+            '/newsletter/subscribe',
+            [
+                'email' => 'reader@example.com',
+                '_token' => $token,
+                'g-recaptcha-response' => 'bogus-token',
+            ],
+            [],
+            ['HTTP_REFERER' => 'http://localhost/pricing'],
+        );
+
+        // Rejected like a valid submission's evil twin: same fixed redirect,
+        // but nothing reaches the mailing provider.
+        self::assertResponseRedirects('/');
+        self::assertCount(0, $this->newsletterTransport()->getSent());
+    }
+
+    public function testMissingCaptchaQueuesNothing(): void
+    {
+        $token = $this->newsletterCsrfToken();
+
+        $this->client->request(
+            'POST',
+            '/newsletter/subscribe',
+            ['email' => 'reader@example.com', '_token' => $token],
+            [],
+            ['HTTP_REFERER' => 'http://localhost/pricing'],
+        );
+
+        self::assertResponseRedirects('/');
+        self::assertCount(0, $this->newsletterTransport()->getSent());
+    }
+
+    public function testSubscribeIsLimitedPerIp(): void
+    {
+        // Opt in: two signups per IP per hour.
+        $this->pinRateLimitEnv(['RATE_LIMIT_NEWSLETTER_IP' => '2']);
+        $token = $this->newsletterCsrfToken();
+
+        // Each assertion below observes the transport of the request that
+        // just ran (the in-memory transport lives in the request's
+        // container): every accepted signup queues exactly one message…
+        $this->postSignup('first@example.com', $token);
+        self::assertResponseRedirects('/');
+        self::assertCount(1, $this->newsletterTransport()->getSent());
+
+        $this->postSignup('second@example.com', $token);
+        self::assertResponseRedirects('/');
+        self::assertCount(1, $this->newsletterTransport()->getSent());
+
+        // …and the third is rejected before anything is queued.
+        $this->postSignup('third@example.com', $token);
+        self::assertResponseStatusCodeSame(Response::HTTP_TOO_MANY_REQUESTS);
+        self::assertCount(0, $this->newsletterTransport()->getSent());
     }
 
     public function testMissingCsrfTokenIsRejectedAndQueuesNothing(): void
@@ -117,6 +221,19 @@ final class NewsletterTest extends DatabaseTestCase
         $this->client->request('GET', '/newsletter/subscribe');
 
         self::assertResponseStatusCodeSame(405);
+    }
+
+    private function postSignup(string $email, string $token): void
+    {
+        $this->client->request(
+            'POST',
+            '/newsletter/subscribe',
+            [
+                'email' => $email,
+                '_token' => $token,
+                'g-recaptcha-response' => FakeRecaptchaRequestMethod::VALID_TOKEN,
+            ],
+        );
     }
 
     private function newsletterTransport(): InMemoryTransport

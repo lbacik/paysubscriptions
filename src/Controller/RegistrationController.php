@@ -15,12 +15,18 @@ use Psr\Log\LoggerInterface;
 use Symfony\Bridge\Twig\Mime\TemplatedEmail;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Bundle\SecurityBundle\Security;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Form\FormError;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
+use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
 use Symfony\Component\Mime\Address;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
+use Symfony\Component\RateLimiter\RateLimiterFactory;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Security\Csrf\CsrfToken;
+use Symfony\Component\Security\Csrf\CsrfTokenManagerInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use SymfonyCasts\Bundle\VerifyEmail\Exception\VerifyEmailExceptionInterface;
 
@@ -142,16 +148,52 @@ class RegistrationController extends AbstractController
         return $this->redirectToRoute('app_login');
     }
 
-    #[Route('/register/activation/resend', name: 'resend_activation')]
+    #[Route('/register/activation/resend', name: 'resend_activation', methods: ['POST'])]
     public function resendActivationEmail(
         Request $request,
-        Security $security,
-        EntityManagerInterface $entityManager
+        EntityManagerInterface $entityManager,
+        CsrfTokenManagerInterface $csrfTokenManager,
+        #[Autowire(service: 'limiter.activation_resend_email')]
+        RateLimiterFactory $emailLimiter,
+        #[Autowire(service: 'limiter.activation_resend_ip')]
+        RateLimiterFactory $ipLimiter,
     ): Response {
-        $email = $request->query->get('email');
-        $user = $entityManager->getRepository(User::class)->findOneBy(['email' => $email]);
+        // A missing or forged token is rejected outright: silently succeeding
+        // would turn the endpoint into a CSRF-driven email oracle.
+        if (!$csrfTokenManager->isTokenValid(new CsrfToken(
+            'resend_activation',
+            (string) $request->request->get('_token', '')
+        ))) {
+            throw new AccessDeniedHttpException('Invalid CSRF token.');
+        }
 
-        if ($user) {
+        $email = trim((string) $request->request->get('email', ''));
+
+        // Throttled before any account lookup, so the answer reveals nothing
+        // about whether the address is registered: both the per-address and
+        // the per-IP window must accept the request.
+        $limits = [
+            $emailLimiter->create(mb_strtolower($email))->consume(),
+            $ipLimiter->create((string) $request->getClientIp())->consume(),
+        ];
+
+        foreach ($limits as $limit) {
+            if (!$limit->isAccepted()) {
+                throw new TooManyRequestsHttpException(
+                    max(1, $limit->getRetryAfter()->getTimestamp() - time()),
+                    'Too many activation email requests. Please try again later.'
+                );
+            }
+        }
+
+        // Verified and unknown addresses take the exact same path as
+        // unverified ones — same flash, same redirect — except no email ever
+        // leaves the server, so the endpoint cannot confirm registration.
+        $user = '' !== $email
+            ? $entityManager->getRepository(User::class)->findOneBy(['email' => $email])
+            : null;
+
+        if (null !== $user && !$user->isVerified()) {
             try {
                 $this->sendConfirmationEmail($user);
             } catch (\Throwable $exception) {
