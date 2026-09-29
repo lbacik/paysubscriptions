@@ -77,9 +77,14 @@ final class OAuthTokenRateLimitTest extends DatabaseTestCase
 
     public function testNonPostTokenRequestsDoNotConsumeBudget(): void
     {
-        // Only POSTs count: a GET must leave the burst of 1 untouched, so the
-        // following POST is still accepted instead of throttled.
+        // Only POSTs count: after one POST exhausts the burst of 1, a GET
+        // must still pass (never throttled, never counted) while a second
+        // POST is rejected — the trailing 429 also proves the burst was
+        // genuinely exhausted, so the GET passing is meaningful.
         $this->pinRateLimitEnv(['RATE_LIMIT_TOKEN_CLIENT' => '1', 'RATE_LIMIT_TOKEN_IP' => '1']);
+
+        $this->postToken();
+        $this->assertNotThrottled();
 
         $this->client->request('GET', '/token', [
             'grant_type' => 'refresh_token',
@@ -93,7 +98,7 @@ final class OAuthTokenRateLimitTest extends DatabaseTestCase
         );
 
         $this->postToken();
-        $this->assertNotThrottled();
+        self::assertResponseStatusCodeSame(Response::HTTP_TOO_MANY_REQUESTS);
     }
 
     public function testKeylessTokenRequestsShareNoClientBucket(): void
@@ -108,6 +113,19 @@ final class OAuthTokenRateLimitTest extends DatabaseTestCase
         $this->assertNotThrottled();
         $this->postKeylessToken();
         $this->assertNotThrottled();
+    }
+
+    public function testKeylessTokenRequestsStillCountAgainstIp(): void
+    {
+        // Companion to the test above: skipping the per-client window must
+        // not mean skipping throttling entirely — with an IP burst of 1 the
+        // second keyless POST is rejected.
+        $this->pinRateLimitEnv(['RATE_LIMIT_TOKEN_CLIENT' => '100000', 'RATE_LIMIT_TOKEN_IP' => '1']);
+
+        $this->postKeylessToken();
+        $this->assertNotThrottled();
+        $this->postKeylessToken();
+        self::assertResponseStatusCodeSame(Response::HTTP_TOO_MANY_REQUESTS);
     }
 
     private function postToken(): void
