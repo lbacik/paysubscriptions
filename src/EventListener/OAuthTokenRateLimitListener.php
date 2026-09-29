@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\EventListener;
 
+use App\RateLimiter\RateLimitGuard;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -23,6 +24,13 @@ use Symfony\Component\RateLimiter\RateLimiterFactory;
  * request is rejected with 429 before it reaches the authorization server,
  * so no cryptographic work is spent on throttled callers.
  *
+ * Only POST requests consume a budget: anything else is rejected by the
+ * OAuth layer anyway, and counting it would let junk traffic burn the burst
+ * of legitimate callers. Requests without a client_id skip the per-client
+ * window (there is no client to attribute them to) and count only against
+ * the per-IP window, so keyless scripts cannot lock each other out through
+ * a shared anonymous bucket.
+ *
  * The bursts resolve from the environment (RATE_LIMIT_TOKEN_CLIENT,
  * RATE_LIMIT_TOKEN_IP; see config/packages/rate_limiter.yaml): the test
  * suite pins them to opt in per test.
@@ -34,6 +42,7 @@ final class OAuthTokenRateLimitListener
         private readonly RateLimiterFactory $clientLimiter,
         #[Autowire(service: 'limiter.oauth_token_ip')]
         private readonly RateLimiterFactory $ipLimiter,
+        private readonly RateLimitGuard $rateLimitGuard,
     ) {
     }
 
@@ -46,34 +55,33 @@ final class OAuthTokenRateLimitListener
 
         $request = $event->getRequest();
 
-        if ('/token' !== $request->getPathInfo()) {
+        if ('/token' !== $request->getPathInfo() || !$request->isMethod('POST')) {
             return;
         }
 
-        $limiters = [
-            $this->clientLimiter->create((string) $request->request->get('client_id', '')),
-            $this->ipLimiter->create((string) $request->getClientIp()),
-        ];
+        $clientId = (string) $request->request->get('client_id', '');
 
-        foreach ($limiters as $limiter) {
-            $limit = $limiter->consume();
+        $windows = [];
 
-            if ($limit->isAccepted()) {
-                continue;
-            }
+        if ('' !== $clientId) {
+            $windows[] = [$this->clientLimiter, $clientId];
+        }
 
-            $retryAfter = $limit->getRetryAfter()->getTimestamp() - time();
+        $windows[] = [$this->ipLimiter, (string) $request->getClientIp()];
 
-            $event->setResponse(new JsonResponse(
-                [
-                    'error' => 'temporarily_unavailable',
-                    'error_description' => 'Too many token requests. Please try again later.',
-                ],
-                Response::HTTP_TOO_MANY_REQUESTS,
-                ['Retry-After' => (string) max(1, $retryAfter)],
-            ));
+        $retryAfter = $this->rateLimitGuard->retryAfterSeconds($windows);
 
+        if (null === $retryAfter) {
             return;
         }
+
+        $event->setResponse(new JsonResponse(
+            [
+                'error' => 'temporarily_unavailable',
+                'error_description' => 'Too many token requests. Please try again later.',
+            ],
+            Response::HTTP_TOO_MANY_REQUESTS,
+            ['Retry-After' => (string) $retryAfter],
+        ));
     }
 }

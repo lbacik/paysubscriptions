@@ -181,19 +181,4 @@ final class ActivationResendTest extends DatabaseTestCase
             '_token' => $token,
         ]);
     }
-
-    /**
-     * Reads the token out of the login page's resend form, the same place a
-     * browser would get it from.
-     */
-    private function resendCsrfToken(): string
-    {
-        $crawler = $this->client->request('GET', '/login');
-        self::assertResponseIsSuccessful();
-
-        $token = $crawler->filter('form[action="/register/activation/resend"] input[name="_token"]')->attr('value');
-        self::assertNotNull($token, 'expected a resend form on the login page');
-
-        return $token;
-    }
 }
