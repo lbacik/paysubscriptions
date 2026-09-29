@@ -186,7 +186,10 @@ final class RegistrationTest extends DatabaseTestCase
     {
         $this->createUser('resendme@example.com', 'Fixture-Password-1', false);
 
-        $this->client->request('GET', '/register/activation/resend?email=resendme@example.com');
+        $this->client->request('POST', '/register/activation/resend', [
+            'email' => 'resendme@example.com',
+            '_token' => $this->resendCsrfToken(),
+        ]);
 
         self::assertResponseRedirects('/login');
         self::assertEmailCount(1);
@@ -196,11 +199,29 @@ final class RegistrationTest extends DatabaseTestCase
 
     public function testResendActivationEmailForUnknownAddressSendsNothing(): void
     {
-        $this->client->request('GET', '/register/activation/resend?email=ghost@example.com');
+        $this->client->request('POST', '/register/activation/resend', [
+            'email' => 'ghost@example.com',
+            '_token' => $this->resendCsrfToken(),
+        ]);
 
         // Same redirect either way: the endpoint must not reveal registrations.
         self::assertResponseRedirects('/login');
         self::assertEmailCount(0);
+    }
+
+    /**
+     * Reads the token out of the login page's resend form, the same place a
+     * browser would get it from.
+     */
+    private function resendCsrfToken(): string
+    {
+        $crawler = $this->client->request('GET', '/login');
+        self::assertResponseIsSuccessful();
+
+        $token = $crawler->filter('form[action="/register/activation/resend"] input[name="_token"]')->attr('value');
+        self::assertNotNull($token, 'expected a resend form on the login page');
+
+        return $token;
     }
 
     /**

@@ -45,6 +45,18 @@ security:
             provider: app_user_provider
             custom_authenticator: App\Security\AppCustomAuthenticator
             user_checker: App\Security\UserChecker
+            # Brute-force protection (issue #143): at most LOGIN_MAX_ATTEMPTS
+            # failed logins per account+IP inside the window (plus a
+            # LOGIN_MAX_ATTEMPTS_IP per-IP ceiling). Further attempts — even
+            # with the right password — fail with a TooManyLoginAttempts
+            # message rendered on the login page. The bursts resolve from the
+            # environment (see config/packages/rate_limiter.yaml): the test
+            # suite pins them to opt in per test. A custom limiter service is
+            # used because the bundle computes its default 1:5 ratio from
+            # max_attempts while compiling the container, which cannot consume
+            # an env placeholder.
+            login_throttling:
+                limiter: app.login_throttling.limiter
             logout:
                 path: app_logout
                 # where to redirect after logout

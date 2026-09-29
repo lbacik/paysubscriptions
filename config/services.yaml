@@ -44,6 +44,17 @@ services:
 
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
+    # Web-login throttling (issue #143): the bundle's own username+IP *and*
+    # IP limiters, fed by the env-sized login_local/login_global factories
+    # (config/packages/rate_limiter.yaml) instead of the static max_attempts
+    # the firewall schema would otherwise require.
+    app.login_throttling.limiter:
+        class: Symfony\Component\Security\Http\RateLimiter\DefaultLoginRateLimiter
+        arguments:
+            $globalFactory: '@limiter.login_global'
+            $localFactory: '@limiter.login_local'
+            $secret: '%kernel.secret%'
+
     App\Service\RecaptchaVerifierInterface: '@App\Service\RecaptchaVerifier'
 
     # OAuth2 API v1 wiring (issues #88, #91). The listeners self-register

@@ -31,7 +31,7 @@ final class ExternalServicesTest extends WebTestCase
         'cloud.umami.is',
         'fonts.googleapis.com',
         'fonts.gstatic.com',
-        'www.google.com', // reCAPTCHA loader, contact page only
+        'www.google.com', // reCAPTCHA loader: contact page and footer signup form
     ];
 
     /**

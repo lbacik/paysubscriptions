@@ -32,7 +32,11 @@
                 <p class="text-xs text-slate-500 mb-3 leading-relaxed">
                     Subscribe for occasional updates on development progress and new releases.
                 </p>
-                <form name="newsletter" action="{{ path('app_newsletter_subscribe') }}" method="POST" class="space-y-2">
+                <form name="newsletter" action="{{ path('app_newsletter_subscribe') }}" method="POST" class="space-y-2"
+                      data-turbo="false"
+                      data-controller="recaptcha"
+                      data-recaptcha-sitekey-value="{{ google_recaptcha_site_key }}"
+                      data-recaptcha-action-value="newsletter_subscribe">
                     <div class="flex flex-col sm:flex-row gap-2">
                         <label for="newsletter-email" class="sr-only">Email address</label>
                         <input type="email"
@@ -44,6 +48,7 @@
                                class="text-sm px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-color-ter/30 flex-1 bg-white"
                         />
                         <input type="hidden" name="_token" value="{{ csrf_token('newsletter') }}"/>
+                        <input type="hidden" name="g-recaptcha-response">
                         <button type="submit" class="px-4 py-2 text-sm font-semibold text-white bg-color-qua hover:bg-slate-800 rounded-xl transition-colors shrink-0">
                             Subscribe
                         </button>

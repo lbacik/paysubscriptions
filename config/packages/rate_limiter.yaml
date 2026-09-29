@@ -1,0 +1,52 @@
+# Abuse protection for public endpoints (issue #143).
+#
+# Every limiter below resolves its burst from an environment variable so each
+# deployment — including the test suite — can size it independently:
+#
+#   .env        production-sized bursts (fail-closed when unset: the variable
+#               must exist, see .env for defaults).
+#   .env.test   effectively unlimited bursts, so test runs are never throttled
+#               unless a test explicitly opts in by pinning a small value
+#               (putenv + $_SERVER + $_ENV before the kernel boots, the same
+#               pattern ContactFlowTest uses for reCAPTCHA secrets).
+#
+# Login throttling lives in config/packages/security.yaml instead: it uses
+# the SecurityBundle's login_throttling factory (per-account+IP *and* per-IP
+# windows), which needs the RateLimiter component installed but no named
+# limiter here.
+framework:
+    rate_limiter:
+        # Web-login throttling (issue #143): one window per account+IP, one
+        # per source IP, mirroring SecurityBundle's own 1:5 ratio. Wired into
+        # the firewall through app.login_throttling.limiter (services.yaml).
+        login_local:
+            policy: fixed_window
+            limit: '%env(int:LOGIN_MAX_ATTEMPTS)%'
+            interval: '5 minutes'
+        login_global:
+            policy: fixed_window
+            limit: '%env(int:LOGIN_MAX_ATTEMPTS_IP)%'
+            interval: '5 minutes'
+        # OAuth2 token endpoint: one window per client_id, one per source IP.
+        oauth_token_client:
+            policy: sliding_window
+            limit: '%env(int:RATE_LIMIT_TOKEN_CLIENT)%'
+            interval: '1 hour'
+        oauth_token_ip:
+            policy: sliding_window
+            limit: '%env(int:RATE_LIMIT_TOKEN_IP)%'
+            interval: '1 hour'
+        # Activation-email resend: one window per recipient address, one per IP.
+        activation_resend_email:
+            policy: sliding_window
+            limit: '%env(int:RATE_LIMIT_RESEND_EMAIL)%'
+            interval: '1 hour'
+        activation_resend_ip:
+            policy: sliding_window
+            limit: '%env(int:RATE_LIMIT_RESEND_IP)%'
+            interval: '1 hour'
+        # Newsletter signup: one window per source IP.
+        newsletter_ip:
+            policy: sliding_window
+            limit: '%env(int:RATE_LIMIT_NEWSLETTER_IP)%'
+            interval: '1 hour'
