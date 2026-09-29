@@ -68,7 +68,7 @@ final class OAuthApiFirewallTest extends DatabaseTestCase
         ]);
 
         $crawler = $this->client->request('GET', $url);
-        $csrf = $crawler->filter('input[name="_csrf_token"]')->attr('value');
+        $csrf = $crawler->filter('#oauth-consent-form input[name="_csrf_token"]')->attr('value');
         $this->client->request('POST', $url, ['decision' => 'allow', '_csrf_token' => $csrf]);
         parse_str(
             (string) parse_url((string) $this->client->getResponse()->headers->get('Location'), PHP_URL_QUERY),
@@ -144,6 +144,32 @@ final class OAuthApiFirewallTest extends DatabaseTestCase
 
         $this->client->request('GET', '/api', [], [], ['HTTP_Authorization' => 'Bearer '.$tampered]);
 
+        self::assertResponseStatusCodeSame(Response::HTTP_UNAUTHORIZED);
+    }
+
+    public function testApiRejectsTokenFromDeactivatedClient(): void
+    {
+        $this->registerPublicClient();
+        $token = $this->craftToken();
+
+        // Baseline: the still-active client opens the versioned API.
+        $this->client->request('GET', '/api/v1/subscriptions', [], [], [
+            'HTTP_Authorization' => 'Bearer '.$token,
+        ]);
+        self::assertResponseIsSuccessful();
+
+        // Deactivating the client revokes its API access immediately: the
+        // still-valid access token must stop working without waiting for
+        // its 15-minute expiry.
+        $manager = static::getContainer()->get(ClientManagerInterface::class);
+        $client = $manager->find(self::CLIENT_ID);
+        self::assertNotNull($client);
+        $client->setActive(false);
+        $manager->save($client);
+
+        $this->client->request('GET', '/api/v1/subscriptions', [], [], [
+            'HTTP_Authorization' => 'Bearer '.$token,
+        ]);
         self::assertResponseStatusCodeSame(Response::HTTP_UNAUTHORIZED);
     }
 

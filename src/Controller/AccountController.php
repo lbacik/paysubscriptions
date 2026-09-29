@@ -9,6 +9,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
@@ -18,6 +19,7 @@ class AccountController extends AbstractController
     public function __construct(
         private readonly AccountDeletionService $accountDeletionService,
         private readonly Security $security,
+        private readonly UserPasswordHasherInterface $passwordHasher,
     ) {
     }
 
@@ -46,6 +48,16 @@ class AccountController extends AbstractController
         $user = $this->getUser();
         if (null === $user || !($user instanceof \App\Entity\User)) {
             throw $this->createAccessDeniedException();
+        }
+
+        // Deletion is irreversible, and a remember-me session can stay alive
+        // for days on a shared or briefly unattended browser. The current
+        // password proves the requester is really the account owner.
+        $password = $this->requestInput($request, 'currentPassword');
+        if (!\is_string($password) || '' === $password || !$this->passwordHasher->isPasswordValid($user, $password)) {
+            $this->addFlash('danger', 'The password you entered is not correct. Your account was not deleted.');
+
+            return $this->render('account/delete.html.twig', [], new Response('', Response::HTTP_UNPROCESSABLE_ENTITY));
         }
 
         $this->accountDeletionService->delete($user);

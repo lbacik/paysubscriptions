@@ -135,9 +135,10 @@ final class ActivationResendTest extends DatabaseTestCase
         $crawler = $this->client->followRedirect();
         self::assertStringContainsString('not active', $crawler->text(null, true));
 
-        // The block message carries an inline POST form (not a link) whose
-        // token the endpoint accepts: submitting it queues the email.
-        $form = $crawler->selectButton('Send activation email again')->form();
+        // The login page's resend form (POST, not a link) is prefilled with
+        // the attempted address and carries a token the endpoint accepts:
+        // submitting it queues the email.
+        $form = $crawler->selectButton('Resend activation email')->form();
         $this->client->submit($form);
 
         self::assertResponseRedirects('/login');

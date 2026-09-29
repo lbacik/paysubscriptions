@@ -323,7 +323,7 @@ final class OAuthKeyRotationTest extends DatabaseTestCase
         $crawler = $this->client->request('GET', $url);
 
         if (Response::HTTP_FOUND !== $this->client->getResponse()->getStatusCode()) {
-            $csrf = $crawler->filter('input[name="_csrf_token"]')->attr('value');
+            $csrf = $crawler->filter('#oauth-consent-form input[name="_csrf_token"]')->attr('value');
             self::assertNotNull($csrf);
             $this->client->request('POST', $url, ['decision' => 'allow', '_csrf_token' => $csrf]);
         }

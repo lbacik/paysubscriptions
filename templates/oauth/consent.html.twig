@@ -44,7 +44,7 @@
                 access tokens already issued stay valid for up to 15 minutes afterwards.
             </p>
 
-            <form method="post" action="{{ authorize_url }}" class="flex gap-3">
+            <form method="post" action="{{ authorize_url }}" id="oauth-consent-form" class="flex gap-3">
                 <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
                 <button type="submit"
                         name="decision"
