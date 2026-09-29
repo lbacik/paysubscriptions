@@ -82,6 +82,36 @@ final class LoginThrottlingTest extends DatabaseTestCase
         self::assertResponseRedirects('/dashboard');
     }
 
+    public function testLockoutIsPerIpAcrossAccounts(): void
+    {
+        // Re-pin before any request: the limiter factories resolve lazily on
+        // first use, so the per-account window stays generous while the
+        // per-IP ceiling drops to three failures from this address.
+        $this->pinRateLimitEnv(['LOGIN_MAX_ATTEMPTS' => '100', 'LOGIN_MAX_ATTEMPTS_IP' => '3']);
+
+        $accounts = [];
+        for ($i = 0; $i < 4; ++$i) {
+            $email = sprintf('throttle-ip-%d-%s@example.com', $i, bin2hex(random_bytes(4)));
+            $this->createUser($email, self::PASSWORD, true);
+            $accounts[] = $email;
+        }
+
+        // Three failures for three distinct accounts exhaust the shared
+        // per-IP window without tripping any single account window.
+        for ($i = 0; $i < 3; ++$i) {
+            $this->loginFromTestIp($accounts[$i], 'Wrong-Password-2');
+            self::assertResponseRedirects('/login');
+        }
+
+        // A fourth, never-before-seen account with the correct password is
+        // still locked out: the IP ceiling applies before authentication.
+        $this->loginFromTestIp($accounts[3], self::PASSWORD);
+        self::assertResponseRedirects('/login');
+
+        $crawler = $this->client->followRedirect();
+        self::assertStringContainsString('Too many failed login attempts', $crawler->text(null, true));
+    }
+
     private function loginFromTestIp(string $email, string $password): void
     {
         $crawler = $this->client->request('GET', '/login', [], [], ['REMOTE_ADDR' => $this->ip]);
