@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\RateLimiter\RateLimitGuard;
 use App\Service\MailingSubscriptionService;
 use App\Service\RecaptchaVerifierInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -29,17 +30,20 @@ class NewsletterController extends AbstractController
         Request $request,
         MailingSubscriptionService $mailingSubscriptionService,
         FormFactoryInterface $formFactory,
+        RateLimitGuard $rateLimitGuard,
         #[Autowire(service: 'limiter.newsletter_ip')]
         RateLimiterFactory $ipLimiter,
     ): Response {
         // Throttled before any other work (issue #143): a script iterating
         // over victim addresses must not turn the list provider into a
         // spam cannon, no matter how cheap each request is.
-        $limit = $ipLimiter->create((string) $request->getClientIp())->consume();
+        $retryAfter = $rateLimitGuard->retryAfterSeconds([
+            [$ipLimiter, (string) $request->getClientIp()],
+        ]);
 
-        if (!$limit->isAccepted()) {
+        if (null !== $retryAfter) {
             throw new TooManyRequestsHttpException(
-                max(1, $limit->getRetryAfter()->getTimestamp() - time()),
+                $retryAfter,
                 'Too many subscription attempts. Please try again later.'
             );
         }

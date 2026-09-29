@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use App\Entity\User;
+use App\RateLimiter\RateLimitGuard;
 use App\Form\RegistrationFormType;
 use App\Repository\UserRepository;
 use App\Security\AppCustomAuthenticator;
@@ -153,6 +154,7 @@ class RegistrationController extends AbstractController
         Request $request,
         EntityManagerInterface $entityManager,
         CsrfTokenManagerInterface $csrfTokenManager,
+        RateLimitGuard $rateLimitGuard,
         #[Autowire(service: 'limiter.activation_resend_email')]
         RateLimiterFactory $emailLimiter,
         #[Autowire(service: 'limiter.activation_resend_ip')]
@@ -172,18 +174,16 @@ class RegistrationController extends AbstractController
         // Throttled before any account lookup, so the answer reveals nothing
         // about whether the address is registered: both the per-address and
         // the per-IP window must accept the request.
-        $limits = [
-            $emailLimiter->create(mb_strtolower($email))->consume(),
-            $ipLimiter->create((string) $request->getClientIp())->consume(),
-        ];
+        $retryAfter = $rateLimitGuard->retryAfterSeconds([
+            [$emailLimiter, mb_strtolower($email)],
+            [$ipLimiter, (string) $request->getClientIp()],
+        ]);
 
-        foreach ($limits as $limit) {
-            if (!$limit->isAccepted()) {
-                throw new TooManyRequestsHttpException(
-                    max(1, $limit->getRetryAfter()->getTimestamp() - time()),
-                    'Too many activation email requests. Please try again later.'
-                );
-            }
+        if (null !== $retryAfter) {
+            throw new TooManyRequestsHttpException(
+                $retryAfter,
+                'Too many activation email requests. Please try again later.'
+            );
         }
 
         // Verified and unknown addresses take the exact same path as
