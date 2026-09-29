@@ -29,13 +29,24 @@ readonly class Documentation
         );
     }
 
-    public function getContent(string $menuItem): string
+    public function hasSection(string $section): bool
     {
-        try {
-            return file_get_contents($this->docsPath . $menuItem . '.md');
-        } catch (\Throwable) {
-            return 'not found';
+        return array_key_exists($section, $this->getMenuItems());
+    }
+
+    public function getContent(string $section): string
+    {
+        if (!$this->hasSection($section)) {
+            throw new \InvalidArgumentException(sprintf('Unknown documentation section "%s".', $section));
         }
+
+        $content = file_get_contents($this->docsPath . $section . '.md');
+
+        if (false === $content) {
+            throw new \RuntimeException(sprintf('Unable to read documentation section "%s".', $section));
+        }
+
+        return $content;
     }
 
     private function getChapters(string $file): array
