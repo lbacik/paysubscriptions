@@ -28,8 +28,11 @@ final class OAuthTokenRateLimitTest extends DatabaseTestCase
         parent::setUp();
 
         // Start every test with full bursts: limiter state survives in the
-        // cache across runs, and the client/IP keys below are fixed.
+        // cache across runs, and the client/IP keys below are fixed. The
+        // empty client key covers keyless requests from before the listener
+        // learned to skip the per-client window for them.
         $this->resetLimiter('limiter.oauth_token_client', self::CLIENT_ID);
+        $this->resetLimiter('limiter.oauth_token_client', '');
         $this->resetLimiter('limiter.oauth_token_ip', '127.0.0.1');
     }
 
@@ -72,11 +75,54 @@ final class OAuthTokenRateLimitTest extends DatabaseTestCase
         self::assertResponseStatusCodeSame(Response::HTTP_TOO_MANY_REQUESTS);
     }
 
+    public function testNonPostTokenRequestsDoNotConsumeBudget(): void
+    {
+        // Only POSTs count: a GET must leave the burst of 1 untouched, so the
+        // following POST is still accepted instead of throttled.
+        $this->pinRateLimitEnv(['RATE_LIMIT_TOKEN_CLIENT' => '1', 'RATE_LIMIT_TOKEN_IP' => '1']);
+
+        $this->client->request('GET', '/token', [
+            'grant_type' => 'refresh_token',
+            'client_id' => self::CLIENT_ID,
+            'refresh_token' => 'bogus-token',
+        ]);
+        self::assertNotSame(
+            Response::HTTP_TOO_MANY_REQUESTS,
+            $this->client->getResponse()->getStatusCode(),
+            'non-POST token requests must never be throttled'
+        );
+
+        $this->postToken();
+        $this->assertNotThrottled();
+    }
+
+    public function testKeylessTokenRequestsShareNoClientBucket(): void
+    {
+        // Requests without a client_id skip the per-client window (there is
+        // no client to attribute them to): two of them must both pass even
+        // with a client burst of 1, or keyless scripts could lock each other
+        // out through a shared anonymous bucket.
+        $this->pinRateLimitEnv(['RATE_LIMIT_TOKEN_CLIENT' => '1', 'RATE_LIMIT_TOKEN_IP' => '100000']);
+
+        $this->postKeylessToken();
+        $this->assertNotThrottled();
+        $this->postKeylessToken();
+        $this->assertNotThrottled();
+    }
+
     private function postToken(): void
     {
         $this->client->request('POST', '/token', [
             'grant_type' => 'refresh_token',
             'client_id' => self::CLIENT_ID,
+            'refresh_token' => 'bogus-token',
+        ]);
+    }
+
+    private function postKeylessToken(): void
+    {
+        $this->client->request('POST', '/token', [
+            'grant_type' => 'refresh_token',
             'refresh_token' => 'bogus-token',
         ]);
     }
