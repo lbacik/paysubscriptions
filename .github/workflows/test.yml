@@ -38,10 +38,17 @@ name: Test
 # No continue-on-error anywhere in this file. It is allowed to be red only when
 # the repository is broken - see the `migrations` job, which is red today for a
 # reason recorded there.
+# Never add a `pull_request_target` trigger that checks out the PR head: it
+# would run untrusted fork code with this repository's secrets and a write
+# token. Fork PRs, if ever needed, use plain `pull_request`.
 on:
   push:
     branches: ['**']
   workflow_call:
+
+# Least privilege for every job; a job that needs more declares it itself.
+permissions:
+  contents: read
 
 concurrency:
   group: test-${{ github.ref }}
@@ -82,10 +89,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Set up PHP ${{ env.PHP_VERSION }}
-        uses: shivammathur/setup-php@v2
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
         with:
           php-version: ${{ env.PHP_VERSION }}
           # The set the Dockerfile builds: amqp via pecl, then pdo_mysql, opcache
@@ -96,7 +103,7 @@ jobs:
           ini-values: memory_limit=1G
 
       - name: Install dependencies
-        uses: ramsey/composer-install@v4
+        uses: ramsey/composer-install@26d8a556604053a9612623447203a691f406fbe6 # v4
 
       # The compile check, and the most valuable one this repository has. The app
       # resolves 14 environment variables through %env()%, binds
@@ -157,10 +164,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Set up PHP ${{ env.PHP_VERSION }}
-        uses: shivammathur/setup-php@v2
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
         with:
           php-version: ${{ env.PHP_VERSION }}
           extensions: amqp, ctype, iconv, intl, pdo_mysql
@@ -168,7 +175,7 @@ jobs:
           ini-values: memory_limit=1G
 
       - name: Install dependencies
-        uses: ramsey/composer-install@v4
+        uses: ramsey/composer-install@26d8a556604053a9612623447203a691f406fbe6 # v4
 
       # base.html.twig requires the compiled asset; without this the runtime
       # smoke below 500s on every page render, same as the Dockerfile build
@@ -307,10 +314,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Set up PHP ${{ env.PHP_VERSION }}
-        uses: shivammathur/setup-php@v2
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
         with:
           php-version: ${{ env.PHP_VERSION }}
           extensions: amqp, ctype, iconv, intl, pdo_mysql
@@ -318,7 +325,7 @@ jobs:
           ini-values: memory_limit=1G
 
       - name: Install dependencies
-        uses: ramsey/composer-install@v4
+        uses: ramsey/composer-install@26d8a556604053a9612623447203a691f406fbe6 # v4
 
       # base.html.twig fails to render without this: the Tailwind bundle looks
       # for a pre-built CSS file and does not compile it on the fly here the
@@ -409,10 +416,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Set up PHP ${{ env.PHP_VERSION }}
-        uses: shivammathur/setup-php@v2
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
         with:
           php-version: ${{ env.PHP_VERSION }}
           extensions: amqp, ctype, iconv, intl, pdo_mysql
@@ -420,7 +427,7 @@ jobs:
           ini-values: memory_limit=1G
 
       - name: Install dependencies
-        uses: ramsey/composer-install@v4
+        uses: ramsey/composer-install@26d8a556604053a9612623447203a691f406fbe6 # v4
 
       # Byte-for-byte the command deploy.yml runs on the host, and under the same
       # APP_ENV=prod the container uses there. --allow-no-migration keeps this
@@ -502,10 +509,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Set up PHP ${{ env.PHP_VERSION }}
-        uses: shivammathur/setup-php@v2
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
         with:
           php-version: ${{ env.PHP_VERSION }}
           extensions: amqp, ctype, iconv, intl, pdo_mysql
@@ -513,7 +520,7 @@ jobs:
           ini-values: memory_limit=1G
 
       - name: Install dependencies
-        uses: ramsey/composer-install@v4
+        uses: ramsey/composer-install@26d8a556604053a9612623447203a691f406fbe6 # v4
 
       - name: Build Tailwind CSS
         run: php bin/console tailwind:build
@@ -534,7 +541,7 @@ jobs:
           APP_ENV=test php bin/console doctrine:fixtures:load --no-interaction
 
       - name: Set up Node 20
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '20'
           cache: npm
@@ -571,7 +578,7 @@ jobs:
 
       - name: Upload the accessibility report
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: accessibility-report
           path: var/accessibility-report.json

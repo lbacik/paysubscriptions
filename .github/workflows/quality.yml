@@ -42,6 +42,9 @@ name: Quality
 # `schedule` is what makes the permanent watchers useful, and is the one trigger
 # here that test.yml has no use for: `audit` and `outdated` go red because a
 # third party published something, which no push of ours would ever notice.
+# Never add a `pull_request_target` trigger that checks out the PR head: it
+# would run untrusted fork code with this repository's secrets and a write
+# token. Fork PRs, if ever needed, use plain `pull_request`.
 on:
   push:
     branches: ['**']
@@ -53,6 +56,10 @@ on:
     # entry does nothing until it is merged to main, and edits to it on a feature
     # branch have no effect at all.
     - cron: '17 6 * * 1'
+
+# Least privilege for every job; a job that needs more declares it itself.
+permissions:
+  contents: read
 
 concurrency:
   group: quality-${{ github.ref }}
@@ -83,14 +90,14 @@ jobs:
       JSON_HUB_PROJECT: '00000000-0000-0000-0000-000000000000'
       MAILING_PROVIDER_ROUTING_KEY: 'ci'
     steps:
-      - uses: actions/checkout@v7
-      - uses: shivammathur/setup-php@v2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
         with:
           php-version: ${{ env.PHP_VERSION }}
           extensions: amqp, ctype, iconv, intl, pdo_mysql
           coverage: none
           ini-values: memory_limit=1G
-      - uses: ramsey/composer-install@v4
+      - uses: ramsey/composer-install@26d8a556604053a9612623447203a691f406fbe6 # v4
       - run: php bin/console lint:twig templates
 
   # PERMANENT WATCHER. Goes red when a stranger publishes an advisory against a
@@ -109,13 +116,13 @@ jobs:
     runs-on: ubuntu-latest
     continue-on-error: ${{ github.event_name != 'schedule' }}
     steps:
-      - uses: actions/checkout@v7
-      - uses: shivammathur/setup-php@v2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
         with:
           php-version: ${{ env.PHP_VERSION }}
           extensions: amqp, ctype, iconv, intl, pdo_mysql
           coverage: none
-      - uses: ramsey/composer-install@v4
+      - uses: ramsey/composer-install@26d8a556604053a9612623447203a691f406fbe6 # v4
       - run: composer audit
 
   # PERMANENT WATCHER. Red means an upstream maintainer released something, which
@@ -137,13 +144,13 @@ jobs:
     runs-on: ubuntu-latest
     continue-on-error: ${{ github.event_name != 'schedule' }}
     steps:
-      - uses: actions/checkout@v7
-      - uses: shivammathur/setup-php@v2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
         with:
           php-version: ${{ env.PHP_VERSION }}
           extensions: amqp, ctype, iconv, intl, pdo_mysql
           coverage: none
-      - uses: ramsey/composer-install@v4
+      - uses: ramsey/composer-install@26d8a556604053a9612623447203a691f406fbe6 # v4
       # dama/doctrine-test-bundle is pinned behind phpunit/phpunit: v8.6.0 conflicts
       # with phpunit/phpunit <11.0, and we're still on ^9.5. It's not an actionable
       # update until PHPUnit is upgraded, so it's excluded here to keep this job red

@@ -16,6 +16,10 @@ on:
         required: true
         type: string
 
+# Least privilege; the deploy job re-declares it explicitly.
+permissions:
+  contents: read
+
 concurrency:
   group: deploy-prod
   # Never cancel a deploy halfway through a converge: a killed job leaves the
@@ -34,8 +38,13 @@ jobs:
 
     env:
       DOCKER_HOST: ssh://rum
+      # Topology comes from the production environment's variables.
+      DEPLOY_SSH_HOST: ${{ vars.DEPLOY_SSH_HOST }}
+      DEPLOY_SSH_PORT: ${{ vars.DEPLOY_SSH_PORT }}
+      DEPLOY_SSH_USER: ${{ vars.DEPLOY_SSH_USER }}
+      REGISTRY_HOST: ${{ vars.REGISTRY_HOST }}
       COMPOSE: docker compose --env-file /dev/null -f compose.prod.yaml -p paysubscriptions
-      APP_IMAGE: registry.rum.luka.sh/paysubscriptions/web:${{ inputs.tag }}
+      APP_IMAGE: ${{ vars.REGISTRY_HOST }}/paysubscriptions/web:${{ inputs.tag }}
       # Supplied by the job, not by a variable - like APP_IMAGE, it is a property
       # of what is being deployed. config/packages/twig.yaml renders it into every
       # page as `appVersion`.
@@ -85,12 +94,32 @@ jobs:
       OAUTH2_ISSUER: ${{ vars.OAUTH2_ISSUER }}
 
     steps:
+      # workflow_dispatch accepts any string as the tag, and the environment's
+      # deployment policy only constrains the ref the workflow runs from. Refuse
+      # anything that is not an existing v* tag before the checkout, the secrets
+      # or the host are touched.
+      - name: Require an existing v* tag
+        env:
+          TAG: ${{ inputs.tag }}
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          case "$TAG" in
+            v*[!A-Za-z0-9._-]*|v) echo "::error::'$TAG' is not a valid v* tag name"; exit 1 ;;
+            v*) ;;
+            *) echo "::error::'$TAG' is not a v* tag"; exit 1 ;;
+          esac
+          if ! gh api "repos/$REPO/git/ref/tags/$TAG" --silent; then
+            echo "::error::tag '$TAG' does not exist in $REPO"
+            exit 1
+          fi
+
       # Take compose.prod.yaml from the tag being deployed, not from HEAD - the
       # stack definition that ships must be the one that was tagged.
       - name: Checkout ${{ inputs.tag }}
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          ref: ${{ inputs.tag }}
+          ref: refs/tags/${{ inputs.tag }}
 
       # Fails before touching the host. Without this, a missing value surfaces as
       # a ${VAR:?} error from compose after the SSH session and the registry login
@@ -107,6 +136,7 @@ jobs:
           # deploy itself needs. MAINTENANCE_MODE, LETSENCRYPT_EMAIL and RESTART
           # are absent on purpose: they have defaults in compose.prod.yaml.
           required='
+            DEPLOY_SSH_HOST DEPLOY_SSH_PORT DEPLOY_SSH_USER REGISTRY_HOST
             NETWORK VIRTUAL_HOST LETSENCRYPT_HOST DEFAULT_URI
             SYSTEM_EMAIL CONTACT_EMAIL JSON_HUB_PROJECT
             MAILING_PROVIDER_ROUTING_KEY GOOGLE_RECAPTCHA_SITE_KEY
@@ -147,7 +177,7 @@ jobs:
       #
       # StrictHostKeyChecking yes with a pinned known_hosts: the host keys come
       # from the DEPLOY_SSH_KNOWN_HOSTS secret, generated with
-      # `ssh-keyscan -p 2211 rum.host.luka.sh`.
+      # `ssh-keyscan -p $DEPLOY_SSH_PORT $DEPLOY_SSH_HOST`.
       - name: Configure SSH access to rum
         env:
           DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
@@ -157,11 +187,11 @@ jobs:
           printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/github-actions-deploy
           chmod 600 ~/.ssh/github-actions-deploy
           printf '%s\n' "$DEPLOY_SSH_KNOWN_HOSTS" >> ~/.ssh/known_hosts
-          cat >> ~/.ssh/config <<'EOF'
+          cat >> ~/.ssh/config <<EOF
           Host rum
-            HostName rum.host.luka.sh
-            Port 2211
-            User debian
+            HostName $DEPLOY_SSH_HOST
+            Port $DEPLOY_SSH_PORT
+            User $DEPLOY_SSH_USER
             IdentityFile ~/.ssh/github-actions-deploy
             IdentitiesOnly yes
             StrictHostKeyChecking yes
@@ -172,9 +202,9 @@ jobs:
       # pull, so the private image reaches rum's daemon without credentials ever
       # landing on the host.
       - name: Log in to the registry
-        uses: docker/login-action@v4
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
         with:
-          registry: registry.rum.luka.sh
+          registry: ${{ vars.REGISTRY_HOST }}
           username: ${{ secrets.REGISTRY_USER }}
           password: ${{ secrets.REGISTRY_PASSWORD }}
 
