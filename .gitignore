@@ -40,3 +40,5 @@ config/reference.php
 ###< league/oauth2-server-bundle ###
 
 .claude/
+
+.agent/
