@@ -36,7 +36,16 @@ real migrations into `paysub_test` first, proving they apply before tests run.
   and password reset (unknown addresses get the identical redirect with no
   email; single-use tokens; invalid tokens change nothing).
 - Contact (reCAPTCHA pass/fail) and newsletter signup (CSRF/method rejection,
-  queued `MailingSubscribe` inspection).
+  reCAPTCHA pass/fail, per-IP throttling, fixed homepage redirect instead of
+  `Referer`, queued `MailingSubscribe` inspection).
+- Public-endpoint abuse protection (issue #143): login throttling
+  (per-account and per-IP lockout with a user-facing message), OAuth2 token
+  rate limiting (per client and per IP, 429 + `Retry-After`), and
+  activation-email resend (POST-only CSRF form, identical response with no
+  email for verified/unknown addresses, per-address and per-IP throttling).
+  Limiter bursts resolve from the environment (`.env` production-sized,
+  `.env.test` effectively unlimited); tests opt in by pinning small values
+  before the kernel boots (see `App\Tests\RateLimitTestHelper`).
 - Subscription CRUD, per-user limits, billing-cycle amount normalization and
   totals (including cross-currency conversion), chart datasets
   (bar/monthly/yearly), dashboard totals and limit gauge.

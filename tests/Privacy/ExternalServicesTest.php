@@ -6,6 +6,9 @@ namespace App\Tests\Privacy;
 
 use App\Entity\User;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Session\Session;
+use Symfony\Component\HttpFoundation\Session\Storage\MockArraySessionStorage;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 use Symfony\Component\Security\Http\Authenticator\Token\PostAuthenticationToken;
 
@@ -31,7 +34,7 @@ final class ExternalServicesTest extends WebTestCase
         'cloud.umami.is',
         'fonts.googleapis.com',
         'fonts.gstatic.com',
-        'www.google.com', // reCAPTCHA loader, contact page only
+        'www.google.com', // reCAPTCHA loader: contact page and footer signup form
     ];
 
     /**
@@ -176,6 +179,12 @@ final class ExternalServicesTest extends WebTestCase
         $tokenStorage = $container->get('security.token_storage');
         self::assertInstanceOf(TokenStorageInterface::class, $tokenStorage);
         $tokenStorage->setToken(new PostAuthenticationToken($user, 'main', $user->getRoles()));
+
+        // The menu carries a CSRF-protected logout form, whose token needs a
+        // session even when the template is rendered outside a request.
+        $request = new Request();
+        $request->setSession(new Session(new MockArraySessionStorage()));
+        $container->get('request_stack')->push($request);
 
         $html = $container->get('twig')->render('partials/_user_profile_menu.html.twig');
 

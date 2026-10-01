@@ -325,6 +325,40 @@ final class SubscriptionListTest extends WebTestCase
         self::assertStringNotContainsString('MMM Other', $content);
     }
 
+    public function testTurboStreamReplacesWholeTableComponentWithoutDuplicatingFilter(): void
+    {
+        $client = static::createClient();
+        $owner = UserFactory::createOne(['email' => 'owner@example.com', 'isVerified' => true]);
+        $video = $this->createCategory($owner->_real(), 'Video');
+        $subscription = $this->createSubscription($client, $owner->_real(), $video, 'Streamed Flix', BillingCycle::Monthly, '2024-01-05', 10.0);
+
+        $this->loginAs($client, 'owner@example.com');
+        $client->request('GET', '/dashboard');
+        self::assertResponseIsSuccessful();
+        $page = (string) $client->getResponse()->getContent();
+        self::assertSame(1, substr_count($page, 'id="category-filter"'), 'Dashboard should render exactly one category filter');
+        self::assertSame(1, substr_count($page, 'id="subscriptions-table-wrapper"'), 'Dashboard should render exactly one table wrapper');
+
+        // Edit through the Turbo modal, like the dashboard does.
+        $client->request('GET', '/subscription/'.$subscription->getId().'/edit');
+        self::assertResponseIsSuccessful();
+        $form = $client->getCrawler()->selectButton('Update')->form();
+        $form['subscription[name]'] = 'Streamed Flix Renamed';
+        $client->submit($form, [], ['HTTP_TURBO_FRAME' => 'modal']);
+
+        self::assertResponseIsSuccessful();
+        $content = (string) $client->getResponse()->getContent();
+        self::assertStringContainsString('text/vnd.turbo-stream.html', (string) $client->getResponse()->headers->get('Content-Type'));
+        // The stream must replace the whole component wrapper (filter + table),
+        // not just the inner <table>, otherwise each mutation nests another
+        // copy of the filter inside the stale wrapper.
+        self::assertStringContainsString('target="subscriptions-table-wrapper"', $content);
+        self::assertStringNotContainsString('target="subscriptions-table"', $content);
+        self::assertSame(1, substr_count($content, 'id="category-filter"'), 'Stream should render exactly one category filter');
+        self::assertSame(1, substr_count($content, 'id="subscriptions-table-wrapper"'), 'Stream should render exactly one table wrapper');
+        self::assertStringContainsString('Streamed Flix Renamed', $content);
+    }
+
     public function testYearlyChartRendersWithFilterActive(): void
     {
         $client = static::createClient();

@@ -18,7 +18,7 @@
 # This is deliberately NOT a copy of compose.yaml, which is the dev file:
 #
 #   - `build: .` and `image: ps-web-${TAG}` become ${APP_IMAGE}, a digest-stable
-#     tag pulled from registry.rum.luka.sh. Production never builds on the host.
+#     tag pulled from the private registry (REGISTRY_HOST). Production never builds on the host.
 #   - the `database` (postgres) service is gone. Production talks to the shared
 #     external MySQL on `my.rum`, reached over the external `main` network, so a
 #     postgres container here would be an unused second database.
@@ -79,6 +79,33 @@ services:
       MAINTENANCE_MODE: "${MAINTENANCE_MODE:-0}"
       GOOGLE_RECAPTCHA_SITE_KEY: "${GOOGLE_RECAPTCHA_SITE_KEY:?GOOGLE_RECAPTCHA_SITE_KEY is required}"
       GOOGLE_RECAPTCHA_SECRET: "${GOOGLE_RECAPTCHA_SECRET:?GOOGLE_RECAPTCHA_SECRET is required}"
+      # OAuth2 signing and encryption material (issue #94, procedures in
+      # docs/oauth-key-rotation.md, full operator runbook in
+      # docs/api-operations.md). Values are container-local: either paths
+      # to key files baked or mounted into the image, or the raw PEM/key
+      # contents inline. Required since the API v1 release gates (#100):
+      # without them the authorization, token, JWKS, and API endpoints
+      # cannot work, and the deploy must fail loudly instead of converging
+      # a stack whose API is silently dead. The preflight in deploy.yml
+      # rejects missing values before anything is pulled, and
+      # app:api:preflight re-checks them from inside the container.
+      OAUTH_PRIVATE_KEY: "${OAUTH_PRIVATE_KEY:?OAUTH_PRIVATE_KEY is required}"
+      OAUTH_PUBLIC_KEY: "${OAUTH_PUBLIC_KEY:?OAUTH_PUBLIC_KEY is required}"
+      OAUTH_ENCRYPTION_KEY: "${OAUTH_ENCRYPTION_KEY:?OAUTH_ENCRYPTION_KEY is required}"
+      # Private-key passphrase. Optional by design: empty when the signing
+      # key has none, which is the recommended production setup.
+      OAUTH_PASSPHRASE: "${OAUTH_PASSPHRASE:-}"
+      # Key identifier minted into every access token's `kid` header. Change
+      # to a fresh label with each signing-key rotation; keep in step with
+      # whichever key the *_KEY paths above point at.
+      OAUTH_KEY_ID: "${OAUTH_KEY_ID:-v1}"
+      # Previous verification key while a routine rotation is in flight;
+      # empty the rest of the time (and always after an emergency rotation).
+      OAUTH_PREVIOUS_PUBLIC_KEY: "${OAUTH_PREVIOUS_PUBLIC_KEY:-}"
+      OAUTH_PREVIOUS_KEY_ID: "${OAUTH_PREVIOUS_KEY_ID:-}"
+      # Public identifier carried as the `iss` claim of every access token.
+      # Should match the production base URL so tokens are self-describing.
+      OAUTH2_ISSUER: "${OAUTH2_ISSUER:-https://paysubscriptions.com}"
       # nginx-proxy / acme-companion discovery. VIRTUAL_PORT is explicit because
       # the FrankenPHP image exposes four ports (80, 443, 443/udp and Caddy's
       # admin API on 2019); with more than one exposed port nginx-proxy falls

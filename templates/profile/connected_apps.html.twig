@@ -1,0 +1,46 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ 'connected_apps.title'|trans }} — {{ 'service.name'|trans }}{% endblock %}
+
+{% block body %}
+<div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 space-y-6">
+    <div>
+        <h1 class="text-3xl font-extrabold text-slate-900 tracking-tight">
+            {{ 'connected_apps.title'|trans }}
+        </h1>
+        <p class="text-sm text-slate-500 mt-1">
+            {{ app.user.email }}
+        </p>
+    </div>
+
+    <div class="p-4 rounded-2xl bg-blue-50 border border-blue-200/80 text-sm text-blue-900">
+        {{ 'connected_apps.notice'|trans }}
+    </div>
+
+    {% if grants is empty %}
+        <div class="bg-white rounded-3xl p-6 md:p-8 border border-slate-200/80 shadow-xs">
+            <p class="text-sm text-slate-500">{{ 'connected_apps.empty'|trans }}</p>
+        </div>
+    {% else %}
+        <ul class="space-y-4">
+            {% for grant in grants %}
+                <li class="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-xs flex items-center justify-between gap-4">
+                    <div>
+                        <p class="font-semibold text-slate-900">{{ grant.clientName }}</p>
+                        <p class="text-xs text-slate-500">{{ grant.clientId }} · {{ grant.scopes|join(', ') }}</p>
+                    </div>
+                    <form method="post" action="{{ path('app_connected_apps_revoke') }}">
+                        <input type="hidden" name="_token" value="{{ csrf_token('connected_apps') }}">
+                        <input type="hidden" name="client_id" value="{{ grant.clientId }}">
+                        <button type="submit" class="btn-delete">{{ 'connected_apps.disconnect'|trans }}</button>
+                    </form>
+                </li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+
+    <p class="text-sm text-slate-500">
+        <a href="{{ path('app_profile') }}" class="underline">{{ 'connected_apps.back_to_profile'|trans }}</a>
+    </p>
+</div>
+{% endblock %}

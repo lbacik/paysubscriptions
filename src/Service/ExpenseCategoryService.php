@@ -93,6 +93,18 @@ class ExpenseCategoryService
     }
 
     /**
+     * Applies a full name/color update in one flush. The web edit form saves
+     * name and color through rename()/recolor(); the API PATCH path uses this
+     * so both stay on the same service rule.
+     */
+    public function update(ExpenseCategory $category, string $name, string $color): void
+    {
+        $category->setName($name);
+        $category->setColor($color);
+        $this->categoryRepository->save($category);
+    }
+
+    /**
      * Deletes a category that is not in use. A category with Subscriptions
      * assigned is never reassigned silently — the caller must reassign those
      * Subscriptions first.

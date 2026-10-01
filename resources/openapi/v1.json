@@ -1,0 +1,1295 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "PaySubscriptions API",
+    "version": "1.0.0",
+    "description": "Versioned REST API for User-owned resources. v1 covers ExpenseCategory collection/detail reads (issue #89) plus collection POST and detail PATCH/DELETE writes: writes accept name and #RRGGBB color only, PATCH changes supplied fields only, name collisions and in-use deletes return 409, constraint violations return 422 with field errors. It also covers Subscription collection and detail reads with explicit stateless navigation (issue #96) plus collection POST, detail PATCH (issue #98), and detail DELETE writes (issue #97): writes accept the same editable data as the web experience with server-controlled ids/timestamps/currency stamps, the default-category rule, manual converted amounts, and the per-User Subscription limit (409 on conflict, 422 on invalid data); PATCH is atomic and partial, with write-only confirmConvertedFor reviewing converted amounts (409 on currency mismatch), and the dashboard snapshot report (issue #99); write-error statuses 409/422 do not apply to the read-only report endpoint. Additive backward-compatible changes stay within v1; breaking changes require a new version."
+  },
+  "servers": [
+    {
+      "url": "/api/v1"
+    }
+  ],
+  "security": [
+    {
+      "paySubsOAuth2": [
+        "api:full"
+      ]
+    }
+  ],
+  "paths": {
+    "/expense-categories": {
+      "get": {
+        "operationId": "listExpenseCategories",
+        "summary": "List the authenticated User's expense categories",
+        "description": "User-owned collection ordered by name with no pagination or filters in v1. Scoped to the bearer token User; never returns another User's records.",
+        "security": [
+          {
+            "paySubsOAuth2": [
+              "api:full"
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Owned categories ordered by name.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ExpenseCategory"
+                  }
+                },
+                "example": [
+                  {
+                    "id": "0190a1b2-c3d4-7e5f-8901-23456789abcd",
+                    "name": "Apple",
+                    "color": "#222222",
+                    "createdAt": "2026-09-01T10:00:00+00:00",
+                    "updatedAt": "2026-09-01T10:00:00+00:00"
+                  }
+                ]
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      },
+      "post": {
+        "operationId": "createExpenseCategory",
+        "summary": "Create an expense category for the authenticated User",
+        "description": "Accepts name and color only; id and timestamps are server-generated. A name already used by this User returns 409.",
+        "security": [
+          {
+            "paySubsOAuth2": [
+              "api:full"
+            ]
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExpenseCategoryCreate"
+              },
+              "example": {
+                "name": "Food",
+                "color": "#ff0000"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The created category.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExpenseCategory"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/CategoryNameConflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationFailed"
+          }
+        }
+      }
+    },
+    "/expense-categories/{id}": {
+      "get": {
+        "operationId": "getExpenseCategory",
+        "summary": "Fetch one owned expense category",
+        "description": "Missing, malformed, or foreign IDs return 404 without disclosing another User's data.",
+        "security": [
+          {
+            "paySubsOAuth2": [
+              "api:full"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ExpenseCategory UUID.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The owned category.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExpenseCategory"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/CategoryNotFound"
+          }
+        }
+      },
+      "patch": {
+        "operationId": "updateExpenseCategory",
+        "summary": "Update an owned expense category",
+        "description": "Partial update: only supplied name/color fields change. Missing, malformed, or foreign IDs return 404 without disclosing another User's data.",
+        "security": [
+          {
+            "paySubsOAuth2": [
+              "api:full"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ExpenseCategory UUID.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExpenseCategoryUpdate"
+              },
+              "example": {
+                "name": "Groceries"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The updated category.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExpenseCategory"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/CategoryNotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/CategoryNameConflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationFailed"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteExpenseCategory",
+        "summary": "Delete an owned expense category",
+        "description": "Only unused categories can be deleted: a category still used by any Subscription returns 409 and nothing is reassigned. Missing, malformed, or foreign IDs return 404 without disclosing another User's data.",
+        "security": [
+          {
+            "paySubsOAuth2": [
+              "api:full"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ExpenseCategory UUID.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The category was deleted."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/CategoryNotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/CategoryInUse"
+          }
+        }
+      }
+    },
+    "/subscriptions": {
+      "get": {
+        "operationId": "listSubscriptions",
+        "summary": "List the authenticated User's subscriptions",
+        "description": "User-owned collection with explicit stateless navigation: optional categoryId filter, name/comparable-price/next-renewal sort with asc/desc order and deterministic name/UUID tie-breaking, 25 items per page starting at page 1. Filtering and sorting run before pagination. Never reads or alters the web session's list state; never returns another User's records.",
+        "security": [
+          {
+            "paySubsOAuth2": [
+              "api:full"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "name": "categoryId",
+            "in": "query",
+            "required": false,
+            "description": "Only Subscriptions in this owned ExpenseCategory (UUID). Unknown or foreign IDs match nothing.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "description": "Sort mode: name, comparable price (monthly equivalent in the User's main currency), or next renewal. Legacy monthly/yearly keys behave like price. Defaults to name.",
+            "schema": {
+              "type": "string",
+              "enum": ["name", "price", "renewal"],
+              "default": "name"
+            }
+          },
+          {
+            "name": "order",
+            "in": "query",
+            "required": false,
+            "description": "Sort direction. Ties always break by ascending name, then UUID. Defaults to asc.",
+            "schema": {
+              "type": "string",
+              "enum": ["asc", "desc"],
+              "default": "asc"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "description": "1-based page number, 25 items per page. Defaults to 1; past the last page returns an empty array.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Owned subscriptions: filtered, sorted, then paginated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Subscription"
+                  }
+                },
+                "example": [
+                  {
+                    "id": "0190a1b2-c3d4-7e5f-8901-23456789abcd",
+                    "name": "Netflix",
+                    "billingCycle": "monthly",
+                    "amount": 15.99,
+                    "nextPayment": "2026-04-05",
+                    "currency": "USD",
+                    "convertedAmount": null,
+                    "convertedCurrency": null,
+                    "pendingReview": false,
+                    "categoryId": "0190a1b2-c3d4-7e5f-8901-23456789abce",
+                    "notes": null,
+                    "createdAt": "2026-09-01T10:00:00+00:00",
+                    "updatedAt": "2026-09-01T10:00:00+00:00"
+                  }
+                ]
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      },
+      "post": {
+        "operationId": "createSubscription",
+        "summary": "Create a subscription for the authenticated User",
+        "description": "Accepts the same editable data as the web experience: name, billingCycle, amount, date-only nextPayment, currency, convertedAmount, notes, and categoryId. Owner, id, timestamps, convertedCurrency, and pendingReview are server-controlled. An omitted categoryId follows the default-category rule; an explicitly supplied missing or foreign categoryId is rejected as an invalid field without disclosure. Currency defaults to the User's confirmed main currency; cross-currency Subscriptions require a positive manual convertedAmount. Reaching the User's Subscription limit returns 409.",
+        "security": [
+          {
+            "paySubsOAuth2": [
+              "api:full"
+            ]
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubscriptionCreate"
+              },
+              "example": {
+                "name": "Netflix",
+                "billingCycle": "monthly",
+                "amount": 15.99,
+                "nextPayment": "2026-04-05",
+                "currency": "USD",
+                "categoryId": "0190a1b2-c3d4-7e5f-8901-23456789abce"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The created subscription.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Subscription"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/SubscriptionLimitReached"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationFailed"
+          }
+        }
+      }
+    },
+    "/subscriptions/{id}": {
+      "get": {
+        "operationId": "getSubscription",
+        "summary": "Fetch one owned subscription",
+        "description": "Missing, malformed, or foreign IDs return 404 without disclosing another User's data.",
+        "security": [
+          {
+            "paySubsOAuth2": [
+              "api:full"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Subscription UUID.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The owned subscription.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Subscription"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/SubscriptionNotFound"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteSubscription",
+        "summary": "Delete an owned subscription",
+        "description": "Only the authenticated User's own Subscription is deleted. Missing, malformed, or foreign IDs return 404 without disclosing another User's data.",
+        "security": [
+          {
+            "paySubsOAuth2": [
+              "api:full"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Subscription UUID.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The subscription was deleted."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/SubscriptionNotFound"
+          }
+        }
+      },
+      "patch": {
+        "operationId": "updateSubscription",
+        "summary": "Partially update an owned subscription",
+        "description": "Atomic partial update: only supplied fields change and omitted fields keep their values. Optional notes/convertedAmount may be cleared with explicit null only when the patched Subscription stays valid; required fields, the owner, and the UUID can never be cleared or changed. An unrelated edit preserves pendingReview; changing currency drops a converted figure entered for the old currency. Supplying convertedAmount together with write-only confirmConvertedFor reviews even an unchanged figure: a confirmation matching the current main currency stamps it, a mismatched one returns 409 and applies nothing. confirmConvertedFor is never stored or returned. Missing, malformed, or foreign Subscription IDs return 404 without disclosure; invalid or foreign category IDs return 422 without disclosure.",
+        "security": [
+          {
+            "paySubsOAuth2": [
+              "api:full"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Subscription UUID.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubscriptionUpdate"
+              },
+              "example": {
+                "name": "Netflix Premium"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The updated subscription.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Subscription"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/SubscriptionNotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/CurrencyConflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationFailed"
+          }
+        }
+      }
+    },
+    "/reports/dashboard": {
+      "get": {
+        "operationId": "getDashboardReport",
+        "summary": "Current dashboard snapshot: summary cards plus one chart mode",
+        "description": "Stateless snapshot of the authenticated User's Subscriptions reusing the web dashboard calculations. Summary mirrors SubscriptionService::getTotals() plus the User limit; chart series mirror ChartService numeric data with basis/visibility metadata instead of Chart.js options. Pending-review cross-currency Subscriptions stay in counts but are excluded from monetary totals and charts. The month selector applies only to the monthly direct view (monthly Subscriptions plus yearly ones whose next-payment month matches). No year, date-range, payment-history, or forecast semantics.",
+        "security": [
+          {
+            "paySubsOAuth2": [
+              "api:full"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "name": "chartMode",
+            "in": "query",
+            "required": false,
+            "description": "Chart view: twelve-month charge distribution (bar), monthly doughnut (monthly), or yearly doughnut (yearly). Defaults to bar.",
+            "schema": {
+              "type": "string",
+              "enum": ["bar", "monthly", "yearly"],
+              "default": "bar"
+            }
+          },
+          {
+            "name": "basis",
+            "in": "query",
+            "required": false,
+            "description": "Direct-cycle charges (direct) or normalized equivalents (equivalent). The bar view supports direct only; monthly equivalent uses per-Subscription monthly calculations over all reportable Subscriptions; yearly equivalent uses yearly calculations. Defaults to direct.",
+            "schema": {
+              "type": "string",
+              "enum": ["direct", "equivalent"],
+              "default": "direct"
+            }
+          },
+          {
+            "name": "categoryId",
+            "in": "query",
+            "required": false,
+            "description": "Optional User-owned ExpenseCategory UUID filter; omit for all categories. Unknown, malformed, or foreign IDs return 404 without disclosing another User's data.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "month",
+            "in": "query",
+            "required": false,
+            "description": "Month of the year (1-12) used only by the monthly direct view. Any other use, or a value outside 1-12, returns 422.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 12
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Summary cards, numeric chart data with visibility metadata, and the applied filters.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardReport"
+                },
+                "example": {
+                  "summary": {
+                    "monthly": 15.99,
+                    "yearly": 120.0,
+                    "monthlyEquivalent": 25.99,
+                    "yearlyEquivalent": 311.88,
+                    "count": 2,
+                    "limit": 30,
+                    "currency": "USD",
+                    "pendingReview": 0
+                  },
+                  "chart": {
+                    "mode": "monthly",
+                    "basis": "monthly_direct",
+                    "currency": "USD",
+                    "labels": ["Netflix"],
+                    "data": [15.99],
+                    "empty": false,
+                    "hiddenCount": 1,
+                    "hiddenCycle": "yearly"
+                  },
+                  "filters": {
+                    "chartMode": "monthly",
+                    "basis": "direct",
+                    "categoryId": null,
+                    "month": null
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/CategoryNotFound"
+          },
+          "422": {
+            "$ref": "#/components/responses/InvalidFilter"
+          }
+        }
+      }
+    },
+    "/openapi.json": {
+      "get": {
+        "operationId": "getOpenApiDocument",
+        "summary": "Published v1 OpenAPI contract",
+        "security": [
+          {
+            "paySubsOAuth2": [
+              "api:full"
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The v1 OpenAPI document.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "paySubsOAuth2": {
+        "type": "oauth2",
+        "description": "User-delegated authorization code with S256 PKCE. Manually registered clients only; explicit scope api:full; 15-minute access tokens issued by this server.",
+        "flows": {
+          "authorizationCode": {
+            "authorizationUrl": "/authorize",
+            "tokenUrl": "/token",
+            "refreshUrl": "/token",
+            "scopes": {
+              "api:full": "Full read/write access to the approving User's data."
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "ExpenseCategoryCreate": {
+        "type": "object",
+        "required": [
+          "name",
+          "color"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 100,
+            "description": "Unique per User."
+          },
+          "color": {
+            "type": "string",
+            "pattern": "^#[0-9a-fA-F]{6}$",
+            "description": "Hex color swatch, e.g. #577399."
+          }
+        },
+        "description": "Writable fields for creating an expense category. id and timestamps are server-generated."
+      },
+      "ExpenseCategoryUpdate": {
+        "type": "object",
+        "minProperties": 1,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 100,
+            "description": "Unique per User."
+          },
+          "color": {
+            "type": "string",
+            "pattern": "^#[0-9a-fA-F]{6}$",
+            "description": "Hex color swatch, e.g. #577399."
+          }
+        },
+        "description": "Partial update: only supplied fields change."
+      },
+      "SubscriptionCreate": {
+        "type": "object",
+        "required": [
+          "name",
+          "billingCycle",
+          "amount",
+          "nextPayment"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 255,
+            "description": "Subscription name."
+          },
+          "billingCycle": {
+            "type": "string",
+            "enum": ["monthly", "yearly"],
+            "description": "Exactly one billing cycle per Subscription; the amount is priced per that cycle."
+          },
+          "amount": {
+            "type": "number",
+            "format": "double",
+            "exclusiveMinimum": 0,
+            "description": "Positive amount charged per billing cycle."
+          },
+          "nextPayment": {
+            "type": "string",
+            "format": "date",
+            "description": "User-entered next known payment date (date-only, YYYY-MM-DD)."
+          },
+          "currency": {
+            "type": "string",
+            "description": "ISO 4217 currency code; defaults to the User's confirmed main currency when omitted.",
+            "nullable": true
+          },
+          "convertedAmount": {
+            "type": "number",
+            "format": "double",
+            "exclusiveMinimum": 0,
+            "description": "Manually supplied positive converted amount in the User's main currency; required for cross-currency Subscriptions and rejected for same-currency ones.",
+            "nullable": true
+          },
+          "categoryId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ExpenseCategory UUID owned by the same User. Omitted values follow the default-category rule; missing or foreign IDs are rejected as an invalid field."
+          },
+          "notes": {
+            "type": "string",
+            "maxLength": 2000,
+            "description": "Optional notes.",
+            "nullable": true
+          }
+        },
+        "description": "Writable fields for creating a subscription. Owner, id, timestamps, convertedCurrency, and pendingReview are server-controlled."
+      },
+      "SubscriptionUpdate": {
+        "type": "object",
+        "minProperties": 1,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 255,
+            "description": "Subscription name. Cannot be cleared."
+          },
+          "billingCycle": {
+            "type": "string",
+            "enum": ["monthly", "yearly"],
+            "description": "Exactly one billing cycle per Subscription; the amount is priced per that cycle. Cannot be cleared."
+          },
+          "amount": {
+            "type": "number",
+            "format": "double",
+            "exclusiveMinimum": 0,
+            "description": "Positive amount charged per billing cycle. Cannot be cleared."
+          },
+          "nextPayment": {
+            "type": "string",
+            "format": "date",
+            "description": "User-entered next known payment date (date-only, YYYY-MM-DD). Cannot be cleared."
+          },
+          "currency": {
+            "type": "string",
+            "description": "ISO 4217 currency code. Changing currency drops a converted figure entered for the old currency.",
+            "nullable": true
+          },
+          "convertedAmount": {
+            "type": "number",
+            "format": "double",
+            "exclusiveMinimum": 0,
+            "description": "Manually supplied positive converted amount in the User's main currency. May be cleared with null only when the patched Subscription stays valid.",
+            "nullable": true
+          },
+          "confirmConvertedFor": {
+            "type": "string",
+            "description": "Write-only confirmation reviewing the supplied convertedAmount against a main currency: a match with the current main currency stamps the review even for an unchanged figure, a mismatch returns 409. Requires convertedAmount, is never stored, and never appears on reads."
+          },
+          "categoryId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ExpenseCategory UUID owned by the same User. Cannot be cleared; missing or foreign IDs are rejected as an invalid field."
+          },
+          "notes": {
+            "type": "string",
+            "maxLength": 2000,
+            "description": "Optional notes. May be cleared with null.",
+            "nullable": true
+          }
+        },
+        "description": "Atomic partial update: only supplied fields change. Owner, id, timestamps, convertedCurrency, and pendingReview are server-controlled and ignored."
+      },
+      "Subscription": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "billingCycle",
+          "amount",
+          "nextPayment",
+          "currency",
+          "convertedAmount",
+          "convertedCurrency",
+          "pendingReview",
+          "categoryId",
+          "notes",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Server-generated UUID."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 255,
+            "description": "Subscription name."
+          },
+          "billingCycle": {
+            "type": "string",
+            "enum": ["monthly", "yearly"],
+            "description": "Exactly one billing cycle per Subscription; the amount is priced per that cycle."
+          },
+          "amount": {
+            "type": "number",
+            "format": "double",
+            "description": "Amount charged per billing cycle, with two fractional digits.",
+            "nullable": true
+          },
+          "nextPayment": {
+            "type": "string",
+            "format": "date",
+            "description": "User-entered next known payment date (date-only)."
+          },
+          "currency": {
+            "type": "string",
+            "description": "ISO 4217 currency code; defaults to the User's confirmed main currency.",
+            "nullable": true
+          },
+          "convertedAmount": {
+            "type": "number",
+            "format": "double",
+            "description": "Manually supplied converted amount in the User's main currency for cross-currency Subscriptions.",
+            "nullable": true
+          },
+          "convertedCurrency": {
+            "type": "string",
+            "description": "Main currency the saved converted amount was reviewed against. Not writable.",
+            "nullable": true
+          },
+          "pendingReview": {
+            "type": "boolean",
+            "description": "Derived: the converted amount was entered against a previous main currency, or a cross-currency Subscription has no converted amount. Not writable."
+          },
+          "categoryId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ExpenseCategory UUID owned by the same User."
+          },
+          "notes": {
+            "type": "string",
+            "maxLength": 2000,
+            "description": "Optional notes.",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ExpenseCategory": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "color",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Server-generated UUID."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 100,
+            "description": "Unique per User."
+          },
+          "color": {
+            "type": "string",
+            "pattern": "^#[0-9a-fA-F]{6}$",
+            "description": "Hex color swatch, e.g. #577399."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "DashboardReport": {
+        "type": "object",
+        "required": ["summary", "chart", "filters"],
+        "properties": {
+          "summary": {
+            "type": "object",
+            "description": "Summary-card values from SubscriptionService::getTotals() plus the User limit. Pending-review cross-currency Subscriptions are counted but excluded from monetary fields.",
+            "required": ["monthly", "yearly", "monthlyEquivalent", "yearlyEquivalent", "count", "limit", "currency", "pendingReview"],
+            "properties": {
+              "monthly": {
+                "type": "number",
+                "description": "Direct monthly-cycle total in the main currency."
+              },
+              "yearly": {
+                "type": "number",
+                "description": "Direct yearly-cycle total in the main currency."
+              },
+              "monthlyEquivalent": {
+                "type": "number",
+                "description": "Normalized monthly total (direct monthly plus yearly divided by 12)."
+              },
+              "yearlyEquivalent": {
+                "type": "number",
+                "description": "Normalized yearly total (direct yearly plus monthly multiplied by 12)."
+              },
+              "count": {
+                "type": "integer",
+                "description": "Subscription count including pending-review items."
+              },
+              "limit": {
+                "type": "integer",
+                "description": "User subscription limit."
+              },
+              "currency": {
+                "type": "string",
+                "nullable": true,
+                "description": "Main-currency label, or null when no main currency is confirmed."
+              },
+              "pendingReview": {
+                "type": "integer",
+                "description": "Cross-currency Subscriptions pending converted-amount review."
+              }
+            }
+          },
+          "chart": {
+            "type": "object",
+            "description": "Numeric chart data with visibility metadata. Bar mode carries per-month labels and per-Subscription datasets; monthly/yearly modes carry parallel labels and values. No Chart.js styling or options are exposed.",
+            "required": ["mode", "basis", "currency", "labels", "empty", "hiddenCount", "hiddenCycle"],
+            "properties": {
+              "mode": {
+                "type": "string",
+                "enum": ["bar", "monthly", "yearly"]
+              },
+              "basis": {
+                "type": "string",
+                "enum": ["charges", "monthly_direct", "monthly_equivalent", "yearly_direct", "yearly_equivalent"],
+                "description": "Bar always reports per-month charges; doughnut modes report direct-cycle or normalized-equivalent values."
+              },
+              "currency": {
+                "type": "string",
+                "nullable": true,
+                "description": "Main-currency label, or null when no main currency is confirmed."
+              },
+              "labels": {
+                "type": "array",
+                "description": "Month names for bar mode, Subscription names for monthly/yearly modes.",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "datasets": {
+                "type": "array",
+                "description": "Bar mode only: one numeric twelve-value series per reportable Subscription.",
+                "items": {
+                  "type": "object",
+                  "required": ["label", "data"],
+                  "properties": {
+                    "label": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "number"
+                      }
+                    }
+                  }
+                }
+              },
+              "data": {
+                "type": "array",
+                "description": "Monthly/yearly modes only: values parallel to labels.",
+                "items": {
+                  "type": "number"
+                }
+              },
+              "empty": {
+                "type": "boolean",
+                "description": "True when the active view draws no series."
+              },
+              "hiddenCount": {
+                "type": "integer",
+                "description": "Reportable Subscriptions excluded by the direct-cycle view."
+              },
+              "hiddenCycle": {
+                "type": "string",
+                "nullable": true,
+                "enum": ["monthly", "yearly", null],
+                "description": "Billing cycle hidden by the direct view, or null when nothing is hidden."
+              }
+            }
+          },
+          "filters": {
+            "type": "object",
+            "required": ["chartMode", "basis", "categoryId", "month"],
+            "properties": {
+              "chartMode": {
+                "type": "string",
+                "enum": ["bar", "monthly", "yearly"]
+              },
+              "basis": {
+                "type": "string",
+                "enum": ["direct", "equivalent"]
+              },
+              "categoryId": {
+                "type": "string",
+                "format": "uuid",
+                "nullable": true
+              },
+              "month": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 12,
+                "nullable": true
+              }
+            }
+          }
+        }
+      },
+      "Problem": {
+        "type": "object",
+        "required": [
+          "type",
+          "title",
+          "status",
+          "detail",
+          "code"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "format": "uri",
+            "description": "Stable problem type URI."
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "type": "integer"
+          },
+          "detail": {
+            "type": "string",
+            "description": "Safe human-readable detail; never leaks another User's data."
+          },
+          "code": {
+            "type": "string",
+            "description": "Stable machine-readable code, e.g. category_not_found."
+          },
+          "errors": {
+            "type": "array",
+            "description": "Field-level violations for 422 responses (report filters and write operations).",
+            "items": {
+              "type": "object",
+              "required": [
+                "field",
+                "message"
+              ],
+              "properties": {
+                "field": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "responses": {
+      "Unauthorized": {
+        "description": "Missing or invalid bearer token.",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "Valid token without api:full scope, unapproved client, or ineligible account.",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        }
+      },
+      "SubscriptionNotFound": {
+        "description": "Missing, malformed, or foreign subscription ID.",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        }
+      },
+      "SubscriptionLimitReached": {
+        "description": "The User already reached their maximum number of subscriptions.",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        }
+      },
+      "CurrencyConflict": {
+        "description": "The converted amount was confirmed against a different main currency than the current one; nothing was applied.",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        }
+      },
+      "CategoryNotFound": {
+        "description": "Missing, malformed, or foreign category ID.",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        }
+      },
+      "ValidationFailed": {
+        "description": "Field constraint violations, with field-level errors.",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        }
+      },
+      "CategoryNameConflict": {
+        "description": "The User already has a category with this name.",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        }
+      },
+      "CategoryInUse": {
+        "description": "The category is still used by Subscriptions; reassign them first.",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        }
+      },
+      "InvalidFilter": {
+        "description": "Invalid report filter: unknown chart mode or basis, misplaced or out-of-range month, or equivalent basis with the bar view. Carries code invalid_filter with field-level errors.",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        }
+      }
+    }
+  }
+}

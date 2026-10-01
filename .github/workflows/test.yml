@@ -38,10 +38,17 @@ name: Test
 # No continue-on-error anywhere in this file. It is allowed to be red only when
 # the repository is broken - see the `migrations` job, which is red today for a
 # reason recorded there.
+# Never add a `pull_request_target` trigger that checks out the PR head: it
+# would run untrusted fork code with this repository's secrets and a write
+# token. Fork PRs, if ever needed, use plain `pull_request`.
 on:
   push:
     branches: ['**']
   workflow_call:
+
+# Least privilege for every job; a job that needs more declares it itself.
+permissions:
+  contents: read
 
 concurrency:
   group: test-${{ github.ref }}
@@ -82,10 +89,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Set up PHP ${{ env.PHP_VERSION }}
-        uses: shivammathur/setup-php@v2
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
         with:
           php-version: ${{ env.PHP_VERSION }}
           # The set the Dockerfile builds: amqp via pecl, then pdo_mysql, opcache
@@ -96,7 +103,7 @@ jobs:
           ini-values: memory_limit=1G
 
       - name: Install dependencies
-        uses: ramsey/composer-install@v4
+        uses: ramsey/composer-install@26d8a556604053a9612623447203a691f406fbe6 # v4
 
       # The compile check, and the most valuable one this repository has. The app
       # resolves 14 environment variables through %env()%, binds
@@ -129,6 +136,146 @@ jobs:
       # functional tests that need a database, so it cannot run here where no
       # service container is available. The separation keeps this job fast and
       # dependency-free.
+      #
+      # The API v1 release gates live in their own job (`release-gates`) below:
+      # production dependency resolution, route listing, OpenAPI export and
+      # contract validation, and a DB-less runtime smoke of the prod container.
+      # The blocking behavioral gates (contract, two-User isolation, OAuth2
+      # security, report parity, web login) run as PHPUnit tests in `phpunit`.
+
+  # API v1 release gates (issue #100). DB-less by design: every check here
+  # proves something about the built artifact, not about data. Needs-a-
+  # database gates stay where they belong - the `phpunit` suite (contract,
+  # isolation, OAuth2 token flows, report parity, web login) and the
+  # `migrations` job (production migration replay plus schema validation).
+  release-gates:
+    name: Release gates
+    runs-on: ubuntu-latest
+
+    env:
+      APP_ENV: prod
+      APP_DEBUG: '0'
+      APP_SECRET: ci
+      DATABASE_URL: "mysql://root:root@127.0.0.1:3306/paysub?serverVersion=8.4&charset=utf8mb4"
+      MESSENGER_TRANSPORT_DSN: 'amqp://guest:guest@127.0.0.1:5672/%2f/messages'
+      MAILER_DSN: 'null://null'
+      JSON_HUB_PROJECT: '00000000-0000-0000-0000-000000000000'
+      MAILING_PROVIDER_ROUTING_KEY: 'ci'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Set up PHP ${{ env.PHP_VERSION }}
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          extensions: amqp, ctype, iconv, intl, pdo_mysql
+          coverage: none
+          ini-values: memory_limit=1G
+
+      - name: Install dependencies
+        uses: ramsey/composer-install@26d8a556604053a9612623447203a691f406fbe6 # v4
+
+      # base.html.twig requires the compiled asset; without this the runtime
+      # smoke below 500s on every page render, same as the Dockerfile build
+      # step and the other jobs that boot a real page.
+      - name: Build Tailwind CSS
+        run: php bin/console tailwind:build
+
+      # The Dockerfile builds the production image from the same lockfile, so
+      # a resolution that only works with dev packages ships a broken image.
+      - name: Verify production dependency resolution
+        run: |
+          composer check-platform-reqs --no-dev
+          composer install --no-dev --dry-run --no-interaction --no-progress
+
+      - name: Compile the production container
+        run: php bin/console lint:container --env=prod
+
+      # Graduated from quality.yml's waiting room (issue #100): the mapping
+      # is green and stays green, so it is a gate now, not a watcher.
+      # --skip-sync on purpose, same as before: mapping coherence needs no
+      # database. Whether the migrated schema matches is answered by the
+      # `migrations` job's full validate against a real server.
+      - name: Validate Doctrine mapping
+        run: php bin/console doctrine:schema:validate --skip-sync --env=prod
+
+      # Every route the v1 contract documents must exist, and the OAuth2
+      # discovery/token surface must be registered. A renamed route that the
+      # contract still names is a 404 behind a 200-documented operation.
+      - name: Verify v1 and discovery routes
+        run: |
+          routes=$(php bin/console debug:router --env=prod)
+          for name in \
+            api_v1_expense_categories_list api_v1_expense_categories_create \
+            api_v1_expense_categories_show api_v1_expense_categories_update \
+            api_v1_expense_categories_delete \
+            api_v1_subscriptions_list api_v1_subscriptions_create \
+            api_v1_subscriptions_show api_v1_subscriptions_update \
+            api_v1_subscriptions_delete \
+            api_v1_reports_dashboard api_v1_openapi \
+            oauth_discovery_authorization_server \
+            oauth_discovery_protected_resource oauth_discovery_jwks \
+            oauth2_authorize oauth2_token; do
+            echo "$routes" | grep -q " $name " || { echo "::error::route $name is missing"; exit 1; }
+          done
+          echo "all v1 and discovery routes are registered"
+
+      # Proves the API Platform wiring still exports (the /api entrypoint and
+      # docs the firewall guards), and that the committed v1 contract - the
+      # reviewed artifact OpenApiContractTest locks - parses at v1.0.0 with
+      # every operation it claims.
+      - name: Export and validate OpenAPI
+        run: |
+          php bin/console api:openapi:export --output=/tmp/api-platform.json --env=prod
+          php bin/console debug:router --env=prod --show-controllers > /dev/null
+          php -r '$p=json_decode(file_get_contents("/tmp/api-platform.json"),true); if (!is_array($p)||!isset($p["openapi"],$p["info"])) {fwrite(STDERR,"platform export is not OpenAPI\n"); exit(1);} echo "platform export: ",$p["openapi"]," ",$p["info"]["title"] ?? "?","\n";'
+          php -r '$c=json_decode(file_get_contents("resources/openapi/v1.json"),true); if (!is_array($c)||"3.0.3"!==($c["openapi"]??null)||"1.0.0"!==($c["info"]["version"]??null)||0===count($c["paths"]??[])) {fwrite(STDERR,"v1 contract invalid\n"); exit(1);} echo "v1 contract: 1.0.0, ",count($c["paths"])," paths\n";'
+
+      # Boots the real prod container over HTTP with ephemeral keys and proves
+      # the unauthenticated surface behaves: discovery documents serve, the
+      # JWKS carries a key, the API answers 401 with a problem document
+      # instead of an HTML error, and web login still renders its form.
+      # Authenticated flows (issuance, read, refresh, revocation) need a
+      # provisioned client and User, so they stay in the blocking PHPUnit
+      # suite rather than here.
+      #
+      # -d variables_order=EGPCS is load-bearing: PHP's built-in server does
+      # not populate $_SERVER from the process environment, and Symfony reads
+      # %env()% from $_SERVER first - without it the server would boot on
+      # .env defaults and the smoke would prove nothing.
+      - name: Runtime smoke of the prod container
+        run: |
+          mkdir -p /tmp/oauth-smoke
+          openssl genrsa -out /tmp/oauth-smoke/private.pem 2048
+          openssl rsa -in /tmp/oauth-smoke/private.pem -pubout -out /tmp/oauth-smoke/public.pem
+          export OAUTH_PRIVATE_KEY=/tmp/oauth-smoke/private.pem
+          export OAUTH_PUBLIC_KEY=/tmp/oauth-smoke/public.pem
+          export OAUTH_ENCRYPTION_KEY=$(openssl rand -hex 32)
+          export OAUTH2_ISSUER=http://127.0.0.1:8123
+          php -d variables_order=EGPCS -S 127.0.0.1:8123 -t public > /tmp/smoke-server.log 2>&1 &
+          echo $! > /tmp/smoke-server.pid
+          for i in $(seq 1 30); do
+            curl -fsS -o /dev/null http://127.0.0.1:8123/ && break
+            sleep 1
+            if [ "$i" = "30" ]; then echo "::error::smoke server did not start"; cat /tmp/smoke-server.log; exit 1; fi
+          done
+          check() { # $1 = url, $2 = expected status, $3 = body grep
+            code=$(curl -s -o /tmp/smoke-body -w '%{http_code}' "$1")
+            [ "$code" = "$2" ] || { echo "::error::$1 served $code, expected $2"; cat /tmp/smoke-body; exit 1; }
+            grep -q "$3" /tmp/smoke-body || { echo "::error::$1 body misses $3"; cat /tmp/smoke-body; exit 1; }
+          }
+          check http://127.0.0.1:8123/.well-known/oauth-authorization-server 200 authorization_endpoint
+          check http://127.0.0.1:8123/.well-known/oauth-protected-resource 200 authorization_servers
+          check http://127.0.0.1:8123/.well-known/jwks.json 200 '"kty":"RSA"'
+          check http://127.0.0.1:8123/api/v1/openapi.json 401 '"code":"unauthorized"'
+          check http://127.0.0.1:8123/login 200 _csrf_token
+          echo "runtime smoke passed"
+
+      - name: Stop the smoke server
+        if: always()
+        run: kill "$(cat /tmp/smoke-server.pid)" || true
 
   # Functional tests (WebTestCase, ResetDatabase) need a real database to run
   # against. Shares the MySQL service definition with `migrations` below for the
@@ -167,10 +314,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Set up PHP ${{ env.PHP_VERSION }}
-        uses: shivammathur/setup-php@v2
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
         with:
           php-version: ${{ env.PHP_VERSION }}
           extensions: amqp, ctype, iconv, intl, pdo_mysql
@@ -178,7 +325,7 @@ jobs:
           ini-values: memory_limit=1G
 
       - name: Install dependencies
-        uses: ramsey/composer-install@v4
+        uses: ramsey/composer-install@26d8a556604053a9612623447203a691f406fbe6 # v4
 
       # base.html.twig fails to render without this: the Tailwind bundle looks
       # for a pre-built CSS file and does not compile it on the fly here the
@@ -269,10 +416,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Set up PHP ${{ env.PHP_VERSION }}
-        uses: shivammathur/setup-php@v2
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
         with:
           php-version: ${{ env.PHP_VERSION }}
           extensions: amqp, ctype, iconv, intl, pdo_mysql
@@ -280,7 +427,7 @@ jobs:
           ini-values: memory_limit=1G
 
       - name: Install dependencies
-        uses: ramsey/composer-install@v4
+        uses: ramsey/composer-install@26d8a556604053a9612623447203a691f406fbe6 # v4
 
       # Byte-for-byte the command deploy.yml runs on the host, and under the same
       # APP_ENV=prod the container uses there. --allow-no-migration keeps this
@@ -302,12 +449,34 @@ jobs:
           APP_ENV: dev
         run: php bin/console doctrine:fixtures:load --no-interaction
 
+      # The migrated schema must match the entity mappings exactly. This is
+      # the rollback precondition (issue #100): a release rolls back by
+      # redeploying the previous image tag against the already-migrated
+      # schema, which only works while migrations stay additive - enforced
+      # separately by AdditiveMigrationTest in the `phpunit` job. Full
+      # validation (with sync) needs the real server above, which is why it
+      # lives here and not in `release-gates`.
+      - name: Validate migrated schema against mappings
+        env:
+          APP_ENV: dev
+        run: php bin/console doctrine:schema:validate
+
   # WCAG 2.1 AA axe scan (issue #52). Blocking: fails on any violation.
   # Mirrors docs/accessibility.md local reproduction: test-kernel server via
   # the php -S router, fixture credentials, reCAPTCHA test keys.
+  #
+  # Restricted to main and to the release gate: this scan is by far the
+  # slowest job in the file (Chromium install + a real server boot), and
+  # `push: branches: ['**']` above means it would otherwise run on every
+  # commit to every feature branch. `develop` -> `main` is a pure promotion
+  # (see the header comment), so scanning every intermediate develop push
+  # buys nothing a scan of the merge commit on main doesn't already cover.
+  # `github.event_name == 'workflow_call'` keeps it in the tag-build gate
+  # release.yml drives, where github.ref is refs/tags/vX, not refs/heads/main.
   accessibility:
     name: Accessibility
     runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_call'
 
     services:
       mysql:
@@ -340,10 +509,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Set up PHP ${{ env.PHP_VERSION }}
-        uses: shivammathur/setup-php@v2
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
         with:
           php-version: ${{ env.PHP_VERSION }}
           extensions: amqp, ctype, iconv, intl, pdo_mysql
@@ -351,7 +520,7 @@ jobs:
           ini-values: memory_limit=1G
 
       - name: Install dependencies
-        uses: ramsey/composer-install@v4
+        uses: ramsey/composer-install@26d8a556604053a9612623447203a691f406fbe6 # v4
 
       - name: Build Tailwind CSS
         run: php bin/console tailwind:build
@@ -372,7 +541,7 @@ jobs:
           APP_ENV=test php bin/console doctrine:fixtures:load --no-interaction
 
       - name: Set up Node 20
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '20'
           cache: npm
@@ -409,7 +578,7 @@ jobs:
 
       - name: Upload the accessibility report
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: accessibility-report
           path: var/accessibility-report.json

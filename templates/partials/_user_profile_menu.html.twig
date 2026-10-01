@@ -22,9 +22,15 @@
         <ul class="py-2" aria-labelledby="user-menu-button">
             <twig:UserMenuElement href="{{ path('app_settings') }}">{{ 'user.settings'|trans }}</twig:UserMenuElement>
             <twig:UserMenuElement href="{{ path('app_profile') }}">{{ 'user.profile'|trans }}</twig:UserMenuElement>
+            <twig:UserMenuElement href="{{ path('app_connected_apps') }}">{{ 'user.connected_apps'|trans }}</twig:UserMenuElement>
             <twig:UserMenuElement href="{{ path('app_account_delete') }}">{{ 'account.delete_menu'|trans }}</twig:UserMenuElement>
             <twig:UserMenuElement href="{{ path('app_privacy') }}">{{ 'main_menu.privacy'|trans }}</twig:UserMenuElement>
-            <twig:UserMenuElement href="{{ path('app_logout') }}">{{ 'user.logout'|trans }}</twig:UserMenuElement>
+            <li>
+                <form method="post" action="{{ path('app_logout') }}">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token('logout') }}">
+                    <button type="submit" class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">{{ 'user.logout'|trans }}</button>
+                </form>
+            </li>
         </ul>
     </div>
 </div>

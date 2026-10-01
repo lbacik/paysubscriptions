@@ -1,0 +1,64 @@
+league_oauth2_server:
+    authorization_server:
+        private_key: '%env(resolve:OAUTH_PRIVATE_KEY)%'
+        private_key_passphrase: '%env(resolve:OAUTH_PASSPHRASE)%'
+        encryption_key: '%env(resolve:OAUTH_ENCRYPTION_KEY)%'
+        # API v1 issues short-lived User-delegated tokens only: authorization
+        # code (with S256 PKCE, enforced in App\OAuth2) plus refresh. Every
+        # other grant is disabled — client credentials in particular must never
+        # yield access to User-owned data (decisions #82, #86).
+        access_token_ttl: PT15M
+        # Refresh-token families (issue #91): 30 days without use expires the
+        # family; the 90-day absolute deadline is enforced by
+        # App\OAuth2\RefreshTokenFamilyRepository, which caps rotated tokens
+        # instead of extending it.
+        refresh_token_ttl: P30D
+        enable_client_credentials_grant: false
+        # Both grants are disabled by default and will be removed in 2.0. Enable them only if you need them.
+        enable_password_grant: false
+        enable_implicit_grant: false
+        # Access tokens stay valid until their 15-minute expiry: consent or
+        # refresh-token revocation takes effect on refresh families immediately
+        # but does not blacklist already-issued access tokens (#86). The token
+        # endpoint therefore never consults access-token persistence.
+        persist_access_token: false
+    resource_server:
+        public_key: '%env(resolve:OAUTH_PUBLIC_KEY)%'
+        # Clock-skew tolerance for access-token verification (issue #94).
+        # Must stay in step with App\OAuth2\OAuth2Config::CLOCK_SKEW_LEEWAY:
+        # the key-ring validator builds its own verifiers from that constant,
+        # and the rotation overlap window assumes this exact leeway.
+        jwt_leeway: PT60S
+    scopes:
+        # API v1 has a single coarse scope. The bundle requires a non-empty
+        # default, so an omitted `scope` parameter would silently default to
+        # api:full here; App\OAuth2 therefore validates the raw request scope
+        # and rejects empty, unknown, and unapproved scope requests instead of
+        # inheriting the bundle's permissive no-scope behavior (#86).
+        available: ['api:full']
+        default: ['api:full']
+    persistence:
+        doctrine: null
+    client:
+        # Store client secrets hashed. Set to true only to keep supporting legacy plaintext secrets.
+        allow_plaintext_secrets: false
+
+when@test:
+    league_oauth2_server:
+        authorization_server:
+            # Committed test-only keypair. Never valid outside the suite.
+            private_key: '%kernel.project_dir%/tests/Fixtures/oauth/private.pem'
+            private_key_passphrase: ~
+        resource_server:
+            public_key: '%kernel.project_dir%/tests/Fixtures/oauth/public.pem'
+        # Doctrine, like production: the kernel reboots between test requests,
+        # so in-memory clients, codes, and tokens would not survive the
+        # multi-request authorize/consent/token dance. Tables come from the
+        # migrations; DAMA rolls every test back.
+
+    services:
+        # Use the lowest bcrypt cost to speed up client secret hashing in tests.
+        league.oauth2_server.password_hasher:
+            class: Symfony\Component\PasswordHasher\Hasher\NativePasswordHasher
+            arguments:
+                $cost: 4 # Lowest possible value for bcrypt

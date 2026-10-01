@@ -68,10 +68,11 @@ final class RegistrationFlowTest extends WebTestCase
         self::assertSame(['newuser@example.com'], $this->recipientAddresses($email));
     }
 
-    public function testDuplicateEmailReRendersWithout500(): void
+    public function testDuplicateEmailGetsNeutralResponseAndNotifiesOwner(): void
     {
         $this->register('dupe@example.com');
         self::assertResponseRedirects('/login');
+        $freshBody = $this->followRedirectText();
 
         $crawler = $this->client->request('GET', '/register');
         $form = $crawler->selectButton('Register')->form([
@@ -83,12 +84,26 @@ final class RegistrationFlowTest extends WebTestCase
         $form->get('registration_form[agreeTerms]')->tick();
         $this->client->submit($form);
 
-        self::assertResponseStatusCodeSame(422);
-        self::assertStringContainsString(
-            'already an account',
-            strip_tags((string) $this->client->getResponse()->getContent())
-        );
-        self::assertEmailCount(0);
+        // Same outward outcome as the fresh registration above: the response
+        // must not reveal that the address is taken.
+        self::assertResponseRedirects('/login');
+
+        // Assert the owner notice before following the redirect: the next
+        // request reboots the kernel and clears the test mail logger.
+        self::assertEmailCount(1);
+        $email = self::getMailerMessage(0);
+        \assert($email instanceof Email);
+        self::assertSame(['dupe@example.com'], $this->recipientAddresses($email));
+
+        self::assertSame($freshBody, $this->followRedirectText());
+    }
+
+    private function followRedirectText(): string
+    {
+        $crawler = $this->client->followRedirect();
+        self::assertResponseIsSuccessful();
+
+        return $crawler->text(null, true);
     }
 
     private function register(string $email): void

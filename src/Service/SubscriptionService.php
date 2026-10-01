@@ -6,8 +6,12 @@ namespace App\Service;
 
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Exception\SubscriptionLimitReachedException;
 use App\Repository\SubscriptionRepository;
 use App\Repository\UserRepository;
+use Doctrine\DBAL\LockMode;
+use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Bridge\Doctrine\Types\UuidType;
 use Symfony\Component\Security\Core\User\UserInterface;
 
 class SubscriptionService
@@ -17,6 +21,7 @@ class SubscriptionService
         private readonly UserRepository $userRepository,
         private readonly ExpenseCategoryService $categoryService,
         private readonly RenewalCalculator $renewalCalculator,
+        private readonly ?EntityManagerInterface $entityManager = null,
     ) {
     }
 
@@ -167,7 +172,50 @@ class SubscriptionService
 
     public function add(Subscription $subscription): void
     {
-        $this->canAddNewSubscription($subscription->getOwner());
+        if (null === $this->entityManager) {
+            // Unit-test path without a database connection (see
+            // SubscriptionServiceCurrencyTest): the legacy non-atomic gate.
+            $this->canAddNewSubscription($subscription->getOwner());
+            $this->persistNew($subscription);
+
+            return;
+        }
+
+        $this->entityManager->wrapInTransaction(function () use ($subscription): void {
+            $owner = $subscription->getOwner();
+
+            if ($owner instanceof User && null !== $owner->getId()) {
+                // Serialize concurrent creates on the owner row: the limit
+                // COUNT below then reads committed rows instead of racing
+                // two requests past the gate together.
+                $locked = $this->entityManager->find(User::class, $owner->getId(), LockMode::PESSIMISTIC_WRITE);
+
+                if ($locked instanceof User) {
+                    $subscription->setOwner($locked);
+                }
+            }
+
+            $this->assertBelowLimit($subscription->getOwner());
+            $this->persistNew($subscription);
+        });
+    }
+
+    public function update(Subscription $subscription): void
+    {
+        $this->assertCategoryOwnership($subscription);
+        $this->assertValidCurrency($subscription);
+
+        $this->subscriptionRepository->save($subscription);
+    }
+
+    /**
+     * Shared tail of add(): currency defaulting, default-category selection,
+     * ownership, and persistence. The limit gate runs before this, either
+     * through canAddNewSubscription() (legacy path) or assertBelowLimit()
+     * inside the write transaction.
+     */
+    private function persistNew(Subscription $subscription): void
+    {
         $this->assertValidCurrency($subscription);
 
         $owner = $subscription->getOwner();
@@ -179,12 +227,35 @@ class SubscriptionService
         $this->subscriptionRepository->save($subscription);
     }
 
-    public function update(Subscription $subscription): void
+    /**
+     * Atomic limit gate for use inside the add() write transaction: counts
+     * committed rows while the owner row lock is held, so concurrent creates
+     * for the same User serialize instead of each passing the gate.
+     *
+     * @throws \LogicException when the User already reached their limit
+     */
+    private function assertBelowLimit(?User $owner): void
     {
-        $this->assertCategoryOwnership($subscription);
-        $this->assertValidCurrency($subscription);
+        \assert(null !== $this->entityManager);
 
-        $this->subscriptionRepository->save($subscription);
+        if (null === $owner || null === $owner->getId()) {
+            throw new \LogicException('Cannot add a Subscription without an owner.');
+        }
+
+        // NOTE: the owner id is bound explicitly with its UUID type.
+        // Binding the entity itself lets Doctrine infer a string binding,
+        // which never matches the BINARY(16) column on MySQL.
+        $count = (int) $this->entityManager->createQuery(
+            'SELECT COUNT(s.id) FROM App\Entity\Subscription s WHERE s.owner = :owner',
+        )
+            ->setParameter('owner', $owner->getId(), UuidType::NAME)
+            ->getSingleScalarResult();
+
+        $limit = $owner->getSubscriptionsLimit();
+
+        if ($count >= $limit) {
+            throw new SubscriptionLimitReachedException('You have reached the maximum number of subscriptions.');
+        }
     }
 
     /**
@@ -209,7 +280,7 @@ class SubscriptionService
         $user = $this->userRepository->find($user->getId());
 
         if (count($user->getSubscriptions()) >= $user->getSubscriptionsLimit()) {
-            throw new \LogicException('You have reached the maximum number of subscriptions.');
+            throw new SubscriptionLimitReachedException('You have reached the maximum number of subscriptions.');
         }
     }
 

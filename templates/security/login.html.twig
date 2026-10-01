@@ -3,14 +3,26 @@
 {% block body %}
     <twig:ContentCenter width="w-full md:w-1/3 px-10 my-20">
 
-        <form method="post">
-            {% if error %}
-                <div class="text-red-600" role="alert">{{ error.messageKey|trans(error.messageData, 'security')|raw }}</div>
-            {% endif %}
+        {# Rendered outside the login form so the layout matches the resend form
+           below; the message is escaped (no |raw) — it carries no HTML. #}
+        {% if error %}
+            <div class="text-red-600 mb-6" role="alert">
+                {% if error.messageKey == 'user.account_not_verified' %}
+                    {{ 'user.account_not_verified'|trans }}
+                {% else %}
+                    {{ error.messageKey|trans(error.messageData, 'security') }}
+                {% endif %}
+            </div>
+        {% endif %}
 
+        <form method="post">
             {% if app.user %}
                 <div class="mb-3">
-                    You are logged in as {{ app.user.userIdentifier }}, <a href="{{ path('app_logout') }}">Logout</a>
+                    You are logged in as {{ app.user.userIdentifier }},
+                    <form method="post" action="{{ path('app_logout') }}" class="inline">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token('logout') }}">
+                        <button type="submit" class="underline">Logout</button>
+                    </form>
                 </div>
             {% endif %}
 
@@ -63,5 +75,32 @@
                 </div>
             </div>
         </form>
+
+        <div class="mt-10 border-t border-color-sec pt-6">
+            <p class="text-sm text-color-ter mb-3">{{ 'user.no_activation_email'|trans }}</p>
+            <form method="post" action="{{ path('resend_activation') }}" class="space-y-3">
+                <div>
+                    <label for="resendEmail"
+                           class="text-sm text-color-ter"
+                    >{{ 'user.email'|trans }}</label>
+                    <input type="email"
+                           value="{{ last_username }}"
+                           name="email"
+                           id="resendEmail"
+                           class="w-full px-3 py-2 rounded-lg border border-color-sec"
+                           autocomplete="email"
+                           required
+                    >
+                </div>
+
+                <input type="hidden" name="_token"
+                       value="{{ csrf_token('resend_activation') }}"
+                >
+
+                <div class="text-center">
+                    <twig:Button class="btn-secondary" type="submit">{{ 'user.resend_activation'|trans }}</twig:Button>
+                </div>
+            </form>
+        </div>
     </twig:ContentCenter>
 {% endblock %}

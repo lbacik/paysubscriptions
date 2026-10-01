@@ -18,9 +18,15 @@ class DocsController extends AbstractController
         #[MapQueryParameter] string $section = 'about'
     ): Response {
 
+        $show = ucfirst($section);
+
+        if (!$documentation->hasSection($show)) {
+            throw $this->createNotFoundException();
+        }
+
         return $this->render('docs/index.html.twig', [
             'documentation' => $documentation,
-            'show' => ucfirst($section),
+            'show' => $show,
         ]);
     }
 }

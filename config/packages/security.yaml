@@ -25,15 +25,48 @@ security:
             # adopted Encore, so no such directory or route exists to protect.
             pattern: ^/assets/
             security: false
+        oauth2_token:
+            # The OAuth2 token and revocation endpoints must stay reachable
+            # without a session: public clients exchange authorization codes
+            # here with PKCE only and revoke refresh tokens with client_id.
+            pattern: ^/(token|revoke)$
+            security: false
+        api:
+            # Bearer-token API boundary, separate from the session-based web
+            # login in `main`. Stateless so no session is ever created from an
+            # API request; the bundle's oauth2 authenticator validates the
+            # signed access token (App\OAuth2 additionally enforces the API
+            # audience and issuer claim).
+            pattern: ^/api
+            stateless: true
+            oauth2: true
         main:
             lazy: true
             provider: app_user_provider
             custom_authenticator: App\Security\AppCustomAuthenticator
             user_checker: App\Security\UserChecker
+            # Brute-force protection (issue #143): at most LOGIN_MAX_ATTEMPTS
+            # failed logins per account+IP inside the window (plus a
+            # LOGIN_MAX_ATTEMPTS_IP per-IP ceiling). Further attempts — even
+            # with the right password — fail with a TooManyLoginAttempts
+            # message rendered on the login page. The bursts resolve from the
+            # environment (see config/packages/rate_limiter.yaml): the test
+            # suite pins them to opt in per test. A custom limiter service is
+            # used because the bundle computes its default 1:5 ratio from
+            # max_attempts while compiling the container, which cannot consume
+            # an env placeholder.
+            login_throttling:
+                limiter: app.login_throttling.limiter
             logout:
                 path: app_logout
                 # where to redirect after logout
                 # target: app_any_route
+                # Logout changes state, so it must not be a plain GET any
+                # third-party page can trigger: every logout request carries
+                # a per-session CSRF token (see the logout forms in the UI).
+                enable_csrf: true
+                csrf_token_id: logout
+                csrf_parameter: _csrf_token
 
             remember_me:
                 secret: '%kernel.secret%'
@@ -51,6 +84,16 @@ security:
 
     # Note: Only the *first* matching rule is applied
     access_control:
+        # OAuth2 authorization reuses the existing web login: anonymous Users
+        # are sent to /login first, and the full authorize URL (including the
+        # OAuth query) is restored as the post-login target.
+        - { path: ^/authorize$, roles: ROLE_USER }
+        # The API is deny-by-default: a request without a Bearer token skips
+        # the OAuth2 authenticator entirely, so without this rule anonymous
+        # traffic would fall through to the resource (issue #88). Every /api
+        # caller — including docs and entrypoint — presents a User-delegated
+        # token; sibling issues carve out anything that must stay public.
+        - { path: ^/api, roles: IS_AUTHENTICATED_FULLY }
         # - { path: ^/admin, roles: ROLE_ADMIN }
         # - { path: ^/profile, roles: ROLE_USER }
 

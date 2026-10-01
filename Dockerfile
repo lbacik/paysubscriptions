@@ -76,7 +76,12 @@ RUN apt -y update && apt-get install -y \
 # https://github.com/docker-library/docs/tree/master/php#configuration
 # RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
 
-RUN composer install --no-interaction --no-progress \
+# The production image contains only what production runs: --no-dev drops the
+# test tooling (PHPUnit, fixtures, profiler) and --optimize-autoloader dumps
+# the classmap the prod autoloader uses. The release-gates CI job replays
+# this resolution (composer install --no-dev --dry-run), so a dev-only
+# dependency breaks the gate before it can ship a broken image.
+RUN composer install --no-dev --optimize-autoloader --no-interaction --no-progress \
     && ./bin/console tailwind:build \
     && ./bin/console assets:install \
     && ./bin/console asset-map:compile

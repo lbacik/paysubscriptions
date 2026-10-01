@@ -72,7 +72,7 @@ final class RegistrationTest extends DatabaseTestCase
         self::assertFalse($this->freshUser('newuser@example.com')->isVerified());
     }
 
-    public function testDuplicateEmailIsRejected(): void
+    public function testDuplicateEmailGetsNeutralResponseAndNotifiesOwner(): void
     {
         $this->createUser('taken@example.com', 'Fixture-Password-1', true);
 
@@ -85,8 +85,28 @@ final class RegistrationTest extends DatabaseTestCase
         ]);
         $this->client->submit($form);
 
-        self::assertResponseStatusCodeSame(422);
-        self::assertEmailCount(0);
+        // Indistinguishable from a fresh registration: same redirect, same
+        // flash, no "already registered" hint anywhere in the response.
+        self::assertResponseRedirects('/login');
+
+        // Assert the notice before following the redirect: the next request
+        // reboots the kernel and clears the test mail logger.
+        self::assertEmailCount(1);
+        $email = $this->getMailerMessage(0);
+        self::assertEmailSubjectContains($email, 'registration was attempted');
+        self::assertEmailAddressContains($email, 'To', 'taken@example.com');
+
+        $crawler = $this->client->followRedirect();
+        self::assertStringContainsString(
+            'Please check your email for a verification link',
+            $crawler->text(null, true)
+        );
+        self::assertStringNotContainsString(
+            'already an account',
+            (string) $this->client->getResponse()->getContent()
+        );
+
+        // No second account was created.
         self::assertCount(
             1,
             $this->em->getRepository(User::class)->findBy(['email' => 'taken@example.com']),
@@ -186,7 +206,10 @@ final class RegistrationTest extends DatabaseTestCase
     {
         $this->createUser('resendme@example.com', 'Fixture-Password-1', false);
 
-        $this->client->request('GET', '/register/activation/resend?email=resendme@example.com');
+        $this->client->request('POST', '/register/activation/resend', [
+            'email' => 'resendme@example.com',
+            '_token' => $this->resendCsrfToken(),
+        ]);
 
         self::assertResponseRedirects('/login');
         self::assertEmailCount(1);
@@ -196,7 +219,10 @@ final class RegistrationTest extends DatabaseTestCase
 
     public function testResendActivationEmailForUnknownAddressSendsNothing(): void
     {
-        $this->client->request('GET', '/register/activation/resend?email=ghost@example.com');
+        $this->client->request('POST', '/register/activation/resend', [
+            'email' => 'ghost@example.com',
+            '_token' => $this->resendCsrfToken(),
+        ]);
 
         // Same redirect either way: the endpoint must not reveal registrations.
         self::assertResponseRedirects('/login');

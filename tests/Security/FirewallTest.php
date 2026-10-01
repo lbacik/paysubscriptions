@@ -17,7 +17,7 @@ final class FirewallTest extends WebTestCase
      */
     private const EXEMPT_PATTERNS = ['^/(_profiler|_wdt)/', '^/assets/'];
 
-    public function testUnauthenticatedFirewallPatternsAreLimitedToDevToolsAndAssets(): void
+    public function testUnauthenticatedFirewallPatternsAreLimitedToTheKnownExemptions(): void
     {
         $config = Yaml::parseFile(\dirname(__DIR__, 2).'/config/packages/security.yaml');
         $firewalls = $config['security']['firewalls'];
@@ -31,7 +31,13 @@ final class FirewallTest extends WebTestCase
         }
 
         self::assertSame(
-            ['dev' => self::EXEMPT_PATTERNS[0], 'assets' => self::EXEMPT_PATTERNS[1]],
+            // oauth2_token stays sessionless on purpose: the OAuth2 token
+            // and revocation endpoints authenticate the client themselves
+            // (PKCE/client_id for public clients, the secret for
+            // confidential ones), so no session firewall may interpose. It
+            // is deliberately NOT part of EXEMPT_PATTERNS below: /token and
+            // /revoke are reachable there by design.
+            ['dev' => self::EXEMPT_PATTERNS[0], 'assets' => self::EXEMPT_PATTERNS[1], 'oauth2_token' => '^/(token|revoke)$'],
             $unauthenticatedPatterns,
         );
     }

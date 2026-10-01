@@ -26,4 +26,10 @@ class SubscriptionRepository extends ServiceEntityRepository
         $this->getEntityManager()->persist($subscription);
         $this->getEntityManager()->flush();
     }
+
+    public function remove(Subscription $subscription): void
+    {
+        $this->getEntityManager()->remove($subscription);
+        $this->getEntityManager()->flush();
+    }
 }
