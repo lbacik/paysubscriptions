@@ -48,6 +48,24 @@ final class ApiPreflightCommand extends Command
         'api_v1_openapi',
     ];
 
+    /**
+     * SHA-256 fingerprints of the RSA moduli of the committed test-only
+     * keypairs under tests/Fixtures/oauth. The modulus identifies the
+     * keypair, so each fingerprint covers both halves: the first covers
+     * private.pem + public.pem, the second previous-private.pem +
+     * previous-public.pem.
+     *
+     * Stored as hashes rather than read from the fixture files because the
+     * production image no longer ships the tests directory — the check has
+     * to work where the fixtures are absent.
+     *
+     * @var list<string>
+     */
+    private const TEST_FIXTURE_KEY_FINGERPRINTS = [
+        '4312aac9206e265158dd01cbbfba49218a78e4102b1379b24d6f047a557f8959',
+        'de8c49d4f3da6e4390fad0827967d36df3da6b53594b88069e78e0259f4eee19',
+    ];
+
     public function __construct(
         private readonly RouterInterface $router,
         private readonly JwksProvider $jwksProvider,
@@ -60,6 +78,12 @@ final class ApiPreflightCommand extends Command
         private readonly string $publicKey,
         #[Autowire('%env(resolve:OAUTH_ENCRYPTION_KEY)%')]
         private readonly string $encryptionKey,
+        // Fail closed: an unwired environment is treated as production, so
+        // the fixture-key refusal below stays on. Only the test
+        // environment — the one place the fixtures are legitimately
+        // configured (see the when@test overrides) — is exempt.
+        #[Autowire('%kernel.environment%')]
+        private readonly string $environment = 'prod',
     ) {
         parent::__construct();
     }
@@ -78,6 +102,13 @@ final class ApiPreflightCommand extends Command
 
         foreach (['oauth-private-key' => [$this->privateKey, 'signing key'], 'oauth-public-key' => [$this->publicKey, 'verification key']] as $check => [$value, $label]) {
             [$ok, $detail] = self::assessKey($value, $label);
+            if ($ok && 'test' !== $this->environment && self::isTestFixtureKey($value)) {
+                $ok = false;
+                $detail = sprintf(
+                    '%s matches a committed test fixture key (tests/Fixtures/oauth) and must never be used outside the suite; generate production key material — see docs/api-operations.md §6',
+                    $label
+                );
+            }
             $report($check, $ok, $detail);
         }
         $report(
@@ -161,13 +192,71 @@ final class ApiPreflightCommand extends Command
             return [true, sprintf('%s is configured inline', $label)];
         }
 
-        $path = $value;
-        if (str_starts_with($path, 'file://')) {
-            $path = substr($path, \strlen('file://'));
-        }
+        $path = self::keyFilePath($value);
 
         return is_readable($path)
             ? [true, sprintf('%s is configured at a readable path', $label)]
             : [false, sprintf('%s path is not readable: %s', $label, $path)];
+    }
+
+    /**
+     * Whether the configured key value is one of the committed test-only
+     * fixture keys: compares the SHA-256 fingerprint of the key's RSA
+     * modulus against the known fixture fingerprints, so file paths, file://
+     * URLs, and inline PEM all match the same pair. Anything unresolvable
+     * or unparseable returns false — readability is assessKey's job; this
+     * only ever rejects positive matches.
+     */
+    private static function isTestFixtureKey(string $value): bool
+    {
+        $contents = self::readKeyContents($value);
+        if (null === $contents) {
+            return false;
+        }
+
+        $key = @openssl_pkey_get_private($contents);
+        if (false === $key) {
+            $key = @openssl_pkey_get_public($contents);
+        }
+        if (false === $key) {
+            return false;
+        }
+
+        $details = openssl_pkey_get_details($key);
+        if (false === $details || !isset($details['rsa']['n'])) {
+            return false;
+        }
+
+        return \in_array(hash('sha256', $details['rsa']['n']), self::TEST_FIXTURE_KEY_FINGERPRINTS, true);
+    }
+
+    private static function readKeyContents(string $value): ?string
+    {
+        $value = trim($value);
+        if ('' === $value) {
+            return null;
+        }
+
+        if (str_starts_with($value, '-----BEGIN')) {
+            return $value;
+        }
+
+        $contents = @file_get_contents(self::keyFilePath($value));
+
+        return \is_string($contents) && '' !== $contents ? $contents : null;
+    }
+
+    /**
+     * Strips the optional file:// scheme the bundle's own key settings
+     * accept, leaving the filesystem path both assessKey and
+     * readKeyContents resolve.
+     */
+    private static function keyFilePath(string $value): string
+    {
+        if (str_starts_with($value, 'file://')) {
+            return substr($value, \strlen('file://'));
+        }
+
+        return $value;
     }
 }

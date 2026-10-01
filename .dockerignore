@@ -34,3 +34,10 @@ LICENSE
 README.md
 **/var
 **/.env.*
+# The test suite, including the committed test-only OAuth2 fixture keys
+# (tests/Fixtures/oauth): the production image must contain only what
+# production runs, and publicly known fixture keys must never be reachable
+# from it. The API preflight (app:api:preflight) additionally refuses to
+# run when the configured keys match a fixture fingerprint.
+tests
+**/tests
