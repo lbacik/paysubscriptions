@@ -35,17 +35,18 @@ final class AuthenticationTest extends DatabaseTestCase
         self::assertStringContainsString('not active', $crawler->text(null, true));
     }
 
-    public function testUnverifiedLoginShowsResendActivationLink(): void
+    public function testUnverifiedLoginPrefillsResendForm(): void
     {
         $this->createUser('pending@example.com', self::PASSWORD, false);
 
         $this->login('pending@example.com', self::PASSWORD);
 
         $crawler = $this->client->followRedirect();
-        $link = $crawler->filter('div[role="alert"] a');
-        self::assertCount(1, $link);
-        self::assertStringContainsString('/register/activation/resend', (string) $link->attr('href'));
-        self::assertStringContainsString('pending@example.com', (string) $link->attr('href'));
+        // The alert carries no link or HTML; recovery is the page's own
+        // POST resend form, prefilled with the attempted address.
+        self::assertCount(0, $crawler->filter('div[role="alert"] a'));
+        self::assertCount(1, $crawler->filter('form[action="/register/activation/resend"]'));
+        self::assertSame('pending@example.com', $crawler->filter('#resendEmail')->attr('value'));
     }
 
     public function testWrongPasswordHidesVerificationState(): void
@@ -59,10 +60,10 @@ final class AuthenticationTest extends DatabaseTestCase
 
         // A wrong password answers identically whether the account is
         // verified, unverified, or missing entirely: no "not active" hint
-        // and no resend link that would disclose an unverified registration.
+        // that would disclose an unverified registration (the page's resend
+        // form is unconditional, so its presence reveals nothing).
         foreach ([$verifiedBody, $unverifiedBody, $unknownBody] as $body) {
             self::assertStringNotContainsString('not active', strip_tags($body));
-            self::assertStringNotContainsString('/register/activation/resend', $body);
             self::assertStringContainsString('Invalid credentials', strip_tags($body));
         }
         self::assertSame(
