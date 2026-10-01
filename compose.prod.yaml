@@ -18,7 +18,7 @@
 # This is deliberately NOT a copy of compose.yaml, which is the dev file:
 #
 #   - `build: .` and `image: ps-web-${TAG}` become ${APP_IMAGE}, a digest-stable
-#     tag pulled from registry.rum.luka.sh. Production never builds on the host.
+#     tag pulled from the private registry (REGISTRY_HOST). Production never builds on the host.
 #   - the `database` (postgres) service is gone. Production talks to the shared
 #     external MySQL on `my.rum`, reached over the external `main` network, so a
 #     postgres container here would be an unused second database.
