@@ -57,12 +57,19 @@
         <twig:MobileMenuElement route="app_contact">{{ 'main_menu.contact'|trans }}</twig:MobileMenuElement>
 
         {% if is_granted('IS_AUTHENTICATED_FULLY') %}
-            <twig:MobileMenuElement route="app_logout">
-                <div class="flex flex-col">
-                    <span class="text-lg">{{ app.user.email }}</span>
-                    <span class="text-rose-700">{{ 'user.logout'|trans }}</span>
-                </div>
-            </twig:MobileMenuElement>
+            <div class="mobile-menu-item mobile-inactive">
+                <form method="post" action="{{ path('app_logout') }}">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token('logout') }}">
+                    <button type="submit" class="text-left w-full">
+                        <div class="flex flex-col">
+                            <span class="text-lg">{{ app.user.email }}</span>
+                            <span class="text-rose-700">{{ 'user.logout'|trans }}</span>
+                        </div>
+                    </button>
+                </form>
+
+                <div class="border-b border-color-qui mt-8"></div>
+            </div>
         {% else %}
             <twig:MobileMenuElement route="app_login">{{ 'user.login'|trans }}</twig:MobileMenuElement>
             <twig:MobileMenuElement route="app_register">{{ 'user.register'|trans }}</twig:MobileMenuElement>

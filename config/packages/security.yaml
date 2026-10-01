@@ -61,6 +61,12 @@ security:
                 path: app_logout
                 # where to redirect after logout
                 # target: app_any_route
+                # Logout changes state, so it must not be a plain GET any
+                # third-party page can trigger: every logout request carries
+                # a per-session CSRF token (see the logout forms in the UI).
+                enable_csrf: true
+                csrf_token_id: logout
+                csrf_parameter: _csrf_token
 
             remember_me:
                 secret: '%kernel.secret%'

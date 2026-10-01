@@ -5,53 +5,36 @@ declare(strict_types=1);
 namespace App\Security;
 
 use App\Entity\User;
-use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
+use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 use Symfony\Component\Security\Core\Exception\CustomUserMessageAccountStatusException;
 use Symfony\Component\Security\Core\User\UserCheckerInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
-use Symfony\Component\Security\Csrf\CsrfTokenManagerInterface;
 
 class UserChecker implements UserCheckerInterface
 {
-    public function __construct(
-        private readonly UrlGeneratorInterface $urlGenerator,
-        private readonly CsrfTokenManagerInterface $csrfTokenManager,
-    ) {
+    public function checkPreAuth(UserInterface $user): void
+    {
+        // Intentionally empty: everything that distinguishes account states
+        // (e.g. "not verified") must run only after the password is proven
+        // correct in checkPostAuth. Otherwise a wrong password would answer
+        // differently for unverified accounts than for verified or missing
+        // ones, letting anyone probe which emails are registered.
     }
 
-    public function checkPreAuth(UserInterface $user): void
+    public function checkPostAuth(UserInterface $user, ?TokenInterface $token = null): void
     {
         if (!$user instanceof User) {
             return;
         }
 
         if (!$user->isVerified()) {
-            // The resend endpoint only accepts POST with a CSRF token (issue
-            // #143), so the recovery action renders as an inline form — not a
-            // link — posting the address back with a fresh token. The login
-            // template prints this message raw, like it did the old link.
-            $resendUrl = htmlspecialchars(
-                $this->urlGenerator->generate('resend_activation'),
-                ENT_QUOTES
-            );
-            $email = htmlspecialchars($user->getEmail() ?? '', ENT_QUOTES);
-            $token = htmlspecialchars(
-                $this->csrfTokenManager->getToken('resend_activation')->getValue(),
-                ENT_QUOTES
-            );
-
+            // A stable key plus the address as data: the login template
+            // renders the (escaped) message and points at its own POST
+            // resend form, so no HTML travels inside the exception.
             throw new CustomUserMessageAccountStatusException(
-                'User account is not active. '
-                .'<form class="inline" method="post" action="'.$resendUrl.'">'
-                .'<input type="hidden" name="email" value="'.$email.'">'
-                .'<input type="hidden" name="_token" value="'.$token.'">'
-                .'<button type="submit" class="underline">Send activation email again</button>'
-                .'</form>'
+                'user.account_not_verified',
+                ['email' => $user->getEmail()]
             );
         }
-    }
-
-    public function checkPostAuth(UserInterface $user): void
-    {
     }
 }

@@ -3,17 +3,26 @@
 {% block body %}
     <twig:ContentCenter width="w-full md:w-1/3 px-10 my-20">
 
-        {# Rendered outside the login form on purpose: the unverified-account
-           message carries its own inline resend form, and nested forms are
-           invalid HTML (the inner one would submit to /login instead). #}
+        {# Rendered outside the login form so the layout matches the resend form
+           below; the message is escaped (no |raw) — it carries no HTML. #}
         {% if error %}
-            <div class="text-red-600 mb-6" role="alert">{{ error.messageKey|trans(error.messageData, 'security')|raw }}</div>
+            <div class="text-red-600 mb-6" role="alert">
+                {% if error.messageKey == 'user.account_not_verified' %}
+                    {{ 'user.account_not_verified'|trans }}
+                {% else %}
+                    {{ error.messageKey|trans(error.messageData, 'security') }}
+                {% endif %}
+            </div>
         {% endif %}
 
         <form method="post">
             {% if app.user %}
                 <div class="mb-3">
-                    You are logged in as {{ app.user.userIdentifier }}, <a href="{{ path('app_logout') }}">Logout</a>
+                    You are logged in as {{ app.user.userIdentifier }},
+                    <form method="post" action="{{ path('app_logout') }}" class="inline">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token('logout') }}">
+                        <button type="submit" class="underline">Logout</button>
+                    </form>
                 </div>
             {% endif %}
 

@@ -22,6 +22,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
+use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Address;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\RateLimiter\RateLimiterFactory;
@@ -33,12 +34,21 @@ use SymfonyCasts\Bundle\VerifyEmail\Exception\VerifyEmailExceptionInterface;
 
 class RegistrationController extends AbstractController
 {
+    /**
+     * Shown after every registration POST that names an address, whether the
+     * address is new or already registered. The duplicate path must answer
+     * byte-for-byte like a fresh registration, so both share this text.
+     */
+    private const CHECK_EMAIL_MESSAGE = 'Your account has been created. Please check your email for a verification link.';
+
     public function __construct(
         private readonly EmailVerifier $emailVerifier,
         private readonly TimezoneService $timezoneService,
         private readonly string $systemEmail,
         private readonly ExpenseCategoryService $categoryService,
         private readonly LoggerInterface $logger,
+        private readonly UserRepository $users,
+        private readonly MailerInterface $mailer,
     ) {
     }
 
@@ -52,6 +62,25 @@ class RegistrationController extends AbstractController
         $user = new User();
         $form = $this->createForm(RegistrationFormType::class, $user);
         $form->handleRequest($request);
+
+        if ($form->isSubmitted()) {
+            $submittedEmail = $form->get('email')->getData();
+            $existing = \is_string($submittedEmail) && '' !== $submittedEmail
+                ? $this->users->findOneBy(['email' => $submittedEmail])
+                : null;
+
+            if (null !== $existing) {
+                // The address is already registered: answer exactly like a
+                // fresh registration (same redirect, same flash) so the
+                // response never reveals that the email is taken. The owner
+                // is told about the attempt by email instead.
+                $this->sendExistingAccountNotice($existing);
+
+                $this->addFlash('success', self::CHECK_EMAIL_MESSAGE);
+
+                return $this->redirectToRoute('app_login');
+            }
+        }
 
         if ($form->isSubmitted() && $form->isValid()) {
             // A missing or non-IANA browser zone is stored as UTC explicitly;
@@ -73,14 +102,19 @@ class RegistrationController extends AbstractController
                 $entityManager->flush();
             } catch (UniqueConstraintViolationException $exception) {
                 // Lost a race with a concurrent registration for the same
-                // address after UniqueEntity validation passed: re-render with
-                // the same message instead of answering with an HTTP 500.
+                // address after the duplicate check above: answer with the
+                // same neutral outcome instead of an HTTP 500 or an
+                // "already registered" error, so the race reveals nothing.
                 $this->logger->warning('Duplicate registration attempt.', ['exception' => $exception]);
-                $form->get('email')->addError(new FormError('There is already an account with this email'));
 
-                return $this->render('registration/register.html.twig', [
-                    'registrationForm' => $form,
-                ], new Response(null, Response::HTTP_UNPROCESSABLE_ENTITY));
+                $existing = $this->users->findOneBy(['email' => (string) $user->getEmail()]);
+                if (null !== $existing) {
+                    $this->sendExistingAccountNotice($existing);
+                }
+
+                $this->addFlash('success', self::CHECK_EMAIL_MESSAGE);
+
+                return $this->redirectToRoute('app_login');
             }
 
             // Every account starts with one editable `Subscriptions` category.
@@ -103,10 +137,7 @@ class RegistrationController extends AbstractController
             }
 
             // do anything else you need here, like send an email
-            $this->addFlash(
-                'success',
-                'Your account has been created. Please check your email for a verification link.'
-            );
+            $this->addFlash('success', self::CHECK_EMAIL_MESSAGE);
 
             // return $security->login($user, AppCustomAuthenticator::class, 'main');
             return $this->redirectToRoute('app_login');
@@ -217,5 +248,29 @@ class RegistrationController extends AbstractController
                 ->subject('Please Confirm your Email')
                 ->htmlTemplate('registration/confirmation_email.html.twig')
         );
+    }
+
+    /**
+     * Tells the owner of an already-registered address that someone tried to
+     * register with it again. A failed send must never change the neutral
+     * response, so failures are only logged.
+     */
+    private function sendExistingAccountNotice(User $existing): void
+    {
+        try {
+            $this->mailer->send(
+                (new TemplatedEmail())
+                    ->from(new Address($this->systemEmail, 'PaySubscriptions'))
+                    ->to((string) $existing->getEmail())
+                    ->subject('A registration was attempted with your email')
+                    ->htmlTemplate('registration/existing_account_email.html.twig')
+                    ->context([
+                        'loginUrl' => $this->generateUrl('app_login', [], true),
+                        'resetUrl' => $this->generateUrl('app_forgot_password_request', [], true),
+                    ])
+            );
+        } catch (\Throwable $exception) {
+            $this->logger->warning('Existing-account notice could not be sent.', ['exception' => $exception]);
+        }
     }
 }

@@ -383,7 +383,7 @@ final class OAuthRevocationTest extends DatabaseTestCase
 
         $this->client->request('GET', '/reset-password/reset/'.$token);
         $this->client->followRedirect();
-        $form = $this->client->getCrawler()->filter('form')->form([
+        $form = $this->client->getCrawler()->filter('form[name="change_password_form"]')->form([
             'change_password_form[plainPassword][first]' => 'Reset-BatteryStaple99!',
             'change_password_form[plainPassword][second]' => 'Reset-BatteryStaple99!',
         ]);
@@ -512,6 +512,7 @@ final class OAuthRevocationTest extends DatabaseTestCase
         $crawler = $this->client->request('GET', '/account/delete');
         $form = $crawler->selectButton('Delete my account permanently')->form();
         $form['confirm']->tick();
+        $form['currentPassword'] = 'Fixture-Password-1';
         $this->client->submit($form);
         self::assertResponseRedirects('/');
 
@@ -575,7 +576,9 @@ final class OAuthRevocationTest extends DatabaseTestCase
         $this->client->loginUser($this->user);
         $tokens = $this->authorizeAndExchange();
 
-        $this->client->request('GET', '/logout');
+        $crawler = $this->client->request('GET', '/dashboard');
+        $logoutToken = $crawler->filter('form[action="/logout"] input[name="_csrf_token"]')->attr('value');
+        $this->client->request('POST', '/logout', ['_csrf_token' => $logoutToken]);
         self::assertResponseRedirects();
 
         // The web session is over…
@@ -650,7 +653,7 @@ final class OAuthRevocationTest extends DatabaseTestCase
             return $this->codeFromRedirect();
         }
 
-        $csrf = $crawler->filter('input[name="_csrf_token"]')->attr('value');
+        $csrf = $crawler->filter('#oauth-consent-form input[name="_csrf_token"]')->attr('value');
         self::assertNotNull($csrf);
         $this->client->request('POST', $url, ['decision' => 'allow', '_csrf_token' => $csrf]);
 

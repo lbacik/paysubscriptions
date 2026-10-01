@@ -46,7 +46,7 @@ final class ExpenseCategoryControllerTest extends DatabaseTestCase
         // Create.
         $crawler = $this->client->request('GET', '/category/new');
         self::assertResponseIsSuccessful();
-        $this->client->submit($crawler->filter('form')->form([
+        $this->client->submit($crawler->filter('form[name="expense_category"]')->form([
             'expense_category[name]' => 'Streaming',
             'expense_category[color]' => '#123456',
         ]));
@@ -65,7 +65,7 @@ final class ExpenseCategoryControllerTest extends DatabaseTestCase
         // Rename + recolor.
         $crawler = $this->client->request('GET', '/category/' . $category->getId() . '/edit');
         self::assertResponseIsSuccessful();
-        $this->client->submit($crawler->filter('form')->form([
+        $this->client->submit($crawler->filter('form[name="expense_category"]')->form([
             'expense_category[name]' => 'Video',
             'expense_category[color]' => '#654321',
         ]));
@@ -79,7 +79,7 @@ final class ExpenseCategoryControllerTest extends DatabaseTestCase
         // Delete (unused).
         $crawler = $this->client->request('GET', '/category/' . $category->getId());
         self::assertResponseIsSuccessful();
-        $form = $crawler->filter('form')->form();
+        $form = $crawler->filter('form[action^="/category/"]')->form();
         $this->client->submit($form);
         self::assertResponseRedirects('/category');
         // Assert at the database level: the functional client reboots the
@@ -114,7 +114,7 @@ final class ExpenseCategoryControllerTest extends DatabaseTestCase
         self::assertResponseIsSuccessful();
         self::assertStringContainsString('Reassign them before deleting', $crawler->text());
 
-        $this->client->submit($crawler->filter('form')->form());
+        $this->client->submit($crawler->filter('form[action^="/category/"]')->form());
         self::assertResponseRedirects('/category');
 
         // Follow the redirect and check the flash: nothing was reassigned or deleted.
@@ -154,7 +154,7 @@ final class ExpenseCategoryControllerTest extends DatabaseTestCase
         self::assertStringContainsString(ExpenseCategory::DEFAULT_NAME, $categoryField->text());
 
         // Submit without touching the category: the default is used.
-        $this->client->submit($crawler->filter('form')->form([
+        $this->client->submit($crawler->filter('form[name="subscription"]')->form([
             'subscription[name]' => 'Netflix',
             'subscription[billingCycle]' => BillingCycle::Monthly->value,
             'subscription[amount]' => '15.99',
@@ -208,7 +208,7 @@ final class ExpenseCategoryControllerTest extends DatabaseTestCase
 
         $crawler = $this->client->request('GET', '/category/new');
         self::assertResponseIsSuccessful();
-        $this->client->submit($crawler->filter('form')->form([
+        $this->client->submit($crawler->filter('form[name="expense_category"]')->form([
             'expense_category[name]' => 'Food',
             'expense_category[color]' => '#123456',
         ]));

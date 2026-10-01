@@ -43,6 +43,7 @@ final class AccountDeletionTest extends DatabaseTestCase
         self::assertStringContainsString('gprodb.com', $this->client->getResponse()->getContent());
         self::assertCount(1, $crawler->filter('form[action="/account/delete"] input[name="_token"]'));
         self::assertCount(1, $crawler->filter('form[action="/account/delete"] input[name="confirm"]'));
+        self::assertCount(1, $crawler->filter('form[action="/account/delete"] input[name="currentPassword"][type="password"]'));
     }
 
     public function testPostWithoutCsrfTokenKeepsAccount(): void
@@ -70,6 +71,36 @@ final class AccountDeletionTest extends DatabaseTestCase
         self::assertNotNull($this->findUser('unconfirmed@example.com'));
     }
 
+    public function testPostWithWrongPasswordKeepsAccount(): void
+    {
+        $user = $this->createUser('wrongpass@example.com');
+        $this->client->loginUser($user);
+
+        $crawler = $this->client->request('GET', '/account/delete');
+        $form = $crawler->selectButton('Delete my account permanently')->form();
+        $form['confirm']->tick();
+        $form['currentPassword'] = 'Not-The-Password-9';
+        $this->client->submit($form);
+
+        self::assertResponseStatusCodeSame(422);
+        self::assertNotNull($this->findUser('wrongpass@example.com'));
+    }
+
+    public function testPostWithoutPasswordKeepsAccount(): void
+    {
+        $user = $this->createUser('nopass@example.com');
+        $this->client->loginUser($user);
+
+        $crawler = $this->client->request('GET', '/account/delete');
+        $form = $crawler->selectButton('Delete my account permanently')->form();
+        $form['confirm']->tick();
+        // Password field left empty.
+        $this->client->submit($form);
+
+        self::assertResponseStatusCodeSame(422);
+        self::assertNotNull($this->findUser('nopass@example.com'));
+    }
+
     public function testDeleteRemovesUserAndAllOwnedRecords(): void
     {
         $user = $this->createUser('deleted@example.com');
@@ -83,6 +114,7 @@ final class AccountDeletionTest extends DatabaseTestCase
         $crawler = $this->client->request('GET', '/account/delete');
         $form = $crawler->selectButton('Delete my account permanently')->form();
         $form['confirm']->tick();
+        $form['currentPassword'] = 'Fixture-Password-1';
         $this->client->submit($form);
 
         self::assertResponseRedirects('/');
@@ -112,6 +144,7 @@ final class AccountDeletionTest extends DatabaseTestCase
         $crawler = $this->client->request('GET', '/account/delete');
         $form = $crawler->selectButton('Delete my account permanently')->form();
         $form['confirm']->tick();
+        $form['currentPassword'] = 'Fixture-Password-1';
         $this->client->submit($form);
 
         self::assertResponseRedirects('/');
@@ -135,6 +168,7 @@ final class AccountDeletionTest extends DatabaseTestCase
         $crawler = $this->client->request('GET', '/account/delete');
         $form = $crawler->selectButton('Delete my account permanently')->form();
         $form['confirm']->tick();
+        $form['currentPassword'] = 'Fixture-Password-1';
         $this->client->submit($form);
 
         self::assertResponseRedirects('/');
@@ -159,6 +193,7 @@ final class AccountDeletionTest extends DatabaseTestCase
         $crawler = $this->client->request('GET', '/account/delete');
         $form = $crawler->selectButton('Delete my account permanently')->form();
         $form['confirm']->tick();
+        $form['currentPassword'] = 'Fixture-Password-1';
         $this->client->submit($form);
 
         self::assertResponseRedirects('/');
@@ -194,6 +229,7 @@ final class AccountDeletionTest extends DatabaseTestCase
         $crawler = $this->client->request('GET', '/account/delete');
         $form = $crawler->selectButton('Delete my account permanently')->form();
         $form['confirm']->tick();
+        $form['currentPassword'] = 'Fixture-Password-1';
         $this->client->submit($form);
 
         self::assertResponseRedirects('/');
@@ -211,6 +247,7 @@ final class AccountDeletionTest extends DatabaseTestCase
         $crawler = $this->client->request('GET', '/account/delete');
         $form = $crawler->selectButton('Delete my account permanently')->form();
         $form['confirm']->tick();
+        $form['currentPassword'] = 'Fixture-Password-1';
         $this->client->submit($form);
 
         self::assertResponseRedirects('/');

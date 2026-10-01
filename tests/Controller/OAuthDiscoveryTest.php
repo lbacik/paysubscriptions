@@ -254,7 +254,7 @@ final class OAuthDiscoveryTest extends DatabaseTestCase
 
         $this->client->loginUser($user);
         $crawler = $this->client->request('GET', $url);
-        $csrf = $crawler->filter('input[name="_csrf_token"]')->attr('value');
+        $csrf = $crawler->filter('#oauth-consent-form input[name="_csrf_token"]')->attr('value');
         $this->client->request('POST', $url, ['decision' => 'allow', '_csrf_token' => $csrf]);
 
         parse_str(

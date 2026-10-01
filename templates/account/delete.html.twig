@@ -51,6 +51,18 @@
                     <span>{{ 'account.delete_confirm_label'|trans }}</span>
                 </label>
 
+                <div>
+                    <label for="currentPassword" class="block text-sm font-medium text-slate-700 mb-1">{{ 'account.delete_password_label'|trans }}</label>
+                    <input type="password"
+                           name="currentPassword"
+                           id="currentPassword"
+                           required
+                           autocomplete="current-password"
+                           class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-rose-200"
+                    />
+                    <p class="mt-1 text-xs text-slate-500">{{ 'account.delete_password_help'|trans }}</p>
+                </div>
+
                 <div class="flex flex-row items-center justify-end space-x-2 pt-2">
                     <twig:Button styleType="secondary" href="{{ path('app_dashboard') }}">{{ 'cancel'|trans }}</twig:Button>
                     <twig:Button styleType="delete">{{ 'account.delete_submit'|trans }}</twig:Button>

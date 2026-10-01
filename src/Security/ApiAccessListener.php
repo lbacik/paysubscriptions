@@ -89,10 +89,13 @@ final class ApiAccessListener
             return;
         }
 
-        // The token's client must still be registered and approved for
-        // api:full. A deleted or narrowed client invalidates its tokens.
+        // The token's client must still be registered, active, and approved
+        // for api:full. A deleted, deactivated, or narrowed client
+        // invalidates its tokens. The active check matters because access
+        // tokens are stateless: nothing else consults the client record
+        // between issuance and expiry (up to 15 minutes).
         $client = $this->clients->find($token->getOAuthClientId());
-        if (null === $client) {
+        if (null === $client || !$client->isActive()) {
             $event->setResponse($this->problem(
                 Problem::INVALID_TOKEN,
                 'Authentication required',

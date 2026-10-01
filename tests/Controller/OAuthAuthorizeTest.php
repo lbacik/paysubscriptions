@@ -68,6 +68,30 @@ final class OAuthAuthorizeTest extends DatabaseTestCase
         self::assertStringContainsString(self::CLIENT_NAME, (string) $this->client->getResponse()->getContent());
     }
 
+    public function testConsentScreenForbidsFraming(): void
+    {
+        $this->client->loginUser($this->user);
+
+        $this->client->request('GET', $this->authorizeUrl());
+
+        self::assertResponseIsSuccessful();
+        self::assertSame(
+            "frame-ancestors 'none'",
+            $this->client->getResponse()->headers->get('Content-Security-Policy')
+        );
+        self::assertSame('DENY', $this->client->getResponse()->headers->get('X-Frame-Options'));
+    }
+
+    public function testSiteWideResponsesForbidFraming(): void
+    {
+        $this->client->request('GET', '/');
+
+        self::assertResponseIsSuccessful();
+        self::assertSame(
+            "frame-ancestors 'none'",
+            $this->client->getResponse()->headers->get('Content-Security-Policy')
+        );
+    }
     public function testConsentScreenShowsClientIdentityAndFullAccess(): void
     {
         $this->client->loginUser($this->user);
@@ -336,7 +360,7 @@ final class OAuthAuthorizeTest extends DatabaseTestCase
         $crawler = $this->client->request('GET', $url);
         self::assertResponseIsSuccessful();
 
-        $csrf = $crawler->filter('input[name="_csrf_token"]')->attr('value');
+        $csrf = $crawler->filter('#oauth-consent-form input[name="_csrf_token"]')->attr('value');
         self::assertNotNull($csrf);
 
         $this->client->request('POST', $url, [
@@ -381,7 +405,7 @@ final class OAuthAuthorizeTest extends DatabaseTestCase
         $crawler = $this->client->request('GET', $url);
         self::assertResponseIsSuccessful();
 
-        $csrf = $crawler->filter('input[name="_csrf_token"]')->attr('value');
+        $csrf = $crawler->filter('#oauth-consent-form input[name="_csrf_token"]')->attr('value');
 
         $this->client->request('POST', $url, [
             'decision' => 'deny',
