@@ -115,7 +115,8 @@ final class OAuthAuthorizeTest extends DatabaseTestCase
         $token = $this->exchange($code);
 
         self::assertSame('Bearer', $token['token_type']);
-        self::assertSame(900, $token['expires_in']);
+        // expires_in is expiry minus "now", so it may lose a second when a clock boundary passes mid-request.
+        self::assertEqualsWithDelta(900, $token['expires_in'], 2);
         self::assertArrayHasKey('access_token', $token);
         self::assertArrayHasKey('refresh_token', $token);
     }
