@@ -20,6 +20,17 @@
         <server name="GOOGLE_RECAPTCHA_SITE_KEY" value="6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI" />
         <server name="GOOGLE_RECAPTCHA_SECRET" value="6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe" />
         <server name="SHELL_VERBOSITY" value="-1" />
+        <!-- Zero-deprecation gate: any deprecation fails the run. The only
+             suppression is the narrow vendor-annotation ignoreFile below,
+             which exists solely because of issue #171 (upstream has not
+             fixed the annotation); a future suppression needs its own issue
+             with justification and a narrow ignoreFile regex linking to it.
+             No baselineFile. @group legacy is only for a test that
+             deliberately exercises deprecated behavior. -->
+        <env name="SYMFONY_DEPRECATIONS_HELPER" value="max[total]=0&amp;ignoreFile=tests/deprecations-ignore.txt" />
+        <!-- doctrine/deprecations caches its mode on first use and Symfony sets
+             it only at the first kernel boot. -->
+        <server name="DOCTRINE_DEPRECATIONS" value="trigger" force="true" />
         <server name="SYMFONY_PHPUNIT_REMOVE" value="" />
         <server name="SYMFONY_PHPUNIT_VERSION" value="9.5" />
     </php>
