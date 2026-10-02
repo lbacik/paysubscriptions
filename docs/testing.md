@@ -12,14 +12,14 @@ MySQL must be reachable; the suite uses `DATABASE_URL` with the `when@test`
 `_test` suffix appended, so it can never touch the dev database:
 
 ```sh
-DATABASE_URL="mysql://root:root@127.0.0.1:3306/paysub?serverVersion=8.4&charset=utf8mb4" \
+DATABASE_URL="mysql://root:root@127.0.0.1:3306/paysub?charset=utf8mb4" \
   vendor/bin/phpunit
 ```
 
 Single files while iterating:
 
 ```sh
-DATABASE_URL="mysql://root:root@127.0.0.1:3306/paysub?serverVersion=8.4&charset=utf8mb4" \
+DATABASE_URL="mysql://root:root@127.0.0.1:3306/paysub?charset=utf8mb4" \
   APP_ENV=test vendor/bin/phpunit tests/Controller/DashboardTest.php
 ```
 
