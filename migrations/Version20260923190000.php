@@ -36,10 +36,10 @@ use Doctrine\Migrations\AbstractMigration;
  * recoverable is every step below being safe to re-run: each ADD/DROP
  * COLUMN is guarded by the schema it's given, so re-running after a
  * failure skips whatever already landed instead of failing on a duplicate
- * column. (isTransactional() is intentionally left at its default of true:
- * both CI and the production deploy run migrations with --all-or-nothing,
- * which Doctrine refuses outright if any migration in the batch declares
- * itself non-transactional.)
+ * column. (isTransactional() returns false: MySQL commits implicitly around
+ * DDL, so a surrounding transaction would only emit "no active transaction"
+ * notices at commit time, and --all-or-nothing is not used for the same
+ * reason.)
  */
 final class Version20260923190000 extends AbstractMigration
 {

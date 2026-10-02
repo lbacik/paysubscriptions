@@ -18,6 +18,11 @@ use Doctrine\Migrations\AbstractMigration;
  */
 final class Version20260924120000 extends AbstractMigration
 {
+    public function isTransactional(): bool
+    {
+        return false;
+    }
+
     public function getDescription(): string
     {
         return 'Add renewal_reminder send identity for forecast-renewal email reminders';

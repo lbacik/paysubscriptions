@@ -22,6 +22,11 @@ use Doctrine\Migrations\AbstractMigration;
  */
 final class Version20260927103123 extends AbstractMigration
 {
+    public function isTransactional(): bool
+    {
+        return false;
+    }
+
     public function getDescription(): string
     {
         return 'Add OAuth2 client/code/refresh-token persistence and remembered User consents';

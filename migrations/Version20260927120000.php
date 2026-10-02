@@ -19,6 +19,11 @@ use Doctrine\Migrations\AbstractMigration;
  */
 final class Version20260927120000 extends AbstractMigration
 {
+    public function isTransactional(): bool
+    {
+        return false;
+    }
+
     public function getDescription(): string
     {
         return 'Add refresh-token families for single-use rotation';

@@ -20,7 +20,7 @@ final class Version20240928121856 extends AbstractMigration
 
     public function isTransactional(): bool
     {
-        return true;
+        return false;
     }
 
     public function up(Schema $schema): void

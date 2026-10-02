@@ -16,6 +16,11 @@ use Doctrine\Migrations\AbstractMigration;
  */
 final class Version20260923120000 extends AbstractMigration
 {
+    public function isTransactional(): bool
+    {
+        return false;
+    }
+
     public function getDescription(): string
     {
         return 'Add expense_category table, require subscription.category_id, backfill defaults';

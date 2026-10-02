@@ -13,6 +13,11 @@ use Doctrine\Migrations\AbstractMigration;
  */
 final class Version20260924000000 extends AbstractMigration
 {
+    public function isTransactional(): bool
+    {
+        return false;
+    }
+
     public function getDescription(): string
     {
         return 'Add nullable notes to subscription (#40)';
