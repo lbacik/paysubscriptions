@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace App\Factory;
 
 use App\Entity\Limits;
-use Zenstruck\Foundry\Persistence\PersistentProxyObjectFactory;
+use Zenstruck\Foundry\Persistence\PersistentObjectFactory;
 
 /**
- * @extends PersistentProxyObjectFactory<Limits>
+ * @extends PersistentObjectFactory<Limits>
  */
-final class LimitsFactory extends PersistentProxyObjectFactory
+final class LimitsFactory extends PersistentObjectFactory
 {
     public static function class(): string
     {

@@ -32,7 +32,7 @@ final class UpcomingRenewalsWidgetTest extends WebTestCase
         foreach ($leads as $index => $lead) {
             $subscription = $this->createSubscription(
                 $client,
-                $owner->_real(),
+                $owner,
                 sprintf('Sub %02d days', $lead),
                 BillingCycle::Monthly,
                 new \DateTime(sprintf('today +%d days', $lead)),
@@ -74,7 +74,7 @@ final class UpcomingRenewalsWidgetTest extends WebTestCase
         $anchor = new \DateTime('today +7 days');
         $this->createSubscription(
             $client,
-            $owner->_real(),
+            $owner,
             'Forecast Netflix',
             BillingCycle::Monthly,
             $anchor,
@@ -102,7 +102,7 @@ final class UpcomingRenewalsWidgetTest extends WebTestCase
 
         $this->createSubscription(
             $client,
-            $owner->_real(),
+            $owner,
             'Owner Sub',
             BillingCycle::Monthly,
             new \DateTime('today +3 days'),
@@ -110,7 +110,7 @@ final class UpcomingRenewalsWidgetTest extends WebTestCase
         );
         $this->createSubscription(
             $client,
-            $other->_real(),
+            $other,
             'Stranger Sub',
             BillingCycle::Monthly,
             new \DateTime('today +1 day'),
@@ -133,7 +133,7 @@ final class UpcomingRenewalsWidgetTest extends WebTestCase
         $owner = UserFactory::createOne(['email' => 'owner@example.com', 'isVerified' => true]);
         $this->createSubscription(
             $client,
-            $owner->_real(),
+            $owner,
             'Always Visible',
             BillingCycle::Yearly,
             new \DateTime('today +9 days'),

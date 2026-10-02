@@ -8,12 +8,12 @@ use App\Entity\ExpenseCategory;
 use App\Entity\Subscription;
 use App\Enum\BillingCycle;
 use App\Repository\ExpenseCategoryRepository;
-use Zenstruck\Foundry\Persistence\PersistentProxyObjectFactory;
+use Zenstruck\Foundry\Persistence\PersistentObjectFactory;
 
 /**
- * @extends PersistentProxyObjectFactory<Subscription>
+ * @extends PersistentObjectFactory<Subscription>
  */
-final class SubscriptionFactory extends PersistentProxyObjectFactory
+final class SubscriptionFactory extends PersistentObjectFactory
 {
     public function __construct(
         private ExpenseCategoryRepository $categoryRepository

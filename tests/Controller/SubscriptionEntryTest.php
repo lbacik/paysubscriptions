@@ -35,8 +35,8 @@ final class SubscriptionEntryTest extends WebTestCase
             'email' => 'creator@example.com',
             'isVerified' => true,
             'mainCurrency' => 'PLN',
-        ])->_real();
-        $category = ExpenseCategoryFactory::createOne(['owner' => $owner])->_real();
+        ]);
+        $category = ExpenseCategoryFactory::createOne(['owner' => $owner]);
 
         $this->loginAs($client, 'creator@example.com');
         $crawler = $client->request('GET', '/subscription/new');
@@ -78,7 +78,7 @@ final class SubscriptionEntryTest extends WebTestCase
         $id = (string) $subscription->getId();
         $owner = $subscription->getOwner();
         \assert($owner instanceof User);
-        $otherCategory = ExpenseCategoryFactory::createOne(['owner' => $owner])->_real();
+        $otherCategory = ExpenseCategoryFactory::createOne(['owner' => $owner]);
 
         $this->loginAs($client, 'editor@example.com');
         $crawler = $client->request('GET', '/subscription/'.$id.'/edit');
@@ -143,8 +143,8 @@ final class SubscriptionEntryTest extends WebTestCase
             'email' => 'fx@example.com',
             'isVerified' => true,
             'mainCurrency' => 'PLN',
-        ])->_real();
-        $category = ExpenseCategoryFactory::createOne(['owner' => $owner])->_real();
+        ]);
+        $category = ExpenseCategoryFactory::createOne(['owner' => $owner]);
         $categoryId = (string) $category->getId();
 
         $this->loginAs($client, 'fx@example.com');
@@ -220,7 +220,7 @@ final class SubscriptionEntryTest extends WebTestCase
         $this->createSubscriptionForNewUser('owner@example.com', 'Owner Netflix');
 
         $stranger = UserFactory::createOne(['email' => 'stranger@example.com', 'isVerified' => true]);
-        $foreignCategory = ExpenseCategoryFactory::createOne(['owner' => $stranger])->_real();
+        $foreignCategory = ExpenseCategoryFactory::createOne(['owner' => $stranger]);
 
         $this->loginAs($client, 'owner@example.com');
         $client->request('POST', '/subscription/new', [
@@ -249,8 +249,8 @@ final class SubscriptionEntryTest extends WebTestCase
             'email' => 'limited@example.com',
             'isVerified' => true,
             'mainCurrency' => 'PLN',
-        ])->_real();
-        $category = ExpenseCategoryFactory::createOne(['owner' => $owner])->_real();
+        ]);
+        $category = ExpenseCategoryFactory::createOne(['owner' => $owner]);
 
         $this->setSubscriptionLimit($client, 'limited@example.com', 1);
 
@@ -297,8 +297,8 @@ final class SubscriptionEntryTest extends WebTestCase
             'email' => 'notes@example.com',
             'isVerified' => true,
             'mainCurrency' => 'PLN',
-        ])->_real();
-        $category = ExpenseCategoryFactory::createOne(['owner' => $owner])->_real();
+        ]);
+        $category = ExpenseCategoryFactory::createOne(['owner' => $owner]);
 
         $this->loginAs($client, 'notes@example.com');
 
@@ -343,7 +343,7 @@ final class SubscriptionEntryTest extends WebTestCase
     {
         $owner = UserFactory::createOne(['email' => $email, 'isVerified' => true]);
 
-        return SubscriptionFactory::createOne(['owner' => $owner, 'name' => $name])->_real();
+        return SubscriptionFactory::createOne(['owner' => $owner, 'name' => $name]);
     }
 
     private function loginAs(KernelBrowser $client, string $email): void
