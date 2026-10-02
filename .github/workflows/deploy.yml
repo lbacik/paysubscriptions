@@ -211,9 +211,10 @@ jobs:
       # Before the app comes up, and in a throwaway container: --no-deps so this
       # does not start the web service as a side effect, --pull always so the
       # migrations that run are the ones baked into the tag being deployed.
-      # --all-or-nothing wraps the batch in a single transaction, so a failure
-      # leaves the schema untouched and aborts the deploy before any running
-      # container is restarted.
+      # Migrations are non-transactional: MySQL commits implicitly on DDL, so a
+      # failure can leave the schema partly migrated. Recovery relies on
+      # additive, re-runnable migrations (see AdditiveMigrationTest). A failure
+      # still aborts the deploy before any running container is restarted.
       #
       # MESSENGER_TRANSPORT_DSN must be an amqp:// URL for this step to survive.
       # config/packages/messenger.yaml gives `newsletter` an AMQP-only `exchange`
@@ -225,7 +226,7 @@ jobs:
       - name: Run database migrations
         run: |
           $COMPOSE run --rm --no-deps --pull always web \
-            ./bin/console doctrine:migrations:migrate --no-interaction --all-or-nothing --allow-no-migration
+            ./bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
 
       # --wait-timeout bounds the step: the deploy-prod concurrency group has
       # cancel-in-progress: false, so a converge that never settles would block

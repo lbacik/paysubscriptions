@@ -15,6 +15,11 @@ use Doctrine\Migrations\AbstractMigration;
  */
 final class Version20260923000001 extends AbstractMigration
 {
+    public function isTransactional(): bool
+    {
+        return false;
+    }
+
     public function getDescription(): string
     {
         return 'Add main_currency to user; currency, converted_amount and converted_currency to subscription (all nullable, legacy data unchanged).';

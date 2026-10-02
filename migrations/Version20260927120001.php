@@ -26,6 +26,11 @@ use Doctrine\Migrations\AbstractMigration;
  */
 final class Version20260927120001 extends AbstractMigration
 {
+    public function isTransactional(): bool
+    {
+        return false;
+    }
+
     public function getDescription(): string
     {
         return 'Sync migrated schema to mappings for the v1 release gate';

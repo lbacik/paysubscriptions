@@ -4,3 +4,9 @@ doctrine_migrations:
         # as migrations classes should NOT be autoloaded
         'DoctrineMigrations': '%kernel.project_dir%/migrations'
     enable_profiler: false
+    # Migrations are non-transactional by default. On MySQL, DDL commits
+    # implicitly, so a wrapping transaction protects nothing (and
+    # --all-or-nothing is not used). Safety comes from additive, re-runnable
+    # migrations. A migration may return true from isTransactional() only if
+    # it contains no DDL (none does today).
+    transactional: false

@@ -69,7 +69,7 @@ export APP_SECRET=ci \
   JSON_HUB_PROJECT='00000000-0000-0000-0000-000000000000' \
   MAILING_PROVIDER_ROUTING_KEY='ci'
 APP_ENV=test php bin/console doctrine:database:create --if-not-exists --no-interaction
-APP_ENV=test php bin/console doctrine:migrations:migrate --no-interaction --all-or-nothing --allow-no-migration
+APP_ENV=test php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
 APP_ENV=test php bin/console doctrine:fixtures:load --no-interaction
 
 # 2. CSS the templates expect at render time

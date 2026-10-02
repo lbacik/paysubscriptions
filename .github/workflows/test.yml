@@ -334,7 +334,7 @@ jobs:
       - name: Prepare the test database
         run: |
           php bin/console doctrine:database:create --if-not-exists
-          php bin/console doctrine:migrations:migrate --no-interaction --all-or-nothing --allow-no-migration
+          php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
 
       # The gate's behavioral core: registration, authentication, contact,
       # newsletter, subscription CRUD with two-user isolation, limits, totals
@@ -421,13 +421,14 @@ jobs:
 
       # Byte-for-byte the command deploy.yml runs on the host, and under the same
       # APP_ENV=prod the container uses there. --allow-no-migration keeps this
-      # honest if the set is ever emptied; --all-or-nothing is what makes a
-      # partial failure leave no half-migrated schema behind.
+      # honest if the set is ever emptied. Migrations are non-transactional (MySQL
+      # commits DDL implicitly), so a partial failure can leave a partly
+      # migrated schema; re-runnable additive migrations are the safeguard.
       - name: Replay the production migration command
         env:
           APP_ENV: prod
           APP_DEBUG: '0'
-        run: php bin/console doctrine:migrations:migrate --no-interaction --all-or-nothing --allow-no-migration
+        run: php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
 
       # APP_ENV=dev, not prod: DoctrineFixturesBundle and ZenstruckFoundryBundle
       # are registered for dev/test only (config/bundles.php). dev is the right
@@ -522,7 +523,7 @@ jobs:
       - name: Migrate and load fixtures
         run: |
           APP_ENV=test php bin/console doctrine:database:create --if-not-exists --no-interaction
-          APP_ENV=test php bin/console doctrine:migrations:migrate --no-interaction --all-or-nothing --allow-no-migration
+          APP_ENV=test php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
           APP_ENV=test php bin/console doctrine:fixtures:load --no-interaction
 
       - name: Set up Node 20

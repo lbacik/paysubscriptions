@@ -9,8 +9,9 @@ use PHPUnit\Framework\TestCase;
 /**
  * Guards rollback safety for the v1 release (issue #100).
  *
- * The release deploys with `doctrine:migrations:migrate --all-or-nothing` and
- * rolls back by redeploying the previous image tag against the already
+ * The release deploys with `doctrine:migrations:migrate` (non-transactional:
+ * MySQL commits DDL implicitly, so a failed run can leave a partly migrated
+ * schema and re-running must be safe) and rolls back by redeploying the previous image tag against the already
  * migrated schema. That only works while migrations are additive: new tables,
  * new nullable or defaulted columns, new indexes. Anything destructive in
  * up() — a dropped table or column, a rename, a truncate — breaks the

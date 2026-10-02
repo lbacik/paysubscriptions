@@ -244,7 +244,7 @@ pipeline ships one tagged image or nothing.
 ## 8. Migration rehearsal and image rollback
 
 - CI's `migrations` job replays the byte-for-byte production command
-  (`doctrine:migrations:migrate --no-interaction --all-or-nothing
+  (`doctrine:migrations:migrate --no-interaction
   --allow-no-migration` under `APP_ENV=prod`), loads fixtures onto the
   migrated schema, and validates the schema against the mappings.
 - Migrations must stay **additive** — new tables, new nullable or
