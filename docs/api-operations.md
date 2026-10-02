@@ -214,7 +214,7 @@ curl -s -o /dev/null -w '%{http_code}\n' https://paysubscriptions.com/token \
    boots the prod container and checks discovery, JWKS, the 401
    problem response, and web login; the blocking PHPUnit suite covers
    issuance, two-User isolation, refresh, revocation, report parity,
-   and the web login/form flows on every push.
+   and the web login/form flows on every pull request and on `main`.
 
 ### When a check fails (issue #101)
 

@@ -1,39 +1,28 @@
 name: Test
 
-# The gate. Runs once on every pushed commit, on every branch, and is called by
-# release.yml before it builds an image - so the thing that blocks a production
-# deploy is definitionally the same thing you see on every push, not a second
-# copy that can drift.
+# The gate. Runs once per commit: on every pull request targeting `main` and on
+# every push to `main`. It is also called by release.yml before it builds an
+# image - so the thing that blocks a production deploy is definitionally the
+# same thing you see on every pull request, not a second copy that can drift.
 #
-# `push` is the ONLY commit trigger, and `branches: ['**']` matches every branch
-# and no tag. One trigger means one run per commit. There is deliberately no
-# `pull_request` here, which is worth explaining because dropping it is the
-# unusual choice:
+# The repository follows GitHub flow: short-lived branches are merged into `main`
+# through a pull request, and release tags are cut from `main`. The triggers
+# follow from that:
 #
-#   The textbook reason to keep `pull_request` is that it tests the ephemeral
-#   merge commit of the branch with its base, which a branch-tip `push` run never
-#   sees. In this repository that distinction is empty. `main` is a pure
-#   promotion pointer: its only commits are merges from `develop`, and it carries
-#   no content of its own, so the tree of a develop->main merge commit is
-#   byte-identical to the tree of develop's tip. The two runs compile the same
-#   code. (Verified: HEAD of main and the develop commit it merged share tree
-#   92366892.) The day a hotfix lands directly on main, that stops being true and
-#   `pull_request` earns its place back - see below.
+#   `pull_request` (base `main`) tests the ephemeral merge commit of the branch
+#   with its base, which is what will actually land on `main`. `push` is limited
+#   to `main`, so the merge itself is tested once more where it lands. A feature
+#   branch is therefore never tested twice: while it has an open PR only
+#   `pull_request` fires, and a push to a branch without a PR runs nothing.
+#   Open a (draft) PR to get CI on a branch. `push` with `branches: [main]`
+#   matches no tag, so a release tag does not trigger this file directly; it
+#   reaches it through release.yml's `workflow_call`.
 #
-#   The other reason is fork coverage: `push` never fires in this repository for
-#   a PR opened from a fork. There is no such path today - the repository is
-#   private with no forks. Going public or taking outside contributors is the
-#   other event that brings `pull_request` back, and it is `pull_request_target`
-#   and secret exposure that need thinking about at that point.
+#   The concurrency group below keys on github.ref, so a new push to the same PR
+#   cancels the run in flight for the previous commit.
 #
-# What this replaced, and why narrowing `push` was not enough: the file used to
-# carry `push: branches: ['**']` AND `pull_request`, and every commit ran it
-# twice. Narrowing `push` to [main, develop] does not fix that, because the
-# workflow here is a long-lived `develop` -> `main` promotion PR - `develop` is
-# simultaneously the PR head and a listed push branch, so both triggers still
-# fire. Nor do the two runs cancel each other: the concurrency group below keys
-# on github.ref, which is `refs/heads/develop` for one and `refs/pull/N/merge`
-# for the other. Removing a trigger is the only thing that actually deduplicates.
+#   Fork PRs run under plain `pull_request`: no repository secrets and a
+#   read-only token. That is the safe default for outside contributions.
 #
 # No continue-on-error anywhere in this file. It is allowed to be red only when
 # the repository is broken - see the `migrations` job, which is red today for a
@@ -43,7 +32,9 @@ name: Test
 # token. Fork PRs, if ever needed, use plain `pull_request`.
 on:
   push:
-    branches: ['**']
+    branches: [main]
+  pull_request:
+    branches: [main]
   workflow_call:
 
 # Least privilege for every job; a job that needs more declares it itself.
@@ -465,18 +456,13 @@ jobs:
   # Mirrors docs/accessibility.md local reproduction: test-kernel server via
   # the php -S router, fixture credentials, reCAPTCHA test keys.
   #
-  # Restricted to main and to the release gate: this scan is by far the
-  # slowest job in the file (Chromium install + a real server boot), and
-  # `push: branches: ['**']` above means it would otherwise run on every
-  # commit to every feature branch. `develop` -> `main` is a pure promotion
-  # (see the header comment), so scanning every intermediate develop push
-  # buys nothing a scan of the merge commit on main doesn't already cover.
-  # `github.event_name == 'workflow_call'` keeps it in the tag-build gate
-  # release.yml drives, where github.ref is refs/tags/vX, not refs/heads/main.
+  # Runs on every pull request, on main and in the release gate. It is the
+  # slowest job in the file (Chromium install + a real server boot), but with
+  # GitHub flow nothing reaches `main` except through a PR, so this is where an
+  # accessibility regression has to be caught.
   accessibility:
     name: Accessibility
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_call'
 
     services:
       mysql:

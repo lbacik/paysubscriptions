@@ -320,7 +320,7 @@ jobs:
       #     parses, and the database answers. Authenticated flows (issuance,
       #     read, refresh, revocation) need a provisioned client and User, so
       #     they are operator-run from docs/api-operations.md, not deployed
-      #     here - and they run as blocking PHPUnit tests on every push.
+      #     here - and they run as blocking PHPUnit tests on every pull request.
       - name: Run the API release preflight
         run: |
           $COMPOSE exec -T web ./bin/console app:api:preflight
