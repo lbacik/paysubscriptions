@@ -1,0 +1,8 @@
+# Zero-deprecation gate: the single allowed exception (see docs/testing.md).
+# Rule: no suppression without its own issue; this file exists only because of
+# https://github.com/lbacik/paysubscriptions/issues/171 (vendor annotation
+# upstream has not fixed: league/commonmark 2.10.3, still missing on upstream
+# main as of 2026-10-02). Narrow regex matching ONLY that exact vendor
+# message. Remove this file and its wiring in phpunit.xml.dist when an upstream
+# release adds @return mixed to Util\ArrayCollection::offsetGet().
+/^Method "ArrayAccess::offsetGet\(\)" might add "mixed" as a native return type declaration in the future\. Do the same in implementation "League\\CommonMark\\Util\\ArrayCollection" now to avoid errors or add an explicit @return annotation to suppress this message\.$/
