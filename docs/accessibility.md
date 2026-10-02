@@ -63,7 +63,7 @@ running locally, Node 20.
 # Bare `php bin/console …` (dev) would seed `paysub` instead and every scan
 # login would fail.
 export APP_SECRET=ci \
-  DATABASE_URL='mysql://root:root@127.0.0.1:3306/paysub?serverVersion=8.4&charset=utf8mb4' \
+  DATABASE_URL='mysql://root:root@127.0.0.1:3306/paysub?charset=utf8mb4' \
   MESSENGER_TRANSPORT_DSN='amqp://guest:guest@127.0.0.1:5672/%2f/messages' \
   MAILER_DSN='null://null' \
   JSON_HUB_PROJECT='00000000-0000-0000-0000-000000000000' \
@@ -77,7 +77,7 @@ php bin/console tailwind:build
 
 # 3. Start the test-kernel server (router bridges env into $_SERVER)
 export APP_ENV=test APP_DEBUG=0 APP_SECRET=ci \
-  DATABASE_URL='mysql://root:root@127.0.0.1:3306/paysub?serverVersion=8.4&charset=utf8mb4' \
+  DATABASE_URL='mysql://root:root@127.0.0.1:3306/paysub?charset=utf8mb4' \
   MESSENGER_TRANSPORT_DSN='amqp://guest:guest@127.0.0.1:5672/%2f/messages' \
   MAILER_DSN='null://null' \
   GOOGLE_RECAPTCHA_SITE_KEY='6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI' \
@@ -87,7 +87,7 @@ export APP_ENV=test APP_DEBUG=0 APP_SECRET=ci \
 php -S 127.0.0.1:8000 tests/accessibility/router.php &
 
 # 4. Registry guard (uses the default test DATABASE_URL handling)
-DATABASE_URL='mysql://root:root@127.0.0.1:3306/paysub?serverVersion=8.4&charset=utf8mb4' \
+DATABASE_URL='mysql://root:root@127.0.0.1:3306/paysub?charset=utf8mb4' \
   vendor/bin/phpunit tests/AccessibilityScenariosTest.php
 
 # 5. Full axe scan (same credentials as fixtures; test keys for reCAPTCHA)

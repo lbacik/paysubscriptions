@@ -18,6 +18,7 @@ use League\Bundle\OAuth2ServerBundle\Model\Client;
 use League\Bundle\OAuth2ServerBundle\ValueObject\Grant;
 use League\Bundle\OAuth2ServerBundle\ValueObject\RedirectUri;
 use League\Bundle\OAuth2ServerBundle\ValueObject\Scope;
+use SortDirection;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -439,7 +440,7 @@ final class OAuthRefreshTest extends DatabaseTestCase
         return $em->createQueryBuilder()
             ->select('f')
             ->from(OAuthRefreshFamily::class, 'f')
-            ->orderBy('f.issuedAt', 'DESC')
+            ->orderBy('f.issuedAt', SortDirection::Descending)
             ->setMaxResults(1)
             ->getQuery()
             ->getOneOrNullResult();

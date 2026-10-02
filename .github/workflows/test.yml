@@ -72,7 +72,7 @@ jobs:
       APP_ENV: prod
       APP_DEBUG: '0'
       APP_SECRET: ci
-      DATABASE_URL: "mysql://root:root@127.0.0.1:3306/paysub?serverVersion=8.4&charset=utf8mb4"
+      DATABASE_URL: "mysql://root:root@127.0.0.1:3306/paysub?charset=utf8mb4"
       MESSENGER_TRANSPORT_DSN: 'amqp://guest:guest@127.0.0.1:5672/%2f/messages'
       MAILER_DSN: 'null://null'
       JSON_HUB_PROJECT: '00000000-0000-0000-0000-000000000000'
@@ -147,7 +147,7 @@ jobs:
       APP_ENV: prod
       APP_DEBUG: '0'
       APP_SECRET: ci
-      DATABASE_URL: "mysql://root:root@127.0.0.1:3306/paysub?serverVersion=8.4&charset=utf8mb4"
+      DATABASE_URL: "mysql://root:root@127.0.0.1:3306/paysub?charset=utf8mb4"
       MESSENGER_TRANSPORT_DSN: 'amqp://guest:guest@127.0.0.1:5672/%2f/messages'
       MAILER_DSN: 'null://null'
       JSON_HUB_PROJECT: '00000000-0000-0000-0000-000000000000'
@@ -270,7 +270,7 @@ jobs:
 
   # Functional tests (WebTestCase, ResetDatabase) need a real database to run
   # against. Shares the MySQL service definition with `migrations` below for the
-  # same reason documented there: the DSN matches production's serverVersion and
+  # same reason documented there: the image matches production's MySQL 9.7 and
   # the AMQP scheme avoids the Doctrine transport factory's option validation.
   phpunit:
     name: PHPUnit
@@ -278,7 +278,7 @@ jobs:
 
     services:
       mysql:
-        image: mysql:9
+        image: mysql:9.7
         env:
           MYSQL_ROOT_PASSWORD: root
           MYSQL_DATABASE: paysub
@@ -293,7 +293,7 @@ jobs:
     env:
       APP_ENV: test
       APP_SECRET: ci
-      DATABASE_URL: "mysql://root:root@127.0.0.1:3306/paysub?serverVersion=8.4&charset=utf8mb4"
+      DATABASE_URL: "mysql://root:root@127.0.0.1:3306/paysub?charset=utf8mb4"
       MESSENGER_TRANSPORT_DSN: 'amqp://guest:guest@127.0.0.1:5672/%2f/messages'
       MAILER_DSN: 'null://null'
       JSON_HUB_PROJECT: '00000000-0000-0000-0000-000000000000'
@@ -382,10 +382,9 @@ jobs:
     services:
       mysql:
         # rum runs MySQL 9.7.2 (the shared `my.rum` container), so CI replays
-        # against the 9 series. The DSN below still declares serverVersion=8.4,
-        # matching what production actually passes - reproducing that mismatch
-        # is the point, since it is what selects Doctrine's platform.
-        image: mysql:9
+        # against the 9.7 series. The server version Doctrine assumes comes
+        # from `dbal.server_version` in config/packages/doctrine.yaml, not the DSN.
+        image: mysql:9.7
         env:
           MYSQL_ROOT_PASSWORD: root
           MYSQL_DATABASE: paysub
@@ -398,7 +397,7 @@ jobs:
           --health-retries=10
 
     env:
-      DATABASE_URL: "mysql://root:root@127.0.0.1:3306/paysub?serverVersion=8.4&charset=utf8mb4"
+      DATABASE_URL: "mysql://root:root@127.0.0.1:3306/paysub?charset=utf8mb4"
       MESSENGER_TRANSPORT_DSN: 'amqp://guest:guest@127.0.0.1:5672/%2f/messages'
       MAILER_DSN: 'null://null'
       APP_SECRET: ci
@@ -466,7 +465,7 @@ jobs:
 
     services:
       mysql:
-        image: mysql:9
+        image: mysql:9.7
         env:
           MYSQL_ROOT_PASSWORD: root
           MYSQL_DATABASE: paysub
@@ -482,7 +481,7 @@ jobs:
       APP_ENV: test
       APP_DEBUG: '0'
       APP_SECRET: ci
-      DATABASE_URL: "mysql://root:root@127.0.0.1:3306/paysub?serverVersion=8.4&charset=utf8mb4"
+      DATABASE_URL: "mysql://root:root@127.0.0.1:3306/paysub?charset=utf8mb4"
       MESSENGER_TRANSPORT_DSN: 'amqp://guest:guest@127.0.0.1:5672/%2f/messages'
       MAILER_DSN: 'null://null'
       GOOGLE_RECAPTCHA_SITE_KEY: '6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI'
