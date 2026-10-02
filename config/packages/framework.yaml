@@ -2,6 +2,11 @@
 framework:
     secret: '%env(APP_SECRET)%'
 
+    # Symfony 8 default: the constructor extractor feeds PropertyInfo, so
+    # constructor-promoted values stay visible to serializers and forms.
+    property_info:
+        with_constructor_extractor: true
+
     # Note that the session will be started ONLY if you read or write from it.
     session: true
 

@@ -26,15 +26,15 @@ class ChangePasswordFormType extends AbstractType
                 ],
                 'first_options' => [
                     'constraints' => [
-                        new NotBlank([
-                            'message' => 'Please enter a password',
-                        ]),
-                        new Length([
-                            'min' => 12,
-                            'minMessage' => 'Your password should be at least {{ limit }} characters',
+                        new NotBlank(
+                            message: 'Please enter a password',
+                        ),
+                        new Length(
+                            min: 12,
                             // max length allowed by Symfony for security reasons
-                            'max' => 4096,
-                        ]),
+                            max: 4096,
+                            minMessage: 'Your password should be at least {{ limit }} characters',
+                        ),
                         new PasswordStrength(),
                         // skipOnError: an outage of the haveibeenpwned API must
                         // never turn a password reset into an HTTP 500. When the

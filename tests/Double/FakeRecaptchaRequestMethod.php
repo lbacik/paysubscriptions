@@ -18,7 +18,7 @@ final class FakeRecaptchaRequestMethod implements RequestMethod
 {
     public const VALID_TOKEN = 'valid-test-token';
 
-    public function submit(RequestParameters $params)
+    public function submit(RequestParameters $params): string
     {
         $response = $params->toArray()['response'] ?? null;
 
