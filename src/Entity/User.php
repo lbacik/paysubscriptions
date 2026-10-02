@@ -184,9 +184,13 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     /**
      * @see UserInterface
      */
+    #[\Deprecated('Implementing "User::eraseCredentials()" is deprecated since Symfony 7.3; the method is empty and will be removed from UserInterface in Symfony 8.')]
     public function eraseCredentials(): void
     {
-        // If you store any temporary, sensitive data on the user, clear it here
+        // Empty by design: no temporary, sensitive data is stored on the
+        // user. Kept only because Symfony 7.4 still requires it on
+        // UserInterface; delete it when upgrading to Symfony 8, which
+        // removes it from the interface.
         // $this->plainPassword = null;
     }
 

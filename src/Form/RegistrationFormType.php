@@ -48,9 +48,9 @@ class RegistrationFormType extends AbstractType
             ->add('agreeTerms', CheckboxType::class, [
                 'mapped' => false,
                 'constraints' => [
-                    new IsTrue([
-                        'message' => 'You should agree to our terms.',
-                    ]),
+                    new IsTrue(
+                        message: 'You should agree to our terms.',
+                    ),
                 ],
             ])
             ->add('plainPassword', RepeatedType::class, [
@@ -66,15 +66,15 @@ class RegistrationFormType extends AbstractType
                 'mapped' => false,
                 'attr' => ['autocomplete' => 'new-password'],
                 'constraints' => [
-                    new NotBlank([
-                        'message' => 'Please enter a password',
-                    ]),
-                    new Length([
-                        'min' => 12,
-                        'minMessage' => 'Your password should be at least {{ limit }} characters',
+                    new NotBlank(
+                        message: 'Please enter a password',
+                    ),
+                    new Length(
+                        min: 12,
                         // max length allowed by Symfony for security reasons
-                        'max' => 4096,
-                    ]),
+                        max: 4096,
+                        minMessage: 'Your password should be at least {{ limit }} characters',
+                    ),
                     new PasswordStrength(),
                     // skipOnError: an outage of the haveibeenpwned API must
                     // never turn a registration into an HTTP 500. When the

@@ -8,6 +8,7 @@ use App\Entity\ExpenseCategory;
 use App\Entity\User;
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 use Symfony\Component\Security\Core\Authorization\Voter\Voter;
+use Symfony\Component\Security\Core\Authorization\Voter\Vote;
 
 /**
  * Grants access to an expense category only to its owning User.
@@ -26,7 +27,7 @@ class ExpenseCategoryVoter extends Voter
             && \in_array($attribute, [self::VIEW, self::EDIT, self::DELETE], true);
     }
 
-    protected function voteOnAttribute(string $attribute, mixed $subject, TokenInterface $token): bool
+    protected function voteOnAttribute(string $attribute, mixed $subject, TokenInterface $token, ?Vote $vote = null): bool
     {
         $user = $token->getUser();
 
