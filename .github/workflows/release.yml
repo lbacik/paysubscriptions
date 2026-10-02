@@ -19,8 +19,9 @@ env:
   IMAGE_NAME: paysubscriptions/web
 
 jobs:
-  # The gate. The same workflow that runs on every branch push, so a tag whose
-  # checks are red never produces an image and therefore never reaches deploy.yml.
+  # The gate. The same workflow that runs on every pull request and on `main`,
+  # so a tag whose checks are red never produces an image and therefore never
+  # reaches deploy.yml.
   test:
     uses: ./.github/workflows/test.yml
 

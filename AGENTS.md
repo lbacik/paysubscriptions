@@ -15,3 +15,7 @@ The five canonical triage roles, used verbatim as label strings. See `docs/triag
 ### Domain docs
 
 Single-context: `CONTEXT.md` and `docs/adr/` at the repo root. See `docs/domain.md`.
+
+### Branching
+
+GitHub flow: short-lived branches merged into `main` via pull request; releases are `v*` tags cut from `main`. See `docs/development-setup.md`.

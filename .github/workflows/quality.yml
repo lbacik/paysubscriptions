@@ -32,12 +32,9 @@ name: Quality
 # file out; until then the waiting room holds the two checks the existing
 # dependency set can already run.
 #
-# Triggers mirror test.yml, and for the same reasons recorded at length there:
-# `push` on every branch is the only commit trigger, so each commit runs this
-# file once. No `pull_request` - with both, every commit ran it twice, and on the
-# long-lived `develop` -> `main` promotion PR narrowing `push` to the long-lived
-# branches does not help, because `develop` is both the PR head and a push
-# branch.
+# Triggers mirror test.yml, and for the same reasons recorded there: `pull_request`
+# against `main` plus `push` to `main`, so each commit runs this file once. A
+# feature branch is covered by its pull request, not by its own pushes.
 #
 # `schedule` is what makes the permanent watchers useful, and is the one trigger
 # here that test.yml has no use for: `audit` and `outdated` go red because a
@@ -47,7 +44,9 @@ name: Quality
 # token. Fork PRs, if ever needed, use plain `pull_request`.
 on:
   push:
-    branches: ['**']
+    branches: [main]
+  pull_request:
+    branches: [main]
   schedule:
     # Deliberately off the hour: GitHub queues scheduled runs and drops them
     # under load, and :00 is the most popular minute by a wide margin.
