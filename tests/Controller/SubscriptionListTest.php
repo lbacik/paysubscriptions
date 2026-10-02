@@ -33,11 +33,11 @@ final class SubscriptionListTest extends WebTestCase
     {
         $client = static::createClient();
         $owner = UserFactory::createOne(['email' => 'owner@example.com', 'isVerified' => true]);
-        $video = $this->createCategory($owner->_real(), 'Video');
-        $music = $this->createCategory($owner->_real(), 'Music');
-        $this->createSubscription($client, $owner->_real(), $video, 'AlphaFlix', BillingCycle::Monthly, '2024-01-05', 10.0);
-        $this->createSubscription($client, $owner->_real(), $video, 'BetaFlix', BillingCycle::Monthly, '2024-01-06', 20.0);
-        $this->createSubscription($client, $owner->_real(), $music, 'GammaTunes', BillingCycle::Monthly, '2024-01-07', 30.0);
+        $video = $this->createCategory($owner, 'Video');
+        $music = $this->createCategory($owner, 'Music');
+        $this->createSubscription($client, $owner, $video, 'AlphaFlix', BillingCycle::Monthly, '2024-01-05', 10.0);
+        $this->createSubscription($client, $owner, $video, 'BetaFlix', BillingCycle::Monthly, '2024-01-06', 20.0);
+        $this->createSubscription($client, $owner, $music, 'GammaTunes', BillingCycle::Monthly, '2024-01-07', 30.0);
 
         $this->loginAs($client, 'owner@example.com');
         $client->request('GET', '/dashboard?category='.(string) $video->getId());
@@ -55,8 +55,8 @@ final class SubscriptionListTest extends WebTestCase
         $client = static::createClient();
         $owner = UserFactory::createOne(['email' => 'owner@example.com', 'isVerified' => true]);
         $stranger = UserFactory::createOne(['email' => 'stranger@example.com', 'isVerified' => true]);
-        $own = $this->createCategory($owner->_real(), 'Own Video');
-        $this->createCategory($stranger->_real(), 'Stranger Music');
+        $own = $this->createCategory($owner, 'Own Video');
+        $this->createCategory($stranger, 'Stranger Music');
 
         $this->loginAs($client, 'owner@example.com');
         $client->request('GET', '/dashboard');
@@ -75,10 +75,10 @@ final class SubscriptionListTest extends WebTestCase
         $client = static::createClient();
         $owner = UserFactory::createOne(['email' => 'owner@example.com', 'isVerified' => true]);
         $stranger = UserFactory::createOne(['email' => 'stranger@example.com', 'isVerified' => true]);
-        $ownCat = $this->createCategory($owner->_real(), 'Own Video');
-        $foreignCat = $this->createCategory($stranger->_real(), 'Stranger Music');
-        $this->createSubscription($client, $owner->_real(), $ownCat, 'OwnFlix', BillingCycle::Monthly, '2024-01-05', 10.0);
-        $this->createSubscription($client, $stranger->_real(), $foreignCat, 'StrangerFlix', BillingCycle::Monthly, '2024-01-05', 10.0);
+        $ownCat = $this->createCategory($owner, 'Own Video');
+        $foreignCat = $this->createCategory($stranger, 'Stranger Music');
+        $this->createSubscription($client, $owner, $ownCat, 'OwnFlix', BillingCycle::Monthly, '2024-01-05', 10.0);
+        $this->createSubscription($client, $stranger, $foreignCat, 'StrangerFlix', BillingCycle::Monthly, '2024-01-05', 10.0);
 
         $this->loginAs($client, 'owner@example.com');
         $client->request('GET', '/dashboard?category='.(string) $foreignCat->getId());
@@ -102,10 +102,10 @@ final class SubscriptionListTest extends WebTestCase
         $client = static::createClient();
         $owner = UserFactory::createOne(['email' => 'owner@example.com', 'isVerified' => true]);
         $stranger = UserFactory::createOne(['email' => 'stranger@example.com', 'isVerified' => true]);
-        $ownCat = $this->createCategory($owner->_real(), 'Own Video');
-        $foreignCat = $this->createCategory($stranger->_real(), 'Stranger Music');
-        $this->createSubscription($client, $owner->_real(), $ownCat, 'OwnFlix', BillingCycle::Monthly, '2024-01-05', 10.0);
-        $this->createSubscription($client, $stranger->_real(), $foreignCat, 'StrangerFlix', BillingCycle::Monthly, '2024-01-05', 10.0);
+        $ownCat = $this->createCategory($owner, 'Own Video');
+        $foreignCat = $this->createCategory($stranger, 'Stranger Music');
+        $this->createSubscription($client, $owner, $ownCat, 'OwnFlix', BillingCycle::Monthly, '2024-01-05', 10.0);
+        $this->createSubscription($client, $stranger, $foreignCat, 'StrangerFlix', BillingCycle::Monthly, '2024-01-05', 10.0);
 
         $this->loginAs($client, 'owner@example.com');
         $client->request('GET', '/dashboard');
@@ -122,9 +122,9 @@ final class SubscriptionListTest extends WebTestCase
     {
         $client = static::createClient();
         $owner = UserFactory::createOne(['email' => 'owner@example.com', 'isVerified' => true]);
-        $category = $this->createCategory($owner->_real(), 'Video');
+        $category = $this->createCategory($owner, 'Video');
         foreach (['Charlie', 'Alpha', 'Bravo'] as $name) {
-            $this->createSubscription($client, $owner->_real(), $category, $name, BillingCycle::Monthly, '2024-01-05', 10.0);
+            $this->createSubscription($client, $owner, $category, $name, BillingCycle::Monthly, '2024-01-05', 10.0);
         }
 
         $this->loginAs($client, 'owner@example.com');
@@ -140,12 +140,12 @@ final class SubscriptionListTest extends WebTestCase
     {
         $client = static::createClient();
         $owner = UserFactory::createOne(['email' => 'owner@example.com', 'isVerified' => true, 'mainCurrency' => 'USD']);
-        $category = $this->createCategory($owner->_real(), 'Video');
+        $category = $this->createCategory($owner, 'Video');
 
         // EUR 10.00 converted by hand to USD 11.00; USD 120.00 yearly is USD 10.00 monthly.
-        $this->createSubscription($client, $owner->_real(), $category, 'Same Pricey', BillingCycle::Monthly, '2024-01-05', 12.0, 'USD');
-        $this->createSubscription($client, $owner->_real(), $category, 'Cross Mid', BillingCycle::Monthly, '2024-01-05', 10.0, 'EUR', 11.0, 'USD');
-        $this->createSubscription($client, $owner->_real(), $category, 'Yearly Cheap', BillingCycle::Yearly, '2024-01-05', 120.0, 'USD');
+        $this->createSubscription($client, $owner, $category, 'Same Pricey', BillingCycle::Monthly, '2024-01-05', 12.0, 'USD');
+        $this->createSubscription($client, $owner, $category, 'Cross Mid', BillingCycle::Monthly, '2024-01-05', 10.0, 'EUR', 11.0, 'USD');
+        $this->createSubscription($client, $owner, $category, 'Yearly Cheap', BillingCycle::Yearly, '2024-01-05', 120.0, 'USD');
 
         $this->loginAs($client, 'owner@example.com');
 
@@ -166,11 +166,11 @@ final class SubscriptionListTest extends WebTestCase
     {
         $client = static::createClient();
         $owner = UserFactory::createOne(['email' => 'owner@example.com', 'isVerified' => true]);
-        $category = $this->createCategory($owner->_real(), 'Video');
+        $category = $this->createCategory($owner, 'Video');
 
-        $this->createSubscription($client, $owner->_real(), $category, 'Far Renewal', BillingCycle::Monthly, 'today +20 days', 10.0);
-        $this->createSubscription($client, $owner->_real(), $category, 'Soon Renewal', BillingCycle::Monthly, 'today +5 days', 10.0);
-        $this->createSubscription($client, $owner->_real(), $category, 'Mid Renewal', BillingCycle::Monthly, 'today +10 days', 10.0);
+        $this->createSubscription($client, $owner, $category, 'Far Renewal', BillingCycle::Monthly, 'today +20 days', 10.0);
+        $this->createSubscription($client, $owner, $category, 'Soon Renewal', BillingCycle::Monthly, 'today +5 days', 10.0);
+        $this->createSubscription($client, $owner, $category, 'Mid Renewal', BillingCycle::Monthly, 'today +10 days', 10.0);
 
         $this->loginAs($client, 'owner@example.com');
 
@@ -191,12 +191,12 @@ final class SubscriptionListTest extends WebTestCase
     {
         $client = static::createClient();
         $owner = UserFactory::createOne(['email' => 'owner@example.com', 'isVerified' => true]);
-        $category = $this->createCategory($owner->_real(), 'Video');
+        $category = $this->createCategory($owner, 'Video');
 
         // Identical price (12.00 monthly vs 144.00 yearly) and identical
         // renewal date: name order wins regardless of direction.
-        $this->createSubscription($client, $owner->_real(), $category, 'Tie Beta', BillingCycle::Monthly, 'today +7 days', 12.0);
-        $this->createSubscription($client, $owner->_real(), $category, 'Tie Alpha', BillingCycle::Yearly, 'today +7 days', 144.0);
+        $this->createSubscription($client, $owner, $category, 'Tie Beta', BillingCycle::Monthly, 'today +7 days', 12.0);
+        $this->createSubscription($client, $owner, $category, 'Tie Alpha', BillingCycle::Yearly, 'today +7 days', 144.0);
 
         $this->loginAs($client, 'owner@example.com');
 
@@ -217,11 +217,11 @@ final class SubscriptionListTest extends WebTestCase
     {
         $client = static::createClient();
         $owner = UserFactory::createOne(['email' => 'owner@example.com', 'isVerified' => true]);
-        $video = $this->createCategory($owner->_real(), 'Video');
-        $music = $this->createCategory($owner->_real(), 'Music');
-        $this->createSubscription($client, $owner->_real(), $video, 'Cheap Video', BillingCycle::Monthly, '2024-01-05', 5.0);
-        $this->createSubscription($client, $owner->_real(), $video, 'Pricey Video', BillingCycle::Monthly, '2024-01-05', 50.0);
-        $this->createSubscription($client, $owner->_real(), $music, 'Mid Music', BillingCycle::Monthly, '2024-01-05', 25.0);
+        $video = $this->createCategory($owner, 'Video');
+        $music = $this->createCategory($owner, 'Music');
+        $this->createSubscription($client, $owner, $video, 'Cheap Video', BillingCycle::Monthly, '2024-01-05', 5.0);
+        $this->createSubscription($client, $owner, $video, 'Pricey Video', BillingCycle::Monthly, '2024-01-05', 50.0);
+        $this->createSubscription($client, $owner, $music, 'Mid Music', BillingCycle::Monthly, '2024-01-05', 25.0);
 
         $this->loginAs($client, 'owner@example.com');
         $client->request('GET', '/dashboard?category='.(string) $video->getId().'&sort=price&order=desc');
@@ -237,9 +237,9 @@ final class SubscriptionListTest extends WebTestCase
     {
         $client = static::createClient();
         $owner = UserFactory::createOne(['email' => 'owner@example.com', 'isVerified' => true]);
-        $video = $this->createCategory($owner->_real(), 'Video');
-        $empty = $this->createCategory($owner->_real(), 'Empty');
-        $this->createSubscription($client, $owner->_real(), $video, 'Only Video', BillingCycle::Monthly, '2024-01-05', 10.0);
+        $video = $this->createCategory($owner, 'Video');
+        $empty = $this->createCategory($owner, 'Empty');
+        $this->createSubscription($client, $owner, $video, 'Only Video', BillingCycle::Monthly, '2024-01-05', 10.0);
 
         $this->loginAs($client, 'owner@example.com');
         $client->request('GET', '/dashboard?category='.(string) $empty->getId());
@@ -256,11 +256,11 @@ final class SubscriptionListTest extends WebTestCase
     {
         $client = static::createClient();
         $owner = UserFactory::createOne(['email' => 'owner@example.com', 'isVerified' => true]);
-        $video = $this->createCategory($owner->_real(), 'Video');
-        $music = $this->createCategory($owner->_real(), 'Music');
-        $this->createSubscription($client, $owner->_real(), $video, 'Cheap Video', BillingCycle::Monthly, '2024-01-05', 5.0);
-        $this->createSubscription($client, $owner->_real(), $video, 'Pricey Video', BillingCycle::Monthly, '2024-01-05', 50.0);
-        $this->createSubscription($client, $owner->_real(), $music, 'Mid Music', BillingCycle::Monthly, '2024-01-05', 25.0);
+        $video = $this->createCategory($owner, 'Video');
+        $music = $this->createCategory($owner, 'Music');
+        $this->createSubscription($client, $owner, $video, 'Cheap Video', BillingCycle::Monthly, '2024-01-05', 5.0);
+        $this->createSubscription($client, $owner, $video, 'Pricey Video', BillingCycle::Monthly, '2024-01-05', 50.0);
+        $this->createSubscription($client, $owner, $music, 'Mid Music', BillingCycle::Monthly, '2024-01-05', 25.0);
 
         $this->loginAs($client, 'owner@example.com');
         $client->request('GET', '/dashboard?category='.(string) $video->getId().'&sort=price&order=desc');
@@ -279,8 +279,8 @@ final class SubscriptionListTest extends WebTestCase
     {
         $client = static::createClient();
         $owner = UserFactory::createOne(['email' => 'owner@example.com', 'isVerified' => true]);
-        $video = $this->createCategory($owner->_real(), 'Video');
-        $this->createSubscription($client, $owner->_real(), $video, 'Only Video', BillingCycle::Monthly, '2024-01-05', 10.0);
+        $video = $this->createCategory($owner, 'Video');
+        $this->createSubscription($client, $owner, $video, 'Only Video', BillingCycle::Monthly, '2024-01-05', 10.0);
 
         $this->loginAs($client, 'owner@example.com');
         $client->request('GET', '/dashboard?category='.(string) $video->getId());
@@ -295,11 +295,11 @@ final class SubscriptionListTest extends WebTestCase
     {
         $client = static::createClient();
         $owner = UserFactory::createOne(['email' => 'owner@example.com', 'isVerified' => true]);
-        $video = $this->createCategory($owner->_real(), 'Video');
-        $music = $this->createCategory($owner->_real(), 'Music');
-        $this->createSubscription($client, $owner->_real(), $video, 'AAA Stream', BillingCycle::Monthly, '2024-01-05', 5.0);
-        $this->createSubscription($client, $owner->_real(), $video, 'ZZZ Stream', BillingCycle::Monthly, '2024-01-06', 15.0);
-        $this->createSubscription($client, $owner->_real(), $music, 'MMM Other', BillingCycle::Monthly, '2024-01-07', 25.0);
+        $video = $this->createCategory($owner, 'Video');
+        $music = $this->createCategory($owner, 'Music');
+        $this->createSubscription($client, $owner, $video, 'AAA Stream', BillingCycle::Monthly, '2024-01-05', 5.0);
+        $this->createSubscription($client, $owner, $video, 'ZZZ Stream', BillingCycle::Monthly, '2024-01-06', 15.0);
+        $this->createSubscription($client, $owner, $music, 'MMM Other', BillingCycle::Monthly, '2024-01-07', 25.0);
 
         $this->loginAs($client, 'owner@example.com');
         // Prime the remembered list state.
@@ -329,8 +329,8 @@ final class SubscriptionListTest extends WebTestCase
     {
         $client = static::createClient();
         $owner = UserFactory::createOne(['email' => 'owner@example.com', 'isVerified' => true]);
-        $video = $this->createCategory($owner->_real(), 'Video');
-        $subscription = $this->createSubscription($client, $owner->_real(), $video, 'Streamed Flix', BillingCycle::Monthly, '2024-01-05', 10.0);
+        $video = $this->createCategory($owner, 'Video');
+        $subscription = $this->createSubscription($client, $owner, $video, 'Streamed Flix', BillingCycle::Monthly, '2024-01-05', 10.0);
 
         $this->loginAs($client, 'owner@example.com');
         $client->request('GET', '/dashboard');
@@ -363,10 +363,10 @@ final class SubscriptionListTest extends WebTestCase
     {
         $client = static::createClient();
         $owner = UserFactory::createOne(['email' => 'owner@example.com', 'isVerified' => true]);
-        $video = $this->createCategory($owner->_real(), 'Video');
-        $music = $this->createCategory($owner->_real(), 'Music');
-        $this->createSubscription($client, $owner->_real(), $video, 'Only Video', BillingCycle::Yearly, '2024-01-05', 120.0);
-        $this->createSubscription($client, $owner->_real(), $music, 'Only Music', BillingCycle::Monthly, '2024-01-05', 10.0);
+        $video = $this->createCategory($owner, 'Video');
+        $music = $this->createCategory($owner, 'Music');
+        $this->createSubscription($client, $owner, $video, 'Only Video', BillingCycle::Yearly, '2024-01-05', 120.0);
+        $this->createSubscription($client, $owner, $music, 'Only Music', BillingCycle::Monthly, '2024-01-05', 10.0);
 
         $this->loginAs($client, 'owner@example.com');
         $client->request('GET', '/dashboard?chartType=yearly&category='.(string) $video->getId());
@@ -427,7 +427,7 @@ final class SubscriptionListTest extends WebTestCase
             'owner' => $owner,
             'name' => $name,
             'color' => '#577399',
-        ])->_real();
+        ]);
     }
 
     private function createSubscription(

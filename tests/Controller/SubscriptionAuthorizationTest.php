@@ -243,7 +243,7 @@ final class SubscriptionAuthorizationTest extends WebTestCase
         $originalCategoryId = (string) $subscription->getCategory()->getId();
 
         $stranger = UserFactory::createOne(['email' => 'stranger@example.com', 'isVerified' => true]);
-        $foreignCategory = ExpenseCategoryFactory::createOne(['owner' => $stranger])->_real();
+        $foreignCategory = ExpenseCategoryFactory::createOne(['owner' => $stranger]);
 
         $this->loginAs($client, 'owner@example.com');
         $client->request('POST', '/subscription/'.$id.'/edit', [
@@ -275,7 +275,7 @@ final class SubscriptionAuthorizationTest extends WebTestCase
             'name' => $name,
         ]);
 
-        return $subscription->_real();
+        return $subscription;
     }
 
     private function loginAs(KernelBrowser $client, string $email): void
