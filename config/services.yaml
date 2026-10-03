@@ -57,6 +57,11 @@ services:
 
     App\Service\RecaptchaVerifierInterface: '@App\Service\RecaptchaVerifier'
 
+    # Tenant-aware SES v2 transport for MAILER_DSN=ses+tenant://KEY:SECRET@default
+    # (all application email; see App\Mailer\SesTenantTransport).
+    App\Mailer\SesTenantTransportFactory:
+        tags: ['mailer.transport_factory']
+
     # OAuth2 API v1 wiring (issues #88, #91). The listeners self-register
     # through #[AsEventListener]; the repository decorators and the resource
     # server swap need explicit definitions below.

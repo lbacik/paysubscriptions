@@ -73,7 +73,7 @@ Everything else is faked in the test environment:
 
 | Service | Production | Under test |
 |---|---|---|
-| Mail delivery | SES (`MAILER_DSN`) | `sync` routing (`when@test` in `config/packages/messenger.yaml`) + `null://null`; assert via `MailerAssertionsTrait` |
+| Mail delivery | SES tenant transport (`MAILER_DSN=ses+tenant://…`) | `sync` routing (`when@test` in `config/packages/messenger.yaml`) + `null://null`; assert via `MailerAssertionsTrait`. The transport itself is tested against a mock SES HTTP client (`tests/Mailer/SesTenantTransportTest.php`) |
 | Newsletter queue | AMQP exchange | `in-memory://` (`when@test`); inspect `messenger.transport.newsletter::getSent()` |
 | reCAPTCHA | Google API | `App\Tests\Double\FakeReCaptcha`, installed per test via `getContainer()->set()` **before** the first request, with `$client->disableReboot()` so the kernel reboot between requests does not drop it |
 | reCAPTCHA/JSON Hub secrets | production secrets | dummy values in `.env.test` (construction only; never used for verification) |

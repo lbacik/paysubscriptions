@@ -91,6 +91,8 @@ Development sends transactional emails synchronously. Production routes ordinary
 php bin/console messenger:consume async --time-limit=3600
 ```
 
+Production mail goes through Amazon SES in `eu-central-1` with `MAILER_DSN=ses+tenant://ACCESS_KEY_ID:SECRET_ACCESS_KEY@default`. The transport always sends through the `paysubs-app` tenant and `paysubs-app-events` configuration set, and only from `no-reply@paysubscriptions.com`, so `SYSTEM_EMAIL` must be that address. The SES boundary is defined in `src/Mailer/SesTenantBoundary.php`.
+
 Newsletter messages are published to the configured AMQP `mailing` exchange for the external mailing integration. Set `JSON_HUB_PROJECT_UUID` and `MAILING_PROVIDER_ROUTING_KEY` when enabling that integration.
 
 Run renewal reminders from a daily scheduler. Preview due reminders before sending:
