@@ -62,6 +62,16 @@ services:
     App\Mailer\SesTenantTransportFactory:
         tags: ['mailer.transport_factory']
 
+    # Reads the paysubs SES recipient-restriction queue as the dedicated
+    # paysubs-feedback-reader IAM user (aws-config PaysubsSesTenantStack).
+    app.ses_restriction_sqs_client:
+        class: AsyncAws\Sqs\SqsClient
+        arguments:
+            $configuration:
+                region: !php/const App\Mailer\SesTenantBoundary::REGION
+                accessKeyId: '%env(SES_RESTRICTION_ACCESS_KEY_ID)%'
+                accessKeySecret: '%env(SES_RESTRICTION_SECRET_ACCESS_KEY)%'
+
     # OAuth2 API v1 wiring (issues #88, #91). The listeners self-register
     # through #[AsEventListener]; the repository decorators and the resource
     # server swap need explicit definitions below.

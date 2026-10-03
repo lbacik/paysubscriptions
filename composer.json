@@ -9,6 +9,7 @@
         "ext-iconv": "*",
         "api-platform/core": "^4.2",
         "async-aws/ses": "^1.17",
+        "async-aws/sqs": "^2.9",
         "doctrine/dbal": "^3",
         "doctrine/doctrine-bundle": "^2.12",
         "doctrine/doctrine-migrations-bundle": "^3.3",

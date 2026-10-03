@@ -50,6 +50,14 @@ real migrations into `paysub_test` first, proving they apply before tests run.
   totals (including cross-currency conversion), chart datasets
   (bar/monthly/yearly), dashboard totals and limit gauge.
 - Expense categories, upcoming renewals, and account deletion.
+- SES mail boundary and recipient restrictions (`tests/Mailer/`): every
+  email goes through the paysubs-app tenant and configuration set from
+  `no-reply@paysubscriptions.com` only, and `X-SES-*` headers or foreign
+  From addresses are rejected before SES is called. Permanent bounces and
+  complaints restrict an address monotonically, foreign or malformed feedback
+  changes nothing and stays on the queue, and restricted recipients are
+  dropped from outgoing email (an email with no remaining recipient is not
+  sent).
 - Renewal reminders (`tests/Service/RenewalReminderPlannerTest.php`,
   `tests/Service/RenewalReminderServiceTest.php`,
   `tests/Command/SendRenewalRemindersCommandTest.php`): opt-in/opt-out, lead

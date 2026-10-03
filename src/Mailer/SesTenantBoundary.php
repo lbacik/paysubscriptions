@@ -15,6 +15,7 @@ namespace App\Mailer;
  */
 final class SesTenantBoundary
 {
+    public const ACCOUNT = '045689588845';
     public const TENANT_NAME = 'paysubs-app';
     public const CONFIGURATION_SET = 'paysubs-app-events';
     public const REGION = 'eu-central-1';
