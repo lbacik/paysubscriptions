@@ -57,6 +57,10 @@ services:
       # Rendered into every page by config/packages/twig.yaml as `appVersion`.
       # Supplied by the deploy job from the tag, not by an environment variable.
       APP_VERSION: "${APP_VERSION:?APP_VERSION is required}"
+      # Self-hosted Umami tracker, rendered by templates/_analytics.html.twig.
+      # Public values, from the production environment's variables.
+      UMAMI_SCRIPT_URL: "${UMAMI_SCRIPT_URL:?UMAMI_SCRIPT_URL is required}"
+      UMAMI_WEBSITE_ID: "${UMAMI_WEBSITE_ID:?UMAMI_WEBSITE_ID is required}"
       DATABASE_URL: "${DATABASE_URL:?DATABASE_URL is required}"
       MAILER_DSN: "${MAILER_DSN:?MAILER_DSN is required}"
       MESSENGER_TRANSPORT_DSN: "${MESSENGER_TRANSPORT_DSN:?MESSENGER_TRANSPORT_DSN is required}"

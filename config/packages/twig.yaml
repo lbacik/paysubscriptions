@@ -4,6 +4,8 @@ twig:
         - 'tailwind_2_layout.html.twig'
     globals:
         appVersion: '%env(APP_VERSION)%'
+        umamiScriptUrl: '%env(UMAMI_SCRIPT_URL)%'
+        umamiWebsiteId: '%env(UMAMI_WEBSITE_ID)%'
 
 when@test:
     twig:

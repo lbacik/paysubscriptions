@@ -31,7 +31,7 @@ final class ExternalServicesTest extends WebTestCase
      */
     private const ALLOWED_FETCH_HOSTS = [
         'cdnjs.cloudflare.com',
-        'cloud.umami.is',
+        'umami.rum.luka.sh',
         'fonts.googleapis.com',
         'fonts.gstatic.com',
         'www.google.com', // reCAPTCHA loader: contact page and footer signup form
@@ -149,6 +149,16 @@ final class ExternalServicesTest extends WebTestCase
         );
         $fetchHosts[] = 'www.google.com';
 
+        // The Umami tracker URL is configuration (UMAMI_SCRIPT_URL), not a literal in
+        // Twig: the shared partial renders the global, the test env pins the host.
+        $root = \dirname(__DIR__, 2);
+        self::assertStringContainsString('umamiScriptUrl', (string) file_get_contents($root.'/templates/_analytics.html.twig'));
+        self::assertStringContainsString(
+            'UMAMI_SCRIPT_URL=https://umami.rum.luka.sh/script.js',
+            (string) file_get_contents($root.'/.env.test'),
+        );
+        $fetchHosts[] = 'umami.rum.luka.sh';
+
         $fetchHosts = array_values(array_unique($fetchHosts));
         $linkHosts = array_values(array_unique($linkHosts));
         sort($fetchHosts);
@@ -203,9 +213,36 @@ final class ExternalServicesTest extends WebTestCase
 
         self::assertResponseIsSuccessful();
         $content = (string) $client->getResponse()->getContent();
-        self::assertStringContainsString('cloud.umami.is', $content);
+        self::assertStringContainsString('umami.rum.luka.sh', $content);
         self::assertStringNotContainsString('robohash.org', $content);
         self::assertStringNotContainsString('cdn.buymeacoffee.com', $content);
+    }
+
+    public function testNoTrackerIsRenderedWhenWebsiteIdIsEmpty(): void
+    {
+        $previous = $_SERVER['UMAMI_WEBSITE_ID'] ?? null;
+        $_SERVER['UMAMI_WEBSITE_ID'] = $_ENV['UMAMI_WEBSITE_ID'] = '';
+        try {
+            $client = static::createClient();
+            $client->request('GET', '/');
+
+            self::assertResponseIsSuccessful();
+            $content = (string) $client->getResponse()->getContent();
+            self::assertStringNotContainsString('umami', $content);
+            self::assertStringNotContainsString('data-website-id', $content);
+        } finally {
+            static::ensureKernelShutdown();
+            $_SERVER['UMAMI_WEBSITE_ID'] = $_ENV['UMAMI_WEBSITE_ID'] = $previous ?? '00000000-0000-4000-8000-000000000000';
+        }
+    }
+
+    public function testHomePageRendersExactlyOneSelfHostedTracker(): void
+    {
+        $client = static::createClient();
+        $client->request('GET', '/');
+
+        $content = (string) $client->getResponse()->getContent();
+        self::assertSame(1, substr_count($content, '<script defer src="https://umami.rum.luka.sh/script.js" data-website-id="'));
     }
 
     public function testPricingPageLinksSupportWithoutAnExternalImageRequest(): void
