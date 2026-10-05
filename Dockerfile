@@ -81,6 +81,12 @@ RUN apt -y update && apt-get install -y \
 # the classmap the prod autoloader uses. The release-gates CI job replays
 # this resolution (composer install --no-dev --dry-run), so a dev-only
 # dependency breaks the gate before it can ship a broken image.
+#
+# APP_ENV is set explicitly because the committed .env says `dev`: without this
+# the composer auto-scripts (cache:clear) and the console commands below boot the
+# dev kernel, which registers DebugBundle - a package --no-dev just left out.
+ENV APP_ENV=prod
+
 RUN composer install --no-dev --optimize-autoloader --no-interaction --no-progress \
     && ./bin/console tailwind:build \
     && ./bin/console assets:install \
