@@ -147,6 +147,6 @@ covered pages:
   live token and is not scanned; the request + check-email states are.
 - The newsletter footer form posts to `app_newsletter_subscribe` and is
   covered as part of every page render, not as a standalone scenario.
-- External embeds (Umami beacon, Google Fonts, Font Awesome CDN,
+- External embeds (self-hosted Umami beacon, Google Fonts, Font Awesome CDN,
   reCAPTCHA script on contact) are third-party payloads outside axe's
   scope; see `docs/third-party-services.md`.

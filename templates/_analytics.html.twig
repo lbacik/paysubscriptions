@@ -1,0 +1,4 @@
+{# Self-hosted Umami tracker. Renders nothing unless a website id is configured. #}
+{% if umamiWebsiteId is not empty and umamiScriptUrl is not empty %}
+    <script defer src="{{ umamiScriptUrl }}" data-website-id="{{ umamiWebsiteId }}"></script>
+{% endif %}

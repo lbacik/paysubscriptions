@@ -83,7 +83,9 @@ final class PrivacyPolicyTest extends DatabaseTestCase
 
         // Automatic requests (docs/third-party-services.md).
         self::assertStringContainsString('Umami', $content);
-        self::assertStringContainsString('cloud.umami.is', $content);
+        self::assertStringContainsString('umami.rum.luka.sh', $content);
+        self::assertStringContainsString('our own server', $content);
+        self::assertStringContainsString('not Umami Cloud', $content);
         self::assertStringContainsString('reCAPTCHA', $content);
         self::assertStringContainsString('Google Fonts', $content);
         self::assertStringContainsString('Font Awesome', $content);

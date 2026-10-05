@@ -23,7 +23,7 @@ render needs a database and so stays out of the blocking suite).
 
 | Service | Where it loads | What it receives |
 |---|---|---|
-| Umami Cloud analytics (`cloud.umami.is`, website id `92804189-0611-44c6-9151-3ccee0e35284`) | Every page via `templates/base.html.twig`; also the standalone `templates/maintenance.html.twig` | Cookieless page-view beacons: page URL, referrer, device/browser metadata. No personal data. Kept intentionally, see ADR 0002. |
+| Self-hosted Umami analytics (`umami.rum.luka.sh`, on our own server; website id set via `UMAMI_WEBSITE_ID`) | Every page via `templates/_analytics.html.twig`, included by `templates/base.html.twig` and the standalone `templates/maintenance.html.twig`; not rendered when `UMAMI_WEBSITE_ID` is empty | Cookieless page-view beacons: page URL, referrer, device/browser metadata. No personal data, and nothing leaves our own server. Replaced Umami Cloud, see ADR 0004. |
 | Google Fonts (`fonts.googleapis.com`, `fonts.gstatic.com`) | Every page via `templates/base.html.twig` (preconnect + `Plus Jakarta Sans` / `Patrick Hand` stylesheet) | Font CSS/file fetches tied to the visited page URL. |
 | Font Awesome CSS via Cloudflare CDN (`cdnjs.cloudflare.com`, 6.5.2) | Every page via `templates/base.html.twig` | Stylesheet fetch tied to the visited page URL. No Font Awesome JS kit. |
 | Google reCAPTCHA v3 (`www.google.com/recaptcha/api.js`) | Contact page and the site-wide footer signup form: injected by `assets/controllers/recaptcha_controller.js` when either form connects | Risk-analysis signals (cookies Google holds, page URL, site key) on form view. On submit, the server posts the one-time token plus the visitor's IP to `siteverify`; the visitor's name, email, subject, and message are **not** sent to Google. |

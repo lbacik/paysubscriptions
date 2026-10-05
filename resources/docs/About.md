@@ -57,7 +57,7 @@ your list removes it from your overview only.
 ## Data handling in brief
 
 Account and subscription data is not sold. Running the service involves a small number of
-external services — including hosted Umami page-view analytics alongside interface fonts, icon
+external services — including self-hosted Umami page-view analytics alongside interface fonts, icon
 delivery, contact-form spam protection, and mail delivery — and each receives only the data it
 needs to do its job. The product-updates newsletter is a separate opt-in to the shared
 gprodb.com list with its own unsubscribe path.
