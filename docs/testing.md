@@ -28,6 +28,79 @@ schema per test from the entity metadata (`tests/DatabaseTestCase`), so tests
 are order-independent and need no manual setup. CI additionally replays the
 real migrations into `paysub_test` first, proving they apply before tests run.
 
+## Zero-deprecation gate
+
+The `Run PHPUnit` step in `.github/workflows/test.yml` is also the
+deprecation gate: it runs plain `vendor/bin/phpunit` with no strict override,
+so the configuration in `phpunit.xml.dist` decides what fails the run, and any
+deprecation fails it:
+
+- `<env name="SYMFONY_DEPRECATIONS_HELPER" value="max[total]=0"/>` (no
+  `force`, so a real environment variable still wins) turns every
+  `trigger_deprecation()` into a failure.
+- `<server name="DOCTRINE_DEPRECATIONS" value="trigger" force="true"/>` makes
+  `doctrine/deprecations` throw instead of logging. It must stay a forced
+  `<server>` entry in `phpunit.xml.dist` — not `.env.test`, not
+  `tests/bootstrap.php` — because `doctrine/deprecations` caches its mode on
+  first use and Symfony sets it only at the first kernel boot, so anything
+  that fires earlier would otherwise slip through in the cached mode.
+- There is no `SYMFONY_DEPRECATIONS_HELPER` entry in `.env.test`.
+
+### No-suppression rule
+
+No `ignoreFile`, `baselineFile`, or other suppression except the single
+exception below. A deprecation is fixed, not hidden: any future suppression
+needs its own issue with justification and a narrow `ignoreFile` regex linking
+to it. `@group legacy` is only for a test that deliberately exercises
+deprecated behavior.
+
+The one exception is `tests/deprecations-ignore.txt`, kept solely by
+[issue #171](https://github.com/lbacik/paysubscriptions/issues/171): a
+missing-`@return` indirect notice from `league/commonmark` 2.10.3
+(`Util\ArrayCollection::offsetGet()`), still absent on upstream `main`, with
+no newer release carrying a fix. Its single regex matches only that exact
+vendor message. Remove the file and its wiring in `phpunit.xml.dist` once an
+upstream release adds the annotation.
+
+## Running the gate locally on PHP 8.4
+
+The gate only means something on the same interpreter production runs
+(`dunglas/frankenphp:1-php8.4`, matching `.php-version` and CI's
+`PHP_VERSION`). Run `vendor/bin/phpunit` directly only with a PHP 8.4 binary
+(check `php -v` first); any other interpreter still runs the tests but does
+not reproduce the gate. MySQL must be reachable at
+`127.0.0.1:3306` — the suite appends the `_test` suffix, so it uses
+`paysub_test` and can never touch the dev database:
+
+```sh
+php -v  # must report PHP 8.4.x
+DATABASE_URL="mysql://root:root@127.0.0.1:3306/paysub?charset=utf8mb4" \
+  vendor/bin/phpunit
+```
+
+No manual setup is needed beyond a reachable MySQL: replay the migrations
+first exactly as CI does (`php bin/console doctrine:database:create
+--if-not-exists`, then `doctrine:migrations:migrate --no-interaction
+--allow-no-migration` under `APP_ENV=test`), then run the command above.
+
+Without a local PHP 8.4, run the same suite inside the project image with
+the working tree bind-mounted (the `Dockerfile` adds `pdo_mysql`, `intl`
+and `amqp` over the base image, so build it rather than using the bare
+`dunglas/frankenphp:1-php8.4` image, which lacks them; `--network host` keeps
+the host MySQL reachable at `127.0.0.1`):
+
+```sh
+docker build -t paysub-php84 .
+docker run --rm -v "$PWD:/opt/app" --network host \
+  -e APP_ENV=test \
+  -e DATABASE_URL="mysql://root:root@127.0.0.1:3306/paysub?charset=utf8mb4" \
+  paysub-php84 vendor/bin/phpunit
+```
+
+Note: the docker command above is unverified — no container runtime was
+available where this was written. If it fails, the direct PHP 8.4 run is the
+authoritative local gate.
+
 ## What is covered
 
 - Registration and email verification (including tampered links, duplicates,
