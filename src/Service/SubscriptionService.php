@@ -276,11 +276,20 @@ class SubscriptionService
         }
     }
 
+    /**
+     * The User's whole-account Subscription count, regardless of any list
+     * filter: the figure the add-Subscription limit check compares to the cap.
+     */
+    public function countAllSubscriptions(UserInterface $user): int
+    {
+        return $this->subscriptionRepository->count(['owner' => $user->getId()]);
+    }
+
     public function canAddNewSubscription(UserInterface $user): void
     {
         $user = $this->userRepository->find($user->getId());
 
-        if (count($user->getSubscriptions()) >= $user->getSubscriptionsLimit()) {
+        if ($this->countAllSubscriptions($user) >= $user->getSubscriptionsLimit()) {
             throw new SubscriptionLimitReachedException('You have reached the maximum number of subscriptions.');
         }
     }

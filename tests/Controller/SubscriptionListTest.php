@@ -50,6 +50,32 @@ final class SubscriptionListTest extends WebTestCase
         self::assertStringNotContainsString('GammaTunes', $table);
     }
 
+    public function testLimitCardCountsWholeAccountWhileCategoryFilterIsActive(): void
+    {
+        $client = static::createClient();
+        $owner = UserFactory::createOne(['email' => 'owner@example.com', 'isVerified' => true]);
+        $video = $this->createCategory($owner, 'Video');
+        $music = $this->createCategory($owner, 'Music');
+        $this->createSubscription($client, $owner, $video, 'AlphaFlix', BillingCycle::Monthly, '2024-01-05', 10.0);
+        $this->createSubscription($client, $owner, $video, 'BetaFlix', BillingCycle::Monthly, '2024-01-06', 20.0);
+        $this->createSubscription($client, $owner, $music, 'GammaTunes', BillingCycle::Monthly, '2024-01-07', 30.0);
+
+        $this->loginAs($client, 'owner@example.com');
+        $client->request('GET', '/dashboard?category='.(string) $video->getId());
+
+        self::assertResponseIsSuccessful();
+        $content = (string) $client->getResponse()->getContent();
+
+        // The filtered list holds two Subscriptions, the account three of the default 30.
+        self::assertStringContainsString('3 of 30 used', $content);
+        self::assertStringNotContainsString('2 of 30 used', $content);
+        self::assertStringContainsString('27 remaining', $content);
+        self::assertStringContainsString('width: 10%', $content);
+        // The money cards keep following the filter: (10 + 20) * 12, not (10 + 20 + 30) * 12.
+        self::assertStringContainsString('360.00', $content);
+        self::assertStringNotContainsString('720.00', $content);
+    }
+
     public function testFilterOptionsAreScopedToSignedInUser(): void
     {
         $client = static::createClient();
