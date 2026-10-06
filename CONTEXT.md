@@ -33,5 +33,5 @@ A future payment date computed from the next payment date anchor by stepping who
 _Avoid_: Billing date, charge date
 
 **Recipient restriction**:
-The current SES deliverability state of one normalized email address: *undeliverable* after a permanent bounce, *do-not-send* after a complaint. Only SES feedback creates or tightens it; no later event loosens it, and it never changes email verification or password-reset state. It belongs to the address, not the User, so a User who changes address starts unrestricted. Restricted addresses receive no email.
+The current SES deliverability state of one normalized email address: *undeliverable* after a permanent bounce, *do-not-send* after a complaint. Only SES feedback creates or tightens it; no later event loosens it. Only an audited operator action with a reason clears it, and it never changes email verification or password-reset state. It belongs to the address, not the User, so a User who changes address starts unrestricted. Restricted addresses receive no email.
 _Avoid_: Blocklist, suppression (SES keeps its own suppression list per tenant)

@@ -18,7 +18,9 @@ use Symfony\Component\Uid\Uuid;
  * The row is keyed by address, not by User: a User who changes to another
  * address starts unrestricted, and the old address keeps its restriction.
  * There is no per-message history. Rows are written through
- * RecipientRestrictionRepository::restrict(), which never loosens a state.
+ * RecipientRestrictionRepository::restrict(), which never loosens a state,
+ * and deleted only by the audited operator command
+ * app:ses:clear-recipient-restriction.
  */
 #[ORM\Entity(repositoryClass: RecipientRestrictionRepository::class)]
 #[ORM\Table(name: 'recipient_restriction')]
