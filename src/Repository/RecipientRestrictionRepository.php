@@ -39,10 +39,10 @@ class RecipientRestrictionRepository extends ServiceEntityRepository
 
         // MySQL applies the assignments left to right, so updated_at compares against the old state.
         $this->getEntityManager()->getConnection()->executeStatement(
-            'INSERT INTO recipient_restriction (id, email, state, created_at, updated_at) VALUES (:id, :email, :state, :now, :now)
+            'INSERT INTO recipient_restriction (id, email, state, created_at, updated_at) VALUES (:id, :email, :state, :now, :now) AS incoming
              ON DUPLICATE KEY UPDATE
-                updated_at = IF(state <> :strongest AND VALUES(state) = :strongest, VALUES(updated_at), updated_at),
-                state = IF(VALUES(state) = :strongest, :strongest, state)',
+                updated_at = IF(recipient_restriction.state <> :strongest AND incoming.state = :strongest, incoming.updated_at, recipient_restriction.updated_at),
+                state = IF(incoming.state = :strongest, :strongest, recipient_restriction.state)',
             [
                 'id' => Uuid::v7()->toBinary(),
                 'email' => self::normalize($email),
