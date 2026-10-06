@@ -110,7 +110,7 @@ php bin/console app:ses:clear-recipient-restriction bounce@simulator.amazonses.c
   --operator="<your name>" --reason="SES simulator validation (#173)"
 ```
 
-The address is normalized the same way as when it was restricted. Both options are required, and the command fails when the address has no restriction. Each clear is written as a JSON record on the `audit` log channel (stderr in production, outside the error-triggered buffer) with the address, previous state, operator, process user and reason. A later bounce or complaint restricts the address again.
+The address is normalized the same way as when it was restricted. Both options are required, and the command fails when the address has no restriction. Each clear is written as a JSON record on the `audit` log channel (stderr in production, outside the error-triggered buffer) with the address, previous state, operator, process user and reason; the record's timestamp is the time of the clear. The record exists only in the container log, so keep that log for as long as the audit trail is needed. `--operator` is not verified: shell access to the host is the authentication. A later bounce or complaint restricts the address again.
 
 Newsletter messages are published to the configured AMQP `mailing` exchange for the external mailing integration. Set `JSON_HUB_PROJECT_UUID` and `MAILING_PROVIDER_ROUTING_KEY` when enabling that integration.
 

@@ -10,6 +10,7 @@ use App\Repository\RecipientRestrictionRepository;
 use App\Tests\DatabaseTestCase;
 use Monolog\Handler\TestHandler;
 use Monolog\Logger;
+use Monolog\LogRecord;
 use Symfony\Bundle\FrameworkBundle\Console\Application;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Tester\CommandTester;
@@ -63,6 +64,7 @@ final class ClearRecipientRestrictionCommandTest extends DatabaseTestCase
         self::assertSame('complaint@simulator.amazonses.com', $context['email']);
         self::assertSame('do_not_send', $context['previous_state']);
         self::assertArrayHasKey('restricted_since', $context);
+        self::assertArrayHasKey('last_tightened_at', $context);
         self::assertSame('SES simulator validation (#173)', $context['reason']);
         self::assertSame('lukasz', $context['operator']);
         self::assertArrayHasKey('process_user', $context);
@@ -109,6 +111,28 @@ final class ClearRecipientRestrictionCommandTest extends DatabaseTestCase
         self::assertStringContainsString('No recipient restriction exists for unknown@example.com', $this->tester->getDisplay());
         self::assertNotNull($this->restrictions->findOneByEmail('other@example.com'));
         self::assertSame([], $this->audit->getRecords());
+    }
+
+    public function testKeepsTheRestrictionWhenTheAuditRecordCannotBeWritten(): void
+    {
+        $this->restrictions->restrict('user@example.com', RecipientRestrictionState::DoNotSend);
+        $failingAudit = new Logger('audit', [new class extends TestHandler {
+            protected function write(LogRecord $record): void
+            {
+                throw new \RuntimeException('Audit log unavailable.');
+            }
+        }]);
+        $tester = new CommandTester(new ClearRecipientRestrictionCommand($this->restrictions, $failingAudit));
+
+        try {
+            $tester->execute(['email' => 'user@example.com', '--reason' => 'Mailbox fixed', '--operator' => 'lukasz']);
+            self::fail('The audit failure must abort the clear.');
+        } catch (\RuntimeException $failure) {
+            self::assertSame('Audit log unavailable.', $failure->getMessage());
+        }
+
+        $this->em->clear();
+        self::assertSame(RecipientRestrictionState::DoNotSend, $this->restrictions->findOneByEmail('user@example.com')?->getState());
     }
 
     public function testTheRegisteredCommandClearsTheRestriction(): void

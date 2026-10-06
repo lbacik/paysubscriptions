@@ -80,11 +80,15 @@ class RecipientRestrictionRepository extends ServiceEntityRepository
      *
      * The row is locked before it is read, so the returned state is the one
      * actually removed even while SES feedback is being recorded concurrently.
+     * $beforeCommit runs inside the transaction once the row is found: if it
+     * throws, nothing is deleted, so a clear cannot outlive its audit record.
      * Only the operator command app:ses:clear-recipient-restriction calls this.
+     *
+     * @param callable(RecipientRestriction): void $beforeCommit
      */
-    public function clear(string $email): ?RecipientRestriction
+    public function clear(string $email, callable $beforeCommit): ?RecipientRestriction
     {
-        return $this->getEntityManager()->wrapInTransaction(function (EntityManagerInterface $em) use ($email): ?RecipientRestriction {
+        return $this->getEntityManager()->wrapInTransaction(function (EntityManagerInterface $em) use ($email, $beforeCommit): ?RecipientRestriction {
             $restriction = $this->createQueryBuilder('r')
                 ->where('r.email = :email')
                 ->setParameter('email', self::normalize($email))
@@ -94,6 +98,7 @@ class RecipientRestrictionRepository extends ServiceEntityRepository
 
             if ($restriction instanceof RecipientRestriction) {
                 $em->remove($restriction);
+                $beforeCommit($restriction);
             }
 
             return $restriction;
