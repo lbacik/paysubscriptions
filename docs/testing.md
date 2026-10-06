@@ -139,7 +139,9 @@ authoritative local gate.
   complaints restrict an address monotonically, foreign or malformed feedback
   changes nothing and stays on the queue, and restricted recipients are
   dropped from outgoing email (an email with no remaining recipient is not
-  sent).
+  sent). Clearing a restriction (`tests/Command/ClearRecipientRestrictionCommandTest.php`)
+  needs a reason and an operator, normalizes the address, fails for an
+  address without a restriction, and writes one audit record per clear.
 - Renewal reminders (`tests/Service/RenewalReminderPlannerTest.php`,
   `tests/Service/RenewalReminderServiceTest.php`,
   `tests/Command/SendRenewalRemindersCommandTest.php`): opt-in/opt-out, lead

@@ -12,6 +12,8 @@ namespace App\Enum;
  *
  * Restrictions only ever tighten from SES feedback: no later or duplicate
  * event moves an address back to sendable or from DoNotSend to Undeliverable.
+ * Only the audited operator command app:ses:clear-recipient-restriction
+ * removes a restriction.
  */
 enum RecipientRestrictionState: string
 {

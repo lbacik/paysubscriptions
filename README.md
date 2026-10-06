@@ -103,6 +103,15 @@ php bin/console app:ses:consume-recipient-restrictions --time-limit=3600
 
 It needs `SES_RESTRICTION_QUEUE_URL`, `SES_RESTRICTION_ACCESS_KEY_ID` and `SES_RESTRICTION_SECRET_ACCESS_KEY` for the `paysubs-feedback-reader` IAM user. In production this is the `restriction-consumer` service in `compose.prod.yaml`, and the deploy refuses to start without the three values: the queue URL as a variable, the key pair as secrets of the `production` environment. Invalid messages stay on the queue and move to its dead-letter queue after five receives.
 
+A restriction is never loosened by SES feedback. To lift one, for example after a recipient fixes their mailbox or after a test against the SES mailbox simulator, run the operator command on the production host:
+
+```sh
+php bin/console app:ses:clear-recipient-restriction bounce@simulator.amazonses.com \
+  --operator="<your name>" --reason="SES simulator validation (#173)"
+```
+
+The address is normalized the same way as when it was restricted. Both options are required, and the command fails when the address has no restriction. Each clear is written as a JSON record on the `audit` log channel (stderr in production, outside the error-triggered buffer) with the address, previous state, operator, process user and reason; the record's timestamp is the time of the clear. The record exists only in the container log, so keep that log for as long as the audit trail is needed. `--operator` is not verified: shell access to the host is the authentication. A later bounce or complaint restricts the address again.
+
 Newsletter messages are published to the configured AMQP `mailing` exchange for the external mailing integration. Set `JSON_HUB_PROJECT_UUID` and `MAILING_PROVIDER_ROUTING_KEY` when enabling that integration.
 
 Run renewal reminders from a daily scheduler. Preview due reminders before sending:
