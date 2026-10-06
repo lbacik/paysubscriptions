@@ -101,7 +101,7 @@ Permanent bounces and complaints arrive on the `paysubs-ses-recipient-restrictio
 php bin/console app:ses:consume-recipient-restrictions --time-limit=3600
 ```
 
-It needs `SES_RESTRICTION_QUEUE_URL`, `SES_RESTRICTION_ACCESS_KEY_ID` and `SES_RESTRICTION_SECRET_ACCESS_KEY` for the `paysubs-feedback-reader` IAM user. Invalid messages stay on the queue and move to its dead-letter queue after five receives.
+It needs `SES_RESTRICTION_QUEUE_URL`, `SES_RESTRICTION_ACCESS_KEY_ID` and `SES_RESTRICTION_SECRET_ACCESS_KEY` for the `paysubs-feedback-reader` IAM user. In production this is the `restriction-consumer` service in `compose.prod.yaml`, and the deploy refuses to start without the three values: the queue URL as a variable, the key pair as secrets of the `production` environment. Invalid messages stay on the queue and move to its dead-letter queue after five receives.
 
 Newsletter messages are published to the configured AMQP `mailing` exchange for the external mailing integration. Set `JSON_HUB_PROJECT_UUID` and `MAILING_PROVIDER_ROUTING_KEY` when enabling that integration.
 

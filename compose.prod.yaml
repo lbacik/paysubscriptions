@@ -26,6 +26,8 @@
 #   - `worker` runs `messenger:consume async` from the same image as `web`.
 #     Nothing else drains that transport: lbacik/mailing-workers consumes only
 #     the AMQP `mailing` exchange that MESSENGER_TRANSPORT_DSN points at.
+#     `restriction-consumer` runs `app:ses:consume-recipient-restrictions`,
+#     also from that image, and is the only service with SQS credentials.
 #   - APP_ENV and APP_DEBUG are fixed here rather than passed in, so a stray
 #     APP_ENV=dev in the deploy environment cannot put production into debug mode.
 #     Note .env.docker.rum pins APP_ENV=dev - that file describes the *staging*
@@ -171,4 +173,33 @@ services:
     # No healthcheck, like the image itself (HEALTHCHECK NONE): there is no port
     # to probe. `up --wait` then waits for the container to be running, and a
     # worker that cannot boot its kernel exits and fails the deploy right there.
+
+  # Drains the paysubs-ses-recipient-restrictions SQS queue into
+  # recipient_restriction, so the send-time check in `worker` knows which
+  # addresses SES reported as permanent bounces or complaints. It is the only
+  # service that gets the paysubs-feedback-reader keys.
+  #
+  # Like `worker`, it exits every hour and the restart policy brings it back;
+  # an SQS error it cannot handle (rejected keys, wrong queue URL) also exits
+  # it, and deploy.yml's consumer check reports the restart. A message is
+  # deleted only after its restriction is committed, so a kill mid-batch just
+  # means SQS redelivers it, and recording a restriction again is a no-op.
+  restriction-consumer:
+    image: "${APP_IMAGE:?APP_IMAGE is required}"
+    container_name: paysubscriptions-restriction-consumer
+    restart: "${RESTART:-unless-stopped}"
+    command:
+      - ./bin/console
+      - app:ses:consume-recipient-restrictions
+      - --time-limit=3600
+      - --no-interaction
+    environment:
+      <<: *app-environment
+      SES_RESTRICTION_QUEUE_URL: "${SES_RESTRICTION_QUEUE_URL:?SES_RESTRICTION_QUEUE_URL is required}"
+      SES_RESTRICTION_ACCESS_KEY_ID: "${SES_RESTRICTION_ACCESS_KEY_ID:?SES_RESTRICTION_ACCESS_KEY_ID is required}"
+      SES_RESTRICTION_SECRET_ACCESS_KEY: "${SES_RESTRICTION_SECRET_ACCESS_KEY:?SES_RESTRICTION_SECRET_ACCESS_KEY is required}"
+    # The command installs no signal handler, and as PID 1 PHP would ignore
+    # SIGTERM until the 10 s kill. A tiny init forwards it, so the default
+    # action - exit - happens at once; the paragraph above is why that is safe.
+    init: true
 

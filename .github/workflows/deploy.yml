@@ -78,6 +78,12 @@ jobs:
       # which is what .env.docker.gin used.
       MESSENGER_TRANSPORT_DSN: ${{ secrets.MESSENGER_TRANSPORT_DSN }}
       GOOGLE_RECAPTCHA_SECRET: ${{ secrets.GOOGLE_RECAPTCHA_SECRET }}
+      # The paysubs-feedback-reader IAM user (aws-config PaysubsSesTenantStack),
+      # passed to restriction-consumer only. The queue URL names the account
+      # but grants nothing, so it is a variable; the key pair is not.
+      SES_RESTRICTION_QUEUE_URL: ${{ vars.SES_RESTRICTION_QUEUE_URL }}
+      SES_RESTRICTION_ACCESS_KEY_ID: ${{ secrets.SES_RESTRICTION_ACCESS_KEY_ID }}
+      SES_RESTRICTION_SECRET_ACCESS_KEY: ${{ secrets.SES_RESTRICTION_SECRET_ACCESS_KEY }}
 
       # OAuth2 signing and encryption material (issue #100): required since
       # the API v1 release. Provisioned once in the production environment's
@@ -145,6 +151,8 @@ jobs:
             UMAMI_SCRIPT_URL UMAMI_WEBSITE_ID
             APP_SECRET DATABASE_URL MAILER_DSN MESSENGER_TRANSPORT_DSN
             GOOGLE_RECAPTCHA_SECRET
+            SES_RESTRICTION_QUEUE_URL SES_RESTRICTION_ACCESS_KEY_ID
+            SES_RESTRICTION_SECRET_ACCESS_KEY
             OAUTH_PRIVATE_KEY OAUTH_PUBLIC_KEY OAUTH_ENCRYPTION_KEY
             DEPLOY_SSH_KEY DEPLOY_SSH_KNOWN_HOSTS
             REGISTRY_USER REGISTRY_PASSWORD
@@ -328,18 +336,29 @@ jobs:
         run: |
           $COMPOSE exec -T web ./bin/console app:api:preflight
 
-      # (5) The mail worker. `up --wait` only proves it was running at converge
-      #     time, and the smoke tests above take long enough for a worker that
-      #     cannot boot (bad MAILER_DSN, unreachable database) to have exited
-      #     and been restarted. So: still running, and never restarted since.
-      - name: Check the mail worker is running
+      # (5) The two long-running consumers. `up --wait` only proves they were
+      #     running at converge time; the smoke tests above take long enough for
+      #     one that keeps dying to have exited and been restarted. So: still
+      #     running, and never restarted since.
+      #
+      #     What this catches: a kernel that cannot boot, an unreachable
+      #     database, and - for restriction-consumer, which polls SQS right
+      #     away - rejected SES_RESTRICTION_* credentials or a wrong queue URL.
+      #     What it does not: a bad MAILER_DSN. The mailer transport is built
+      #     on the first send, so the worker idles happily and every email
+      #     lands in the `failed` transport after its retries.
+      - name: Check the consumers are running
         run: |
-          id=$($COMPOSE ps -q worker)
-          state=$(docker inspect -f '{{.State.Status}} {{.RestartCount}}' "$id" 2>/dev/null || true)
-          if [ "$state" = "running 0" ]; then
-            echo "worker is consuming the async transport"
-            exit 0
-          fi
-          echo "::error::worker is not running steadily (status, restarts: ${state:-none})" >&2
-          $COMPOSE logs --tail 100 worker || true
-          exit 1
+          status=0
+          for service in worker restriction-consumer; do
+            id=$($COMPOSE ps -q "$service")
+            state=$(docker inspect -f '{{.State.Status}} {{.RestartCount}}' "$id" 2>/dev/null || true)
+            if [ "$state" = "running 0" ]; then
+              echo "$service is running"
+              continue
+            fi
+            echo "::error::$service is not running steadily (status, restarts: ${state:-none})" >&2
+            $COMPOSE logs --tail 100 "$service" || true
+            status=1
+          done
+          exit "$status"
