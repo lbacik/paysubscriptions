@@ -305,7 +305,9 @@ jobs:
         run: |
           base=https://paysubscriptions.com
           fail() { echo "::error::$1" >&2; exit 1; }
-          [ "$(curl -fsS "$base/.well-known/oauth-authorization-server" | grep -o '"issuer":"[^"]*"' | head -1)" = '"issuer":"https://paysubscriptions.com"' ] \
+          # Parse the JSON: the app escapes slashes ("https:\/\/..."), so a
+          # raw-text grep never matches the plain URL.
+          [ "$(curl -fsS "$base/.well-known/oauth-authorization-server" | jq -r .issuer)" = "https://paysubscriptions.com" ] \
             || fail "authorization-server metadata has the wrong issuer"
           curl -fsS "$base/.well-known/oauth-protected-resource" \
             | grep -q 'urn:paysubscriptions:api:v1' \
