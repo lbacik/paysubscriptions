@@ -167,8 +167,8 @@ jobs:
   # *false* on the schedule so a scheduled red actually notifies somebody.
   #
   # Deprecations never turn the job red. SYMFONY_DEPRECATIONS_HELPER below lifts
-  # the threshold out of reach, which overrides whatever phpunit.xml.dist sets for
-  # the gate, and `logFile` makes the bridge write its report to a file instead of
+  # the threshold out of reach (real environment variables win over the value in
+  # phpunit.xml.dist, should the gate ever set one), and `logFile` makes the bridge write its report to a file instead of
   # stdout; that file is summarised per group and uploaded. 8.5-only deprecations
   # are out of scope for the cleanup: this output is input for a future upgrade.
   #
@@ -235,7 +235,9 @@ jobs:
             if [ -s /tmp/php85-deprecations.log ]; then
               echo '| Group | Count |'
               echo '| --- | ---: |'
-              grep -E '^[A-Za-z ]+ deprecation notices \([0-9]+\)$' /tmp/php85-deprecations.log \
+              # `|| true`: under pipefail a log with no recognisable header would
+              # fail this step, and a summary must never redden the job.
+              { grep -E '^[A-Za-z ]+ deprecation notices \([0-9]+\)$' /tmp/php85-deprecations.log || true; } \
                 | sed -E 's/^(.+) deprecation notices \(([0-9]+)\)$/| \1 | \2 |/'
             else
               echo 'No deprecations reported.'
