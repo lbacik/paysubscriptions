@@ -84,6 +84,9 @@ not the full server-reported version (e.g. `9.2` instead of `9.2.0`) makes DBAL
 emit a deprecation per connection, which the gate correctly turns into a
 failure. With the command above the run exits 0.
 
+Run it from the repository root: the `ignoreFile` path is relative, and from
+any other working directory the deprecation handler throws on startup.
+
 No manual setup is needed beyond a reachable MySQL: replay the migrations
 first exactly as CI does (`php bin/console doctrine:database:create
 --if-not-exists`, then `doctrine:migrations:migrate --no-interaction
