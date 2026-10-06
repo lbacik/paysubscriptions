@@ -31,3 +31,7 @@ _Avoid_: First payment (legacy name), due date
 **Renewal** (upcoming renewal):
 A future payment date computed from the next payment date anchor by stepping whole billing cycles while preserving the anchor's calendar day. An occurrence landing in a month without that day uses that month's last day for that occurrence, and later occurrences return to the anchor day when possible (a January 31st monthly anchor renews February 28th/29th, then March 31st; a February 29th yearly anchor renews February 28th except in leap years). An anchor in the past rolls forward to the first occurrence on or after the reference day.
 _Avoid_: Billing date, charge date
+
+**Recipient restriction**:
+The current SES deliverability state of one normalized email address: *undeliverable* after a permanent bounce, *do-not-send* after a complaint. Only SES feedback creates or tightens it; no later event loosens it, and it never changes email verification or password-reset state. It belongs to the address, not the User, so a User who changes address starts unrestricted. Restricted addresses receive no email.
+_Avoid_: Blocklist, suppression (SES keeps its own suppression list per tenant)

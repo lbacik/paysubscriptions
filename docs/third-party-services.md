@@ -32,7 +32,8 @@ render needs a database and so stays out of the blocking suite).
 
 | Service | Where | What it receives |
 |---|---|---|
-| Mail delivery via Symfony Mailer (`MAILER_DSN`; production SES-compatible, development Mailcatcher, `null://` in tests) | Registration verification, password reset, and contact-form-to-operator emails | Recipient address, sender address, subject, and message body by design. Email templates contain no external URLs or tracking pixels. |
+| Mail delivery via Symfony Mailer (`MAILER_DSN`; production Amazon SES `eu-central-1` through the `paysubs-app` tenant, development Mailcatcher, `null://` in tests) | Registration verification, password reset, renewal reminders, and contact-form-to-operator emails | Recipient address, sender address, subject, and message body by design; contact-form mail also carries the visitor's address as Reply-To. Email templates contain no external URLs or tracking pixels. |
+| Amazon SQS (`eu-central-1`, `paysubs-ses-recipient-restrictions`) | `app:ses:consume-recipient-restrictions` worker | Nothing is sent: the worker only receives and deletes SES permanent-bounce and complaint events, which carry the affected recipient address. |
 | Newsletter via AMQP `mailing` exchange to the shared `gprodb.com` list | Footer form on every page (`app_newsletter_subscribe` → `MailingSubscribe` message) | Subscriber email plus the mailing project id and routing key. Separate opt-in with its own unsubscribe path; self-service account deletion does not touch it. |
 | BuyMeACoffee support link (`www.buymeacoffee.com/lbacik`) | Pricing page only, plain anchor with `rel="noopener noreferrer"` (no referrer sent) | Nothing until clicked; click-through reveals the visit to BuyMeACoffee. The former `cdn.buymeacoffee.com` button image was removed in #47 so the pricing page makes no automatic request there. |
 

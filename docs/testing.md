@@ -50,6 +50,14 @@ real migrations into `paysub_test` first, proving they apply before tests run.
   totals (including cross-currency conversion), chart datasets
   (bar/monthly/yearly), dashboard totals and limit gauge.
 - Expense categories, upcoming renewals, and account deletion.
+- SES mail boundary and recipient restrictions (`tests/Mailer/`): every
+  email goes through the paysubs-app tenant and configuration set from
+  `no-reply@paysubscriptions.com` only, and `X-SES-*` headers or foreign
+  From addresses are rejected before SES is called. Permanent bounces and
+  complaints restrict an address monotonically, foreign or malformed feedback
+  changes nothing and stays on the queue, and restricted recipients are
+  dropped from outgoing email (an email with no remaining recipient is not
+  sent).
 - Renewal reminders (`tests/Service/RenewalReminderPlannerTest.php`,
   `tests/Service/RenewalReminderServiceTest.php`,
   `tests/Command/SendRenewalRemindersCommandTest.php`): opt-in/opt-out, lead
@@ -73,7 +81,7 @@ Everything else is faked in the test environment:
 
 | Service | Production | Under test |
 |---|---|---|
-| Mail delivery | SES (`MAILER_DSN`) | `sync` routing (`when@test` in `config/packages/messenger.yaml`) + `null://null`; assert via `MailerAssertionsTrait` |
+| Mail delivery | SES tenant transport (`MAILER_DSN=ses+tenant://…`) | `sync` routing (`when@test` in `config/packages/messenger.yaml`) + `null://null`; assert via `MailerAssertionsTrait`. The transport itself is tested against a mock SES HTTP client (`tests/Mailer/SesTenantTransportTest.php`) |
 | Newsletter queue | AMQP exchange | `in-memory://` (`when@test`); inspect `messenger.transport.newsletter::getSent()` |
 | reCAPTCHA | Google API | `App\Tests\Double\FakeReCaptcha`, installed per test via `getContainer()->set()` **before** the first request, with `$client->disableReboot()` so the kernel reboot between requests does not drop it |
 | reCAPTCHA/JSON Hub secrets | production secrets | dummy values in `.env.test` (construction only; never used for verification) |

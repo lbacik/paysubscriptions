@@ -48,6 +48,9 @@ WORKDIR /opt/app
 # opcache is absent from the list below on purpose: the FrankenPHP image already
 # builds and enables it (conf.d/docker-php-ext-opcache.ini), unlike php:8.4-apache
 # which shipped it disabled and needed the explicit install.
+#
+# pcntl lets `messenger:consume` (the `worker` service in compose.prod.yaml)
+# catch SIGTERM and finish the message in hand before a redeploy stops it.
 RUN apt -y update && apt-get install -y \
     git \
     unzip \
@@ -63,7 +66,8 @@ RUN apt -y update && apt-get install -y \
     intl \
 	&& docker-php-ext-install \
     pdo_mysql \
-    intl
+    intl \
+    pcntl
 
 # Add PECL extensions, see
 # https://github.com/docker-library/docs/tree/master/php#pecl-extensions

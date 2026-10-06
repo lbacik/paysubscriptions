@@ -122,6 +122,7 @@ final class ContactFlowTest extends WebTestCase
         $email = self::getMailerMessage(0);
         \assert($email instanceof Email);
         self::assertStringContainsString('Hello', (string) $email->getSubject());
+        self::assertEmailAddressContains($email, 'Reply-To', 'tester@example.com');
     }
 
     public function testFailedRecaptchaRedirectsWithoutSending(): void

@@ -46,6 +46,8 @@ class ContactController extends AbstractController
             $email = (new TemplatedEmail())
                 ->from(new Address($systemEmail, 'PaySubscriptions'))
                 ->to($contactEmail)
+                // The From address has no mailbox; replies must reach the visitor's validated address.
+                ->replyTo((string) $form->get('email')->getData())
                 ->subject('PaySubscriptions Contact: ' . $form->get('subject')->getData())
                 ->htmlTemplate('contact/contact_email.html.twig')
                 ->context([

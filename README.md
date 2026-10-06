@@ -91,6 +91,18 @@ Development sends transactional emails synchronously. Production routes ordinary
 php bin/console messenger:consume async --time-limit=3600
 ```
 
+In production this is the `worker` service in `compose.prod.yaml`. It runs from the same image as `web` and restarts after every hourly exit. Messages that exhaust their retries land in the `failed` transport; list them with `php bin/console messenger:failed:show`.
+
+Production mail goes through Amazon SES in `eu-central-1` with `MAILER_DSN=ses+tenant://ACCESS_KEY_ID:SECRET_ACCESS_KEY@default`. The transport always sends through the `paysubs-app` tenant and `paysubs-app-events` configuration set, and only from `no-reply@paysubscriptions.com`, so `SYSTEM_EMAIL` must be that address. The SES boundary is defined in `src/Mailer/SesTenantBoundary.php`.
+
+Permanent bounces and complaints arrive on the `paysubs-ses-recipient-restrictions` SQS queue. A second long-running worker records them as recipient restrictions, and restricted addresses then receive no email:
+
+```sh
+php bin/console app:ses:consume-recipient-restrictions --time-limit=3600
+```
+
+It needs `SES_RESTRICTION_QUEUE_URL`, `SES_RESTRICTION_ACCESS_KEY_ID` and `SES_RESTRICTION_SECRET_ACCESS_KEY` for the `paysubs-feedback-reader` IAM user. In production this is the `restriction-consumer` service in `compose.prod.yaml`, and the deploy refuses to start without the three values: the queue URL as a variable, the key pair as secrets of the `production` environment. Invalid messages stay on the queue and move to its dead-letter queue after five receives.
+
 Newsletter messages are published to the configured AMQP `mailing` exchange for the external mailing integration. Set `JSON_HUB_PROJECT_UUID` and `MAILING_PROVIDER_ROUTING_KEY` when enabling that integration.
 
 Run renewal reminders from a daily scheduler. Preview due reminders before sending:
