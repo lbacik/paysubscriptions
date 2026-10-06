@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Entity;
 
+use App\Entity\ExpenseCategory;
 use App\Entity\Subscription;
 use App\Enum\BillingCycle;
 use PHPUnit\Framework\TestCase;
@@ -21,7 +22,7 @@ final class SubscriptionTest extends TestCase
             ->getValidator();
     }
 
-    public function testEmptySubscriptionViolatesCycleAmountAndNextPayment(): void
+    public function testEmptySubscriptionViolatesCycleAmountNextPaymentAndCategory(): void
     {
         $violations = $this->validator->validate(new Subscription());
 
@@ -33,6 +34,7 @@ final class SubscriptionTest extends TestCase
         self::assertContains('billingCycle', $paths);
         self::assertContains('amount', $paths);
         self::assertContains('nextPayment', $paths);
+        self::assertContains('category', $paths);
     }
 
     public function testSubscriptionWithCycleAmountAndNextPaymentIsValid(): void
@@ -41,7 +43,8 @@ final class SubscriptionTest extends TestCase
             ->setName('Netflix')
             ->setBillingCycle(BillingCycle::Monthly)
             ->setAmount(15.99)
-            ->setNextPayment(new \DateTimeImmutable('2024-02-15'));
+            ->setNextPayment(new \DateTimeImmutable('2024-02-15'))
+            ->setCategory(new ExpenseCategory());
 
         self::assertCount(0, $this->validator->validate($subscription));
     }
@@ -90,7 +93,8 @@ final class SubscriptionTest extends TestCase
             ->setName('Netflix')
             ->setBillingCycle(BillingCycle::Monthly)
             ->setAmount(15.99)
-            ->setNextPayment(new \DateTimeImmutable('2024-02-15'));
+            ->setNextPayment(new \DateTimeImmutable('2024-02-15'))
+            ->setCategory(new ExpenseCategory());
 
         self::assertNull($subscription->getNotes());
         self::assertCount(0, $this->validator->validate($subscription));

@@ -136,6 +136,54 @@ final class ExpenseCategoryMigrationTest extends DatabaseTestCase
         self::assertSame('NO', $nullable, 'subscription.category_id must be NOT NULL after a fresh migration.');
     }
 
+    public function testDownMigrationDropsCategoryTableAndColumn(): void
+    {
+        $this->resetDatabase();
+        $this->runCommand('doctrine:migrations:migrate', ['--no-interaction' => true, '--allow-no-migration' => true]);
+
+        $schemaManager = $this->connection->createSchemaManager();
+        self::assertTrue($schemaManager->tablesExist(['expense_category']), 'Precondition: the category table exists after migrating up.');
+
+        $this->rebootKernelForFreshMigrationInstances();
+
+        // Roll back to the pre-category version: drops the FK, the index,
+        // the column, and the whole expense_category table.
+        $this->runCommand('doctrine:migrations:migrate', [
+            'version' => self::PREVIOUS_VERSION,
+            '--no-interaction' => true,
+        ]);
+
+        $schemaManager = $this->connection->createSchemaManager();
+        self::assertFalse($schemaManager->tablesExist(['expense_category']), 'down() must drop the expense_category table.');
+        self::assertArrayNotHasKey(
+            'category_id',
+            $schemaManager->listTableColumns('subscription'),
+            'down() must drop subscription.category_id.'
+        );
+
+        $this->rebootKernelForFreshMigrationInstances();
+
+        // And migrating back up restores the documented migrated state.
+        $this->runCommand('doctrine:migrations:migrate', ['--no-interaction' => true, '--allow-no-migration' => true]);
+
+        $schemaManager = $this->connection->createSchemaManager();
+        self::assertTrue($schemaManager->tablesExist(['expense_category']));
+        self::assertArrayHasKey('category_id', $schemaManager->listTableColumns('subscription'));
+    }
+
+    /**
+     * Migration instances freeze once executed and are cached per container,
+     * so a second runCommand() in the same test would reuse the frozen
+     * instances (a down() after an up() fails with FrozenMigration). Reboot
+     * for fresh instances; the shared test-database connection survives.
+     */
+    private function rebootKernelForFreshMigrationInstances(): void
+    {
+        static::ensureKernelShutdown();
+        $this->em = static::getContainer()->get('doctrine')->getManager();
+        $this->connection = $this->em->getConnection();
+    }
+
     public function testMigratedStateBackfillsLegacyUsersAndSubscriptions(): void
     {
         $this->resetDatabase();

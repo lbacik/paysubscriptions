@@ -6,6 +6,7 @@ namespace App\Controller;
 
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Exception\CategoryOwnershipException;
 use App\Form\SubscriptionType;
 use App\Security\SubscriptionVoter;
 use App\Service\ExpenseCategoryService;
@@ -34,8 +35,31 @@ class SubscriptionController extends AbstractController
         $user = $this->getUser();
         \assert($user instanceof User);
 
+        if ($request->isMethod('POST')) {
+            // Creating the default category is a write-path side effect, so
+            // it happens on submission only: rendering this form on GET must
+            // never persist a row (prefetchers, crawlers, and repeated
+            // navigation without submitting would otherwise silently create
+            // categories). Ensuring before the form is built also keeps the
+            // category choices in sync with what the submission may reference.
+            $default = $this->categoryService->ensureDefaultCategory($user);
+
+            // A form rendered while the owner had no categories has an empty
+            // category select, so the first submission carries no category:
+            // backfill it with the just-ensured default before binding.
+            $submitted = $request->request->all();
+            if (isset($submitted['subscription'])
+                && \is_array($submitted['subscription'])
+                && empty($submitted['subscription']['category'])
+            ) {
+                $submitted['subscription']['category'] = (string) $default->getId();
+                $request->request->set('subscription', $submitted['subscription']);
+            }
+        }
+
         $subscription = new Subscription();
-        $subscription->setCategory($this->categoryService->ensureDefaultCategory($user));
+        // Read-only pre-select: never creates a row on GET.
+        $subscription->setCategory($this->categoryService->findDefaultCategory($user));
         $mainCurrency = $this->getMainCurrency();
         $form = $this->createForm(
             SubscriptionType::class,
@@ -126,7 +150,9 @@ class SubscriptionController extends AbstractController
                 // already scoped to the user's own categories, so a cross-
                 // user assignment normally fails form validation before
                 // reaching assertCategoryOwnership(). This catch only
-                // matters if that scoping is ever bypassed or loosened.
+                // matters if that scoping is ever bypassed or loosened, so
+                // it catches the ownership failure specifically and lets any
+                // other logic error surface instead of masquerading as one.
                 $this->subscriptionService->update($subscription);
 
                 $this->addFlash('success', 'Subscription updated successfully');
@@ -137,7 +163,7 @@ class SubscriptionController extends AbstractController
 
                 return $this->redirectToRoute('app_dashboard', [], Response::HTTP_SEE_OTHER);
 
-            } catch (\LogicException $exception) {
+            } catch (CategoryOwnershipException $exception) {
                 $this->addFlash('danger', $exception->getMessage());
 
                 return $this->redirectToRoute('app_dashboard', [], Response::HTTP_SEE_OTHER);
