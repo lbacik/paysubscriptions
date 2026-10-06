@@ -19,7 +19,7 @@ name: Quality
 #      red is news, not a defect, so it can never satisfy "held at zero" and must
 #      never graduate: gating on it would hand a third party a veto over our
 #      releases, biting hardest exactly when we are shipping a fix.
-#      Here: `audit` and `outdated`.
+#      Here: `audit`, `outdated` and `php85`.
 #
 # Deliberately a separate file from test.yml rather than conditional jobs inside
 # it: test.yml is reused by release.yml via workflow_call, and inside a called
@@ -29,16 +29,16 @@ name: Quality
 # This repository has no phpstan, psalm, php-cs-fixer, rector or phpmd in
 # require-dev, so there are no static-analysis or code-style jobs here yet -
 # unlike the rest of the suite. Adding any of those tools is what would fill this
-# file out; until then the waiting room holds the two checks the existing
-# dependency set can already run.
+# file out; until then the waiting room holds the check the existing dependency
+# set can already run, next to the three permanent watchers.
 #
 # Triggers mirror test.yml, and for the same reasons recorded there: `pull_request`
 # against `main` plus `push` to `main`, so each commit runs this file once. A
 # feature branch is covered by its pull request, not by its own pushes.
 #
 # `schedule` is what makes the permanent watchers useful, and is the one trigger
-# here that test.yml has no use for: `audit` and `outdated` go red because a
-# third party published something, which no push of ours would ever notice.
+# here that test.yml has no use for: `audit`, `outdated` and `php85` go red because
+# a third party published something, which no push of ours would ever notice.
 # Never add a `pull_request_target` trigger that checks out the PR head: it
 # would run untrusted fork code with this repository's secrets and a write
 # token. Fork PRs, if ever needed, use plain `pull_request`.
@@ -155,3 +155,97 @@ jobs:
       # update until PHPUnit is upgraded, so it's excluded here to keep this job red
       # only for updates we can actually take right now.
       - run: composer outdated --direct --strict --minor-only --ignore=dama/doctrine-test-bundle
+
+  # PERMANENT WATCHER. The runtime we do not ship yet: the whole PHPUnit suite on
+  # PHP 8.5, so that a deprecation or a break introduced by the next language
+  # version is seen before a runtime upgrade is attempted rather than during it.
+  # Red means a test fails on 8.5 - news about the world, never a defect to hold at
+  # zero - so it must not graduate into test.yml, whose "no continue-on-error"
+  # guarantee stays intact.
+  #
+  # Same continue-on-error shape as `audit` and `outdated`: neutral on a push or PR,
+  # *false* on the schedule so a scheduled red actually notifies somebody.
+  #
+  # Deprecations never turn the job red. SYMFONY_DEPRECATIONS_HELPER below lifts
+  # the threshold out of reach, which overrides whatever phpunit.xml.dist sets for
+  # the gate, and `logFile` makes the bridge write its report to a file instead of
+  # stdout; that file is summarised per group and uploaded. 8.5-only deprecations
+  # are out of scope for the cleanup: this output is input for a future upgrade.
+  #
+  # The service container and environment mirror the `phpunit` job in test.yml.
+  php85:
+    name: PHP 8.5 preview
+    runs-on: ubuntu-latest
+    continue-on-error: ${{ github.event_name != 'schedule' }}
+
+    services:
+      mysql:
+        image: mysql:9.7
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: paysub
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      APP_ENV: test
+      APP_SECRET: ci
+      DATABASE_URL: "mysql://root:root@127.0.0.1:3306/paysub?charset=utf8mb4"
+      MESSENGER_TRANSPORT_DSN: 'amqp://guest:guest@127.0.0.1:5672/%2f/messages'
+      MAILER_DSN: 'null://null'
+      JSON_HUB_PROJECT: '00000000-0000-0000-0000-000000000000'
+      MAILING_PROVIDER_ROUTING_KEY: 'ci'
+      GOOGLE_RECAPTCHA_SITE_KEY: 'ci'
+      GOOGLE_RECAPTCHA_SECRET: 'ci'
+      # A fixed path: the `runner` context is not available in job-level env.
+      SYMFONY_DEPRECATIONS_HELPER: 'max[total]=999999&logFile=/tmp/php85-deprecations.log'
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
+        with:
+          php-version: '8.5'
+          extensions: amqp, ctype, iconv, intl, pdo_mysql
+          coverage: none
+          ini-values: memory_limit=1G
+      - uses: ramsey/composer-install@26d8a556604053a9612623447203a691f406fbe6 # v4
+      - run: php bin/console tailwind:build
+      - name: Prepare the test database
+        run: |
+          php bin/console doctrine:database:create --if-not-exists
+          php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
+      - name: Run PHPUnit
+        run: vendor/bin/phpunit
+
+      # The bridge only creates the log when it has something to report, so a
+      # missing file means zero deprecations, not a broken step. Group headers
+      # look like "Remaining direct deprecation notices (12)" or "Legacy
+      # deprecation notices (3)".
+      - name: Summarise deprecations
+        if: always()
+        run: |
+          {
+            echo '## PHP 8.5 deprecations'
+            echo
+            if [ -s /tmp/php85-deprecations.log ]; then
+              echo '| Group | Count |'
+              echo '| --- | ---: |'
+              grep -E '^[A-Za-z ]+ deprecation notices \([0-9]+\)$' /tmp/php85-deprecations.log \
+                | sed -E 's/^(.+) deprecation notices \(([0-9]+)\)$/| \1 | \2 |/'
+            else
+              echo 'No deprecations reported.'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the deprecation log
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: php85-deprecations
+          path: /tmp/php85-deprecations.log
+          if-no-files-found: ignore
