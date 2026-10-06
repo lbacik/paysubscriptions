@@ -35,9 +35,10 @@ deprecation gate: it runs plain `vendor/bin/phpunit` with no strict override,
 so the configuration in `phpunit.xml.dist` decides what fails the run, and any
 deprecation fails it:
 
-- `<env name="SYMFONY_DEPRECATIONS_HELPER" value="max[total]=0"/>` (no
-  `force`, so a real environment variable still wins) turns every
-  `trigger_deprecation()` into a failure.
+- `<env name="SYMFONY_DEPRECATIONS_HELPER" value="max[total]=0&amp;ignoreFile=tests/deprecations-ignore.txt"/>`
+  (no `force`, so a real environment variable still wins) turns every
+  `trigger_deprecation()` into a failure; the `ignoreFile` is the single
+  exception described below.
 - `<server name="DOCTRINE_DEPRECATIONS" value="trigger" force="true"/>` makes
   `doctrine/deprecations` throw instead of logging. It must stay a forced
   `<server>` entry in `phpunit.xml.dist` — not `.env.test`, not
@@ -77,6 +78,11 @@ php -v  # must report PHP 8.4.x
 DATABASE_URL="mysql://root:root@127.0.0.1:3306/paysub?charset=utf8mb4" \
   vendor/bin/phpunit
 ```
+
+The explicit `DATABASE_URL` matters: a `serverVersion` in `.env.local` that is
+not the full server-reported version (e.g. `9.2` instead of `9.2.0`) makes DBAL
+emit a deprecation per connection, which the gate correctly turns into a
+failure. With the command above the run exits 0.
 
 No manual setup is needed beyond a reachable MySQL: replay the migrations
 first exactly as CI does (`php bin/console doctrine:database:create
