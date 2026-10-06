@@ -11,6 +11,7 @@ use App\Mailer\SesRestrictionFeedback;
 use App\Repository\RecipientRestrictionRepository;
 use App\Tests\DatabaseTestCase;
 use AsyncAws\Sqs\SqsClient;
+use Doctrine\DBAL\Connection;
 use Psr\Log\NullLogger;
 use Symfony\Bundle\FrameworkBundle\Test\MailerAssertionsTrait;
 use Symfony\Component\Console\Tester\CommandTester;
@@ -62,6 +63,27 @@ final class RecipientRestrictionTest extends DatabaseTestCase
 
         self::assertSame(RecipientRestrictionState::DoNotSend, $this->restrictions->findOneByEmail('user@example.com')?->getState());
         self::assertSame(['user@example.com'], $this->restrictions->restrictedAmong(['USER@example.com', 'other@example.com']));
+    }
+
+    public function testUpdatedAtMovesOnlyWhenTheStateEscalates(): void
+    {
+        $connection = static::getContainer()->get(Connection::class);
+        $backdate = static fn () => $connection->executeStatement("UPDATE recipient_restriction SET updated_at = '2000-01-01 00:00:00'");
+        $updatedAt = static fn (): string => (string) $connection->fetchOne('SELECT updated_at FROM recipient_restriction');
+
+        $this->restrictions->restrict('user@example.com', RecipientRestrictionState::Undeliverable);
+        $backdate();
+        $this->restrictions->restrict('user@example.com', RecipientRestrictionState::Undeliverable);
+        self::assertSame('2000-01-01 00:00:00', $updatedAt(), 'A repeated state leaves the row untouched.');
+
+        $this->restrictions->restrict('user@example.com', RecipientRestrictionState::DoNotSend);
+        self::assertNotSame('2000-01-01 00:00:00', $updatedAt(), 'Escalating to DoNotSend records when it happened.');
+
+        $backdate();
+        $this->restrictions->restrict('user@example.com', RecipientRestrictionState::Undeliverable);
+        $this->restrictions->restrict('user@example.com', RecipientRestrictionState::DoNotSend);
+        self::assertSame('2000-01-01 00:00:00', $updatedAt(), 'Nothing changes a DoNotSend row.');
+        self::assertSame(RecipientRestrictionState::DoNotSend->value, $connection->fetchOne('SELECT state FROM recipient_restriction'));
     }
 
     /**
