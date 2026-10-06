@@ -35,3 +35,15 @@ _Avoid_: Billing date, charge date
 **Recipient restriction**:
 The current SES deliverability state of one normalized email address: *undeliverable* after a permanent bounce, *do-not-send* after a complaint. Only SES feedback creates or tightens it; no later event loosens it, and it never changes email verification or password-reset state. It belongs to the address, not the User, so a User who changes address starts unrestricted. Restricted addresses receive no email.
 _Avoid_: Blocklist, suppression (SES keeps its own suppression list per tenant)
+
+**Client**:
+An application registered to act on a User's behalf through the API (e.g. the CLI). It can be deactivated or removed, and it must be approved for the scope it requests.
+_Avoid_: App, application, integration
+
+**Connection**:
+A User's standing approval for one Client to act on their behalf, granted on the consent screen. It ends only when the User disconnects or the User or Client is removed; security events revoke its Client sessions but leave it standing. It is what the User sees under Connected apps; no Client session or pending authorization may outlive the Connection it was issued under.
+_Avoid_: Consent (the stored record of it), grant, authorization
+
+**Client session**:
+One sign-in of a Client under a Connection (e.g. the CLI on one machine), kept alive by refreshing and ended by inactivity, its absolute lifetime, or revocation. Revoking Client sessions does not end their Connection.
+_Avoid_: Session (the browser login), token family, refresh family, device
