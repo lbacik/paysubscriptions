@@ -109,6 +109,21 @@ x-app-environment: &app-environment
   # Should match the production base URL so tokens are self-describing.
   OAUTH2_ISSUER: "${OAUTH2_ISSUER:-https://paysubscriptions.com}"
 
+# The consumers have no port to probe, but they cannot go without a healthcheck:
+# the image's HEALTHCHECK NONE is a healthcheck config (test ["NONE"]), not the
+# absence of one, so `up --wait` finds no health state to wait on and fails
+# with "container ... has no healthcheck configured". `healthcheck: disable`
+# writes the same ["NONE"] and fails the same way.
+#
+# A no-op probe instead: the container turns healthy on the first check, one
+# interval after start, so `up --wait` proves it stayed up past kernel boot -
+# a consumer that cannot boot exits before that and fails the deploy there.
+x-consumer-healthcheck: &consumer-healthcheck
+  test: ["CMD", "php", "-r", "exit(0);"]
+  interval: 10s
+  timeout: 5s
+  retries: 3
+
 services:
   web:
     image: "${APP_IMAGE:?APP_IMAGE is required}"
@@ -170,9 +185,7 @@ services:
     # messenger:consume finishes the message in hand on SIGTERM (pcntl, see the
     # Dockerfile). A mail send is seconds at most; this is headroom on top.
     stop_grace_period: 30s
-    # No healthcheck, like the image itself (HEALTHCHECK NONE): there is no port
-    # to probe. `up --wait` then waits for the container to be running, and a
-    # worker that cannot boot its kernel exits and fails the deploy right there.
+    healthcheck: *consumer-healthcheck
 
   # Drains the paysubs-ses-recipient-restrictions SQS queue into
   # recipient_restriction, so the send-time check in `worker` knows which
@@ -202,4 +215,5 @@ services:
     # SIGTERM until the 10 s kill. A tiny init forwards it, so the default
     # action - exit - happens at once; the paragraph above is why that is safe.
     init: true
+    healthcheck: *consumer-healthcheck
 
