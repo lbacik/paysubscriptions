@@ -193,6 +193,107 @@ final class OAuthRevocationTest extends DatabaseTestCase
         self::assertResponseIsSuccessful();
     }
 
+    public function testDisconnectRevokesPendingAuthorizationCode(): void
+    {
+        $this->client->loginUser($this->user);
+        // Authorized but never exchanged: the code is still pending.
+        $code = $this->authorizeOnly();
+
+        $this->revokeGrant(self::CLIENT_ID);
+
+        $this->exchangeCode($code);
+        self::assertResponseStatusCodeSame(Response::HTTP_BAD_REQUEST);
+        self::assertStringContainsString('invalid_grant', (string) $this->client->getResponse()->getContent());
+        self::assertSame([], $this->freshEm()->getRepository(OAuthRefreshFamily::class)->findBy(['clientId' => self::CLIENT_ID]));
+    }
+
+    public function testDisconnectLeavesOtherPendingAuthorizationCodesAlone(): void
+    {
+        $other = $this->createUser('pending-other@example.com', 'Fixture-Password-1', true);
+        $this->registerPublicClient(self::OTHER_CLIENT_ID, self::OTHER_CLIENT_NAME);
+
+        $this->client->loginUser($other);
+        $otherUserCode = $this->authorizeOnly();
+
+        $this->client->loginUser($this->user);
+        $otherClientCode = $this->authorizeOnly(self::OTHER_CLIENT_ID);
+        $this->authorizeOnly();
+
+        $this->revokeGrant(self::CLIENT_ID);
+
+        // Same client, another User: untouched.
+        $this->exchangeCode($otherUserCode);
+        self::assertResponseIsSuccessful();
+
+        // Same User, another client: untouched.
+        $this->exchangeCode($otherClientCode, self::OTHER_CLIENT_ID);
+        self::assertResponseIsSuccessful();
+    }
+
+    public function testDisconnectWithoutConsentRowStillRevokesFamilyAndPendingCode(): void
+    {
+        $this->registerPublicClient(self::OTHER_CLIENT_ID, self::OTHER_CLIENT_NAME);
+
+        $this->client->loginUser($this->user);
+        $tokens = $this->authorizeAndExchange();
+        $code = $this->authorizeOnly();
+        // Keeps the Connected apps page (and its CSRF form) available.
+        $this->authorizeAndExchange(self::OTHER_CLIENT_ID);
+
+        // Orphan the grant: the consent row is gone, the family and code remain.
+        $this->removeConsentRows(self::CLIENT_ID);
+
+        $this->revokeGrant(self::CLIENT_ID);
+
+        $this->refresh($tokens['refresh_token']);
+        self::assertResponseStatusCodeSame(Response::HTTP_BAD_REQUEST);
+
+        $this->exchangeCode($code);
+        self::assertResponseStatusCodeSame(Response::HTTP_BAD_REQUEST);
+        self::assertStringContainsString('invalid_grant', (string) $this->client->getResponse()->getContent());
+    }
+
+    public function testDisconnectWithNothingToRevokeSucceedsWithoutFlash(): void
+    {
+        $this->registerPublicClient(self::OTHER_CLIENT_ID, self::OTHER_CLIENT_NAME);
+
+        $this->client->loginUser($this->user);
+        $this->authorizeAndExchange(self::OTHER_CLIENT_ID);
+
+        $this->revokeGrant(self::CLIENT_ID);
+
+        $crawler = $this->client->followRedirect();
+        self::assertResponseIsSuccessful();
+        self::assertSame(0, $crawler->filter('[role="alert"]')->count());
+    }
+
+    public function testDisconnectOfGrantShowsDisconnectedFlash(): void
+    {
+        $this->client->loginUser($this->user);
+        $this->authorizeAndExchange();
+
+        $this->revokeGrant(self::CLIENT_ID);
+
+        $crawler = $this->client->followRedirect();
+        self::assertStringContainsString('The application was disconnected', $crawler->text(null, true));
+    }
+
+    public function testDisconnectOfPendingCodeOnlyShowsDisconnectedFlash(): void
+    {
+        $this->registerPublicClient(self::OTHER_CLIENT_ID, self::OTHER_CLIENT_NAME);
+
+        $this->client->loginUser($this->user);
+        $this->authorizeAndExchange(self::OTHER_CLIENT_ID);
+        $this->authorizeOnly();
+
+        $this->removeConsentRows(self::CLIENT_ID);
+
+        $this->revokeGrant(self::CLIENT_ID);
+
+        $crawler = $this->client->followRedirect();
+        self::assertStringContainsString('The application was disconnected', $crawler->text(null, true));
+    }
+
     public function testClientRevocationRetiresWholeFamily(): void
     {
         $this->client->loginUser($this->user);
@@ -658,6 +759,26 @@ final class OAuthRevocationTest extends DatabaseTestCase
         $this->client->request('POST', $url, ['decision' => 'allow', '_csrf_token' => $csrf]);
 
         return $this->codeFromRedirect();
+    }
+
+    private function removeConsentRows(string $clientId): void
+    {
+        $em = $this->freshEm();
+        foreach ($em->getRepository(OAuthConsent::class)->findBy(['clientId' => $clientId]) as $consent) {
+            $em->remove($consent);
+        }
+        $em->flush();
+    }
+
+    private function exchangeCode(string $code, string $clientId = self::CLIENT_ID): void
+    {
+        $this->client->request('POST', '/token', [
+            'grant_type' => 'authorization_code',
+            'client_id' => $clientId,
+            'redirect_uri' => self::REDIRECT_URI,
+            'code' => $code,
+            'code_verifier' => $this->verifier,
+        ]);
     }
 
     /**
