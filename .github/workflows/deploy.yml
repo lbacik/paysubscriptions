@@ -273,10 +273,7 @@ jobs:
       #     bin/console being able to boot, so it will fail for the messenger
       #     reason above until that is fixed; by then the deploy has already
       #     stopped at the migration step, so this never fails alone.
-      #
-      #     There is no third check for a messenger consumer: nothing in this
-      #     stack consumes. The `async` transport is drained by a separate
-      #     application, deployed from its own repository.
+      #     The worker gets its own check, (5).
       - name: Smoke test the database connection
         run: |
           if $COMPOSE exec -T web ./bin/console dbal:run-sql 'SELECT 1' </dev/null; then
@@ -330,3 +327,19 @@ jobs:
       - name: Run the API release preflight
         run: |
           $COMPOSE exec -T web ./bin/console app:api:preflight
+
+      # (5) The mail worker. `up --wait` only proves it was running at converge
+      #     time, and the smoke tests above take long enough for a worker that
+      #     cannot boot (bad MAILER_DSN, unreachable database) to have exited
+      #     and been restarted. So: still running, and never restarted since.
+      - name: Check the mail worker is running
+        run: |
+          id=$($COMPOSE ps -q worker)
+          state=$(docker inspect -f '{{.State.Status}} {{.RestartCount}}' "$id" 2>/dev/null || true)
+          if [ "$state" = "running 0" ]; then
+            echo "worker is consuming the async transport"
+            exit 0
+          fi
+          echo "::error::worker is not running steadily (status, restarts: ${state:-none})" >&2
+          $COMPOSE logs --tail 100 worker || true
+          exit 1

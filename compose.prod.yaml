@@ -23,11 +23,9 @@
 #     external MySQL on `my.rum`, reached over the external `main` network, so a
 #     postgres container here would be an unused second database.
 #   - the `mailcatcher` service is gone. Production mail goes out over MAILER_DSN.
-#   - there is no `worker` service. paysubscriptions is the web application only;
-#     the messenger consumer that drains the `async` transport is a separate
-#     application with its own image and its own deploy. This stack still passes
-#     MESSENGER_TRANSPORT_DSN, because the web container is what *dispatches*
-#     onto that transport - it just no longer runs anything that reads from it.
+#   - `worker` runs `messenger:consume async` from the same image as `web`.
+#     Nothing else drains that transport: lbacik/mailing-workers consumes only
+#     the AMQP `mailing` exchange that MESSENGER_TRANSPORT_DSN points at.
 #   - APP_ENV and APP_DEBUG are fixed here rather than passed in, so a stray
 #     APP_ENV=dev in the deploy environment cannot put production into debug mode.
 #     Note .env.docker.rum pins APP_ENV=dev - that file describes the *staging*
@@ -45,71 +43,77 @@ networks:
     name: "${NETWORK:-main}"
     external: true
 
+# Shared by web and worker: both boot the same kernel from the same image, so
+# both need everything the container compiles against. Only web adds the
+# nginx-proxy discovery variables - the worker must never be routed to.
+x-app-environment: &app-environment
+  APP_ENV: prod
+  APP_DEBUG: "0"
+  APP_SECRET: "${APP_SECRET:?APP_SECRET is required}"
+  # Rendered into every page by config/packages/twig.yaml as `appVersion`.
+  # Supplied by the deploy job from the tag, not by an environment variable.
+  APP_VERSION: "${APP_VERSION:?APP_VERSION is required}"
+  # Self-hosted Umami tracker, rendered by templates/_analytics.html.twig.
+  # Public values, from the production environment's variables.
+  UMAMI_SCRIPT_URL: "${UMAMI_SCRIPT_URL:?UMAMI_SCRIPT_URL is required}"
+  UMAMI_WEBSITE_ID: "${UMAMI_WEBSITE_ID:?UMAMI_WEBSITE_ID is required}"
+  DATABASE_URL: "${DATABASE_URL:?DATABASE_URL is required}"
+  MAILER_DSN: "${MAILER_DSN:?MAILER_DSN is required}"
+  MESSENGER_TRANSPORT_DSN: "${MESSENGER_TRANSPORT_DSN:?MESSENGER_TRANSPORT_DSN is required}"
+  # What Symfony uses to build absolute URLs outside an HTTP request - the
+  # links in the verify-email and reset-password messages, and anything
+  # bin/console generates. APP_URL, which compose.yaml passes, is not set
+  # here on purpose: nothing in config/ or src/ reads it, DEFAULT_URI is the
+  # one that matters.
+  DEFAULT_URI: "${DEFAULT_URI:-https://paysubscriptions.com}"
+  SYSTEM_EMAIL: "${SYSTEM_EMAIL:?SYSTEM_EMAIL is required}"
+  CONTACT_EMAIL: "${CONTACT_EMAIL:?CONTACT_EMAIL is required}"
+  # Both are compile-time container parameters (config/services.yaml), so
+  # the container will not boot at all if either is missing - hence :? even
+  # though neither is a credential.
+  JSON_HUB_PROJECT: "${JSON_HUB_PROJECT:?JSON_HUB_PROJECT is required}"
+  MAILING_PROVIDER_ROUTING_KEY: "${MAILING_PROVIDER_ROUTING_KEY:?MAILING_PROVIDER_ROUTING_KEY is required}"
+  # Read as %env(bool:MAINTENANCE_MODE)% by MaintenanceKernelRequestSubscriber.
+  # Defaulted rather than required so a deploy cannot accidentally serve the
+  # maintenance page because a variable went missing.
+  MAINTENANCE_MODE: "${MAINTENANCE_MODE:-0}"
+  GOOGLE_RECAPTCHA_SITE_KEY: "${GOOGLE_RECAPTCHA_SITE_KEY:?GOOGLE_RECAPTCHA_SITE_KEY is required}"
+  GOOGLE_RECAPTCHA_SECRET: "${GOOGLE_RECAPTCHA_SECRET:?GOOGLE_RECAPTCHA_SECRET is required}"
+  # OAuth2 signing and encryption material (issue #94, procedures in
+  # docs/oauth-key-rotation.md, full operator runbook in
+  # docs/api-operations.md). Values are container-local: either paths
+  # to key files baked or mounted into the image, or the raw PEM/key
+  # contents inline. Required since the API v1 release gates (#100):
+  # without them the authorization, token, JWKS, and API endpoints
+  # cannot work, and the deploy must fail loudly instead of converging
+  # a stack whose API is silently dead. The preflight in deploy.yml
+  # rejects missing values before anything is pulled, and
+  # app:api:preflight re-checks them from inside the container.
+  OAUTH_PRIVATE_KEY: "${OAUTH_PRIVATE_KEY:?OAUTH_PRIVATE_KEY is required}"
+  OAUTH_PUBLIC_KEY: "${OAUTH_PUBLIC_KEY:?OAUTH_PUBLIC_KEY is required}"
+  OAUTH_ENCRYPTION_KEY: "${OAUTH_ENCRYPTION_KEY:?OAUTH_ENCRYPTION_KEY is required}"
+  # Private-key passphrase. Optional by design: empty when the signing
+  # key has none, which is the recommended production setup.
+  OAUTH_PASSPHRASE: "${OAUTH_PASSPHRASE:-}"
+  # Key identifier minted into every access token's `kid` header. Change
+  # to a fresh label with each signing-key rotation; keep in step with
+  # whichever key the *_KEY paths above point at.
+  OAUTH_KEY_ID: "${OAUTH_KEY_ID:-v1}"
+  # Previous verification key while a routine rotation is in flight;
+  # empty the rest of the time (and always after an emergency rotation).
+  OAUTH_PREVIOUS_PUBLIC_KEY: "${OAUTH_PREVIOUS_PUBLIC_KEY:-}"
+  OAUTH_PREVIOUS_KEY_ID: "${OAUTH_PREVIOUS_KEY_ID:-}"
+  # Public identifier carried as the `iss` claim of every access token.
+  # Should match the production base URL so tokens are self-describing.
+  OAUTH2_ISSUER: "${OAUTH2_ISSUER:-https://paysubscriptions.com}"
+
 services:
   web:
     image: "${APP_IMAGE:?APP_IMAGE is required}"
     container_name: paysubscriptions-web
     restart: "${RESTART:-unless-stopped}"
     environment:
-      APP_ENV: prod
-      APP_DEBUG: "0"
-      APP_SECRET: "${APP_SECRET:?APP_SECRET is required}"
-      # Rendered into every page by config/packages/twig.yaml as `appVersion`.
-      # Supplied by the deploy job from the tag, not by an environment variable.
-      APP_VERSION: "${APP_VERSION:?APP_VERSION is required}"
-      # Self-hosted Umami tracker, rendered by templates/_analytics.html.twig.
-      # Public values, from the production environment's variables.
-      UMAMI_SCRIPT_URL: "${UMAMI_SCRIPT_URL:?UMAMI_SCRIPT_URL is required}"
-      UMAMI_WEBSITE_ID: "${UMAMI_WEBSITE_ID:?UMAMI_WEBSITE_ID is required}"
-      DATABASE_URL: "${DATABASE_URL:?DATABASE_URL is required}"
-      MAILER_DSN: "${MAILER_DSN:?MAILER_DSN is required}"
-      MESSENGER_TRANSPORT_DSN: "${MESSENGER_TRANSPORT_DSN:?MESSENGER_TRANSPORT_DSN is required}"
-      # What Symfony uses to build absolute URLs outside an HTTP request - the
-      # links in the verify-email and reset-password messages, and anything
-      # bin/console generates. APP_URL, which compose.yaml passes, is not set
-      # here on purpose: nothing in config/ or src/ reads it, DEFAULT_URI is the
-      # one that matters.
-      DEFAULT_URI: "${DEFAULT_URI:-https://paysubscriptions.com}"
-      SYSTEM_EMAIL: "${SYSTEM_EMAIL:?SYSTEM_EMAIL is required}"
-      CONTACT_EMAIL: "${CONTACT_EMAIL:?CONTACT_EMAIL is required}"
-      # Both are compile-time container parameters (config/services.yaml), so
-      # the container will not boot at all if either is missing - hence :? even
-      # though neither is a credential.
-      JSON_HUB_PROJECT: "${JSON_HUB_PROJECT:?JSON_HUB_PROJECT is required}"
-      MAILING_PROVIDER_ROUTING_KEY: "${MAILING_PROVIDER_ROUTING_KEY:?MAILING_PROVIDER_ROUTING_KEY is required}"
-      # Read as %env(bool:MAINTENANCE_MODE)% by MaintenanceKernelRequestSubscriber.
-      # Defaulted rather than required so a deploy cannot accidentally serve the
-      # maintenance page because a variable went missing.
-      MAINTENANCE_MODE: "${MAINTENANCE_MODE:-0}"
-      GOOGLE_RECAPTCHA_SITE_KEY: "${GOOGLE_RECAPTCHA_SITE_KEY:?GOOGLE_RECAPTCHA_SITE_KEY is required}"
-      GOOGLE_RECAPTCHA_SECRET: "${GOOGLE_RECAPTCHA_SECRET:?GOOGLE_RECAPTCHA_SECRET is required}"
-      # OAuth2 signing and encryption material (issue #94, procedures in
-      # docs/oauth-key-rotation.md, full operator runbook in
-      # docs/api-operations.md). Values are container-local: either paths
-      # to key files baked or mounted into the image, or the raw PEM/key
-      # contents inline. Required since the API v1 release gates (#100):
-      # without them the authorization, token, JWKS, and API endpoints
-      # cannot work, and the deploy must fail loudly instead of converging
-      # a stack whose API is silently dead. The preflight in deploy.yml
-      # rejects missing values before anything is pulled, and
-      # app:api:preflight re-checks them from inside the container.
-      OAUTH_PRIVATE_KEY: "${OAUTH_PRIVATE_KEY:?OAUTH_PRIVATE_KEY is required}"
-      OAUTH_PUBLIC_KEY: "${OAUTH_PUBLIC_KEY:?OAUTH_PUBLIC_KEY is required}"
-      OAUTH_ENCRYPTION_KEY: "${OAUTH_ENCRYPTION_KEY:?OAUTH_ENCRYPTION_KEY is required}"
-      # Private-key passphrase. Optional by design: empty when the signing
-      # key has none, which is the recommended production setup.
-      OAUTH_PASSPHRASE: "${OAUTH_PASSPHRASE:-}"
-      # Key identifier minted into every access token's `kid` header. Change
-      # to a fresh label with each signing-key rotation; keep in step with
-      # whichever key the *_KEY paths above point at.
-      OAUTH_KEY_ID: "${OAUTH_KEY_ID:-v1}"
-      # Previous verification key while a routine rotation is in flight;
-      # empty the rest of the time (and always after an emergency rotation).
-      OAUTH_PREVIOUS_PUBLIC_KEY: "${OAUTH_PREVIOUS_PUBLIC_KEY:-}"
-      OAUTH_PREVIOUS_KEY_ID: "${OAUTH_PREVIOUS_KEY_ID:-}"
-      # Public identifier carried as the `iss` claim of every access token.
-      # Should match the production base URL so tokens are self-describing.
-      OAUTH2_ISSUER: "${OAUTH2_ISSUER:-https://paysubscriptions.com}"
+      <<: *app-environment
       # nginx-proxy / acme-companion discovery. VIRTUAL_PORT is explicit because
       # the FrankenPHP image exposes four ports (80, 443, 443/udp and Caddy's
       # admin API on 2019); with more than one exposed port nginx-proxy falls
@@ -138,4 +142,33 @@ services:
       # Generous: the first request after a deploy warms the prod container and
       # compiles Doctrine proxies into %kernel.build_dir%.
       start_period: 60s
+
+  # Drains the `async` transport (doctrine://default, the messenger_messages
+  # table), which is where every SendEmailMessage goes in prod - so this is
+  # what actually hands mail to MAILER_DSN, and where the recipient-restriction
+  # check runs at send time. Without it, mail queues and never leaves.
+  #
+  # --time-limit and --memory-limit make it exit cleanly every hour or once it
+  # grows; the restart policy brings it straight back, which also picks up a
+  # fresh kernel. Messages that exhaust the retry strategy land in the `failed`
+  # transport: `bin/console messenger:failed:show` lists them.
+  worker:
+    image: "${APP_IMAGE:?APP_IMAGE is required}"
+    container_name: paysubscriptions-worker
+    restart: "${RESTART:-unless-stopped}"
+    command:
+      - ./bin/console
+      - messenger:consume
+      - async
+      - --time-limit=3600
+      - --memory-limit=128M
+      - --no-interaction
+    environment:
+      <<: *app-environment
+    # messenger:consume finishes the message in hand on SIGTERM (pcntl, see the
+    # Dockerfile). A mail send is seconds at most; this is headroom on top.
+    stop_grace_period: 30s
+    # No healthcheck, like the image itself (HEALTHCHECK NONE): there is no port
+    # to probe. `up --wait` then waits for the container to be running, and a
+    # worker that cannot boot its kernel exits and fails the deploy right there.
 
