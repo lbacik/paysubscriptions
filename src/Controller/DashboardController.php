@@ -56,9 +56,10 @@ class DashboardController extends AbstractController
         $subscriptionLimit = $user instanceof \App\Entity\User
             ? $user->getSubscriptionsLimit()
             : \App\Entity\Limits::DEFAULT_SUBSCRIPTIONS_LIMIT;
-        $count = count($subscriptions);
+        // The limit card describes the whole account, not the filtered list.
+        $totalCount = $this->subscriptionService->countAllSubscriptions($user);
         $limitPercentage = $subscriptionLimit > 0
-            ? min(100, (int) round(($count / $subscriptionLimit) * 100))
+            ? min(100, (int) round(($totalCount / $subscriptionLimit) * 100))
             : 0;
 
         return $this->render('dashboard/index.html.twig', [
@@ -70,6 +71,7 @@ class DashboardController extends AbstractController
             'mainCurrency' => $mainCurrency,
             'pendingReviewSubscriptions' => $pendingReviewSubscriptions,
             'subscriptionLimit' => $subscriptionLimit,
+            'totalSubscriptionCount' => $totalCount,
             'limitPercentage' => $limitPercentage,
             'addSubscriptionDisabled' => ! $this->subscriptionService->isAbleToAddSubscription($this->getUser()),
             'upcomingRenewals' => $this->upcomingRenewals->nextOccurrences($subscriptions),
