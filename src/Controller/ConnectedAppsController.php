@@ -18,8 +18,9 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
  * A User sees every remembered grant and disconnects each client
  * individually. Disconnecting deletes the remembered consent — so the next
  * authorization asks for consent again — and revokes the client's usable
- * refresh-token families immediately. Already-issued access tokens stay
- * usable until their 15-minute expiry; the page states this delay.
+ * refresh-token families and pending authorization codes immediately.
+ * Already-issued access tokens stay usable until their 15-minute expiry; the
+ * page states this delay.
  */
 #[IsGranted('ROLE_USER')]
 class ConnectedAppsController extends AbstractController
