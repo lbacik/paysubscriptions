@@ -7,7 +7,7 @@
         "php": "^8.4",
         "ext-ctype": "*",
         "ext-iconv": "*",
-        "api-platform/core": "^4.2",
+        "api-platform/core": "^5.0",
         "async-aws/ses": "^1.17",
         "async-aws/sqs": "^2.9",
         "doctrine/dbal": "^3",
