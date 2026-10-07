@@ -6,6 +6,8 @@ namespace App\Tests\Controller\Api\V1;
 
 use App\Service\ExpenseCategoryService;
 use DateTimeImmutable;
+use League\Bundle\OAuth2ServerBundle\Manager\ClientManagerInterface;
+use League\Bundle\OAuth2ServerBundle\ValueObject\Scope;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -221,6 +223,49 @@ final class ExpenseCategoryApiTest extends ExpenseCategoryApiTestCase
 
         $problem = json_decode((string) $this->client->getResponse()->getContent(), true);
         self::assertSame('account_inactive', $problem['code']);
+    }
+
+    public function testCollectionWithNarrowedClientReturnsProblemForbidden(): void
+    {
+        // The bearer token itself still carries api:full, but the client
+        // record no longer approves it: the narrowed client invalidates its
+        // tokens with insufficient_scope.
+        $manager = static::getContainer()->get(ClientManagerInterface::class);
+        $client = $manager->find(self::CLIENT_ID);
+        self::assertNotNull($client);
+        $client->setScopes(new Scope('api:limited'));
+        $manager->save($client);
+
+        $this->client->request('GET', '/api/v1/expense-categories', [], [], [
+            'HTTP_Authorization' => 'Bearer '.$this->craftToken('api-cat-user@example.com'),
+        ]);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_FORBIDDEN);
+        self::assertResponseHeaderSame('Content-Type', 'application/problem+json');
+
+        $problem = json_decode((string) $this->client->getResponse()->getContent(), true);
+        self::assertSame('insufficient_scope', $problem['code']);
+    }
+
+    public function testCollectionWithInactiveClientReturnsProblemUnauthorized(): void
+    {
+        // A deactivated client invalidates its tokens: the stateless access
+        // token itself is untouched, but the policy refuses the Client.
+        $manager = static::getContainer()->get(ClientManagerInterface::class);
+        $client = $manager->find(self::CLIENT_ID);
+        self::assertNotNull($client);
+        $client->setActive(false);
+        $manager->save($client);
+
+        $this->client->request('GET', '/api/v1/expense-categories', [], [], [
+            'HTTP_Authorization' => 'Bearer '.$this->craftToken('api-cat-user@example.com'),
+        ]);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_UNAUTHORIZED);
+        self::assertResponseHeaderSame('Content-Type', 'application/problem+json');
+
+        $problem = json_decode((string) $this->client->getResponse()->getContent(), true);
+        self::assertSame('invalid_token', $problem['code']);
     }
 
     public function testCollectionWithDeletedUserReturnsProblemUnauthorized(): void
