@@ -140,7 +140,7 @@ DATABASE_URL="mysql://root:root@127.0.0.1:3306/paysub?charset=utf8mb4" \
   vendor/bin/phpunit
 ```
 
-Use credentials for your local database. Tests append `_test` to the database name and create the test database and schema automatically, so the database user needs permission to create it. Registration and password-reset tests may contact the compromised-password checking service; other external integrations are faked.
+Use credentials for your local database. Leave `serverVersion` out of the DSN: the server version is declared in `config/packages/doctrine.yaml`, and a short one such as `8.4` makes DBAL emit a deprecation on every connection, which fails the zero-deprecation gate. Tests append `_test` to the database name and create the test database and schema automatically, so the database user needs permission to create it. Registration and password-reset tests may contact the compromised-password checking service; other external integrations are faked.
 
 See [testing documentation](docs/testing.md) for coverage, individual test commands, and test-environment behavior.
 
