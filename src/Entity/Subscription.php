@@ -381,12 +381,14 @@ class Subscription
     }
 
     /**
-     * Amount in the main currency used for reporting: the user-entered
-     * converted amount for fresh cross-currency Subscriptions, otherwise the
-     * stored amount. Stale cross-currency amounts are excluded from
-     * aggregates (see SubscriptionService::getTotals()).
+     * Converted amount to display next to the stored amount (e.g. the "≈"
+     * line in the upcoming-renewals list): the user-entered converted amount,
+     * but only when getReportingAmount() would use it — a fresh converted
+     * amount on a cross-currency Subscription. Null in every other case
+     * (same currency, stale amount pending review, missing converted amount
+     * or main currency), meaning "show no converted line".
      */
-    public function getReportingAmount(?string $mainCurrency): ?float
+    public function getConvertedDisplayAmount(?string $mainCurrency): ?float
     {
         if ($this->isCrossCurrency($mainCurrency)
             && !$this->needsConvertedReview($mainCurrency)
@@ -395,7 +397,18 @@ class Subscription
             return $this->getConvertedAmount();
         }
 
-        return $this->getAmount();
+        return null;
+    }
+
+    /**
+     * Amount in the main currency used for reporting: the user-entered
+     * converted amount for fresh cross-currency Subscriptions, otherwise the
+     * stored amount. Stale cross-currency amounts are excluded from
+     * aggregates (see SubscriptionService::getTotals()).
+     */
+    public function getReportingAmount(?string $mainCurrency): ?float
+    {
+        return $this->getConvertedDisplayAmount($mainCurrency) ?? $this->getAmount();
     }
 
     public function getReportingMonthlyCalculated(?string $mainCurrency): float
