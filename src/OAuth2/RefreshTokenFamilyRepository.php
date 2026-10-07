@@ -63,6 +63,7 @@ final class RefreshTokenFamilyRepository implements RefreshTokenRepositoryInterf
         private readonly EntityManagerInterface $em,
         private readonly OpaqueTokenDecryptor $decryptor,
         private readonly ClientManagerInterface $clients,
+        private readonly string $refreshIdleTtl,
     ) {
     }
 
@@ -244,7 +245,7 @@ final class RefreshTokenFamilyRepository implements RefreshTokenRepositoryInterf
 
         $lastUsedAt = $family->getLastUsedAt();
         if (null !== $lastUsedAt) {
-            $idleExpiresAt = $lastUsedAt->add(new DateInterval('P'.OAuth2Config::REFRESH_IDLE_DAYS.'D'));
+            $idleExpiresAt = $lastUsedAt->add(new DateInterval($this->refreshIdleTtl));
             if ($now >= $idleExpiresAt) {
                 $this->revokeFamily($family);
                 throw OAuthServerException::invalidRefreshToken('The refresh token family expired without use.');

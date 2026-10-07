@@ -7,12 +7,16 @@ league_oauth2_server:
         # code (with S256 PKCE, enforced in App\OAuth2) plus refresh. Every
         # other grant is disabled — client credentials in particular must never
         # yield access to User-owned data (decisions #82, #86).
-        access_token_ttl: PT15M
+        # Lifetimes are defined once as container parameters (issue #135,
+        # problem 6); changing e.g. app.oauth2.access_token_ttl moves both
+        # the issued token's `exp` here and the rotation overlap derived in
+        # App\OAuth2\OAuthTokenLifetimes.
+        access_token_ttl: '%app.oauth2.access_token_ttl%'
         # Refresh-token families (issue #91): 30 days without use expires the
         # family; the 90-day absolute deadline is enforced by
         # App\OAuth2\RefreshTokenFamilyRepository, which caps rotated tokens
         # instead of extending it.
-        refresh_token_ttl: P30D
+        refresh_token_ttl: '%app.oauth2.refresh_idle_ttl%'
         enable_client_credentials_grant: false
         # Both grants are disabled by default and will be removed in 2.0. Enable them only if you need them.
         enable_password_grant: false
@@ -24,11 +28,11 @@ league_oauth2_server:
         persist_access_token: false
     resource_server:
         public_key: '%env(resolve:OAUTH_PUBLIC_KEY)%'
-        # Clock-skew tolerance for access-token verification (issue #94).
-        # Must stay in step with App\OAuth2\OAuth2Config::CLOCK_SKEW_LEEWAY:
-        # the key-ring validator builds its own verifiers from that constant,
-        # and the rotation overlap window assumes this exact leeway.
-        jwt_leeway: PT60S
+        # Clock-skew tolerance for access-token verification (issue #94),
+        # defined once as app.oauth2.clock_skew_leeway: the key-ring
+        # validator builds its own verifiers from that injected parameter,
+        # and the rotation overlap window derives from it.
+        jwt_leeway: '%app.oauth2.clock_skew_leeway%'
     scopes:
         # API v1 has a single coarse scope. The bundle requires a non-empty
         # default, so an omitted `scope` parameter would silently default to
