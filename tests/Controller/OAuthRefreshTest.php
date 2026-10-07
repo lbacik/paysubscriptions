@@ -7,6 +7,7 @@ namespace App\Tests\Controller;
 use App\Entity\OAuthRefreshFamily;
 use App\Entity\User;
 use App\OAuth2\OAuth2Config;
+use App\OAuth2\RefreshTokenFamilyRepository;
 use App\Tests\DatabaseTestCase;
 use DateInterval;
 use DateTimeImmutable;
@@ -20,6 +21,7 @@ use League\Bundle\OAuth2ServerBundle\ValueObject\RedirectUri;
 use League\Bundle\OAuth2ServerBundle\ValueObject\Scope;
 use SortDirection;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Contracts\Service\ResetInterface;
 
 /**
  * Refresh-token rotation with single-use families (issue #91).
@@ -342,6 +344,56 @@ final class OAuthRefreshTest extends DatabaseTestCase
         self::assertStringContainsString('invalid_grant', (string) $this->client->getResponse()->getContent());
     }
 
+    public function testFailedRefreshDoesNotLeakRotationIntoNextAuthorization(): void
+    {
+        // Issue #135: the rotation handshake is scoped to one token request,
+        // so a refresh that fails after validation cannot make the next
+        // authorization-code exchange rotate the earlier family. Runs on one
+        // container without reboot (long-running worker runtime).
+        self::assertInstanceOf(
+            ResetInterface::class,
+            static::getContainer()->get(RefreshTokenFamilyRepository::class)
+        );
+
+        $this->client->loginUser($this->user);
+        $first = $this->authorizeAndExchange();
+        self::assertResponseIsSuccessful();
+        self::assertCount(1, $this->allFamilies());
+
+        // One container for the rest of the test: stale handshake state would
+        // otherwise be hidden by a reboot.
+        $this->client->disableReboot();
+        try {
+            // Unknown scope is checked after League validates the old refresh
+            // token, so isRefreshTokenRevoked() records handshake state but
+            // persist is never reached.
+            $this->client->request('POST', '/token', [
+                'grant_type' => 'refresh_token',
+                'client_id' => self::CLIENT_ID,
+                'refresh_token' => $first['refresh_token'],
+                'scope' => 'api:limited',
+            ]);
+            self::assertResponseStatusCodeSame(Response::HTTP_BAD_REQUEST);
+
+            // Fresh authorization must start a NEW family, not rotate the
+            // earlier one via stale state.
+            $second = $this->authorizeAndExchange();
+            self::assertResponseIsSuccessful();
+
+            $families = $this->allFamilies();
+            self::assertCount(2, $families, 'stale rotation handshake reused the earlier family');
+
+            // The original refresh token still rotates its own family: the
+            // failed request did not retire it.
+            $third = $this->refresh($first['refresh_token']);
+            self::assertResponseIsSuccessful();
+            self::assertArrayHasKey('access_token', $third);
+            self::assertNotSame($second['refresh_token'], $third['refresh_token']);
+        } finally {
+            $this->client->enableReboot();
+        }
+    }
+
     /**
      * @return array{token_type: string, expires_in: int, access_token: string, refresh_token: string}
      */
@@ -444,6 +496,17 @@ final class OAuthRefreshTest extends DatabaseTestCase
             ->setMaxResults(1)
             ->getQuery()
             ->getOneOrNullResult();
+    }
+
+    /**
+     * @return list<OAuthRefreshFamily>
+     */
+    private function allFamilies(): array
+    {
+        $em = $this->freshEm();
+        $em->clear();
+
+        return $em->getRepository(OAuthRefreshFamily::class)->findAll();
     }
 
     private function ageFamily(DateInterval $lastUsedAgo, DateInterval $issuedAgo): void

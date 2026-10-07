@@ -15,8 +15,12 @@ use League\Bundle\OAuth2ServerBundle\Manager\ClientManagerInterface;
 use League\OAuth2\Server\Entities\RefreshTokenEntityInterface;
 use League\OAuth2\Server\Exception\OAuthServerException;
 use League\OAuth2\Server\Repositories\RefreshTokenRepositoryInterface;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\Uid\Uuid;
+use Symfony\Contracts\Service\ResetInterface;
 use Throwable;
+use WeakMap;
 
 /**
  * Refresh-token repository with single-use rotating families (issue #91).
@@ -46,17 +50,30 @@ use Throwable;
  * then superseded, which revokes the family); serializing the window would
  * need pessimistic locking inside League's grant.
  */
-final class RefreshTokenFamilyRepository implements RefreshTokenRepositoryInterface
+final class RefreshTokenFamilyRepository implements RefreshTokenRepositoryInterface, ResetInterface
 {
     /**
-     * Rotation handshake: isRefreshTokenRevoked() validates the presented
-     * token and records which family the subsequent persistNewRefreshToken()
-     * of the same token request must rotate. Same-request only; League always
-     * calls validate → revoke → persist in that order.
+     * Rotation handshake, scoped to the current HTTP request (issue #135).
+     *
+     * isRefreshTokenRevoked() validates the presented token and records which
+     * family the subsequent persistNewRefreshToken() of the same token request
+     * must rotate. League always calls validate → revoke → persist in that
+     * order within one token request.
+     *
+     * The pending rotation is keyed by the current Request object (plus a
+     * fallback slot when no request is on the stack, e.g. CLI), never by bare
+     * instance state: a previous request that failed after validation (so its
+     * persist never ran) leaves an entry behind its own Request object, which
+     * the next request never reads. Entries are consumed by persist, garbage
+     * collected with their Request via WeakMap, and dropped by reset() between
+     * worker requests.
+     *
+     * @var WeakMap<Request, array{tokenId: string, familyId: ?string}>
      */
-    private ?string $validatedTokenId = null;
+    private WeakMap $pendingRotations;
 
-    private ?string $validatedFamilyId = null;
+    /** @var array{tokenId: string, familyId: ?string}|null */
+    private ?array $fallbackRotation = null;
 
     public function __construct(
         private readonly RefreshTokenRepositoryInterface $inner,
@@ -64,7 +81,15 @@ final class RefreshTokenFamilyRepository implements RefreshTokenRepositoryInterf
         private readonly OpaqueTokenDecryptor $decryptor,
         private readonly ClientManagerInterface $clients,
         private readonly string $refreshIdleTtl,
+        private readonly RequestStack $requestStack,
     ) {
+        $this->pendingRotations = new WeakMap();
+    }
+
+    public function reset(): void
+    {
+        $this->pendingRotations = new WeakMap();
+        $this->fallbackRotation = null;
     }
 
     public function getNewRefreshToken(): ?RefreshTokenEntityInterface
@@ -75,9 +100,10 @@ final class RefreshTokenFamilyRepository implements RefreshTokenRepositoryInterf
     public function persistNewRefreshToken(RefreshTokenEntityInterface $refreshTokenEntity): void
     {
         $now = new DateTimeImmutable();
+        $pending = $this->consumePendingRotation();
 
-        if (null !== $this->validatedFamilyId && null !== $this->validatedTokenId) {
-            $this->persistRotation($refreshTokenEntity, $now);
+        if (null !== $pending) {
+            $this->persistRotation($refreshTokenEntity, $now, $pending['familyId'], $pending['tokenId']);
 
             return;
         }
@@ -188,8 +214,7 @@ final class RefreshTokenFamilyRepository implements RefreshTokenRepositoryInterf
         }
 
         $id = $family->getId();
-        $this->validatedTokenId = $tokenId;
-        $this->validatedFamilyId = null !== $id ? (string) $id : null;
+        $this->rememberPendingRotation($tokenId, null !== $id ? (string) $id : null);
 
         return $this->inner->isRefreshTokenRevoked($tokenId);
     }
@@ -300,13 +325,12 @@ final class RefreshTokenFamilyRepository implements RefreshTokenRepositoryInterf
         }
     }
 
-    private function persistRotation(RefreshTokenEntityInterface $entity, DateTimeImmutable $now): void
-    {
-        $validatedFamilyId = $this->validatedFamilyId;
-        $validatedTokenId = $this->validatedTokenId;
-        $this->validatedTokenId = null;
-        $this->validatedFamilyId = null;
-
+    private function persistRotation(
+        RefreshTokenEntityInterface $entity,
+        DateTimeImmutable $now,
+        ?string $validatedFamilyId,
+        ?string $validatedTokenId,
+    ): void {
         if (null === $validatedFamilyId) {
             $this->inner->persistNewRefreshToken($entity);
 
@@ -408,7 +432,45 @@ final class RefreshTokenFamilyRepository implements RefreshTokenRepositoryInterf
 
         $this->em->flush();
 
-        $this->validatedTokenId = null;
-        $this->validatedFamilyId = null;
+        // Deliberately leaves the pending rotation for the current request
+        // untouched: persistRotation() re-checks family usability and fails
+        // closed when the family was revoked mid-flight, instead of falling
+        // back to a fresh family for a refresh request.
+    }
+
+    /**
+     * @return array{tokenId: string, familyId: ?string}|null
+     */
+    private function consumePendingRotation(): ?array
+    {
+        $request = $this->requestStack->getCurrentRequest();
+        if (null === $request) {
+            $pending = $this->fallbackRotation;
+            $this->fallbackRotation = null;
+
+            return $pending;
+        }
+
+        if (!isset($this->pendingRotations[$request])) {
+            return null;
+        }
+
+        $pending = $this->pendingRotations[$request];
+        unset($this->pendingRotations[$request]);
+
+        return $pending;
+    }
+
+    private function rememberPendingRotation(string $tokenId, ?string $familyId): void
+    {
+        $pending = ['tokenId' => $tokenId, 'familyId' => $familyId];
+        $request = $this->requestStack->getCurrentRequest();
+        if (null === $request) {
+            $this->fallbackRotation = $pending;
+
+            return;
+        }
+
+        $this->pendingRotations[$request] = $pending;
     }
 }
