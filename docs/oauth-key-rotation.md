@@ -102,25 +102,27 @@ each) and ends every session.
 2. Deploy the new pair with a fresh `OAUTH_KEY_ID` and with
    `OAUTH_PREVIOUS_PUBLIC_KEY` / `OAUTH_PREVIOUS_KEY_ID` **empty**. Every
    token the compromised key signed now fails validation at once.
-3. Revoke every refresh-token family so stolen sessions cannot mint new-key
-   tokens:
+3. Revoke every Client session **and every pending authorization code** so
+   stolen sessions cannot mint new-key tokens and in-flight authorizations
+   cannot complete into them:
    `./bin/console app:oauth:revoke-refresh-families`
-   The command reports how many families it revoked. Clients must authorize
+   The command reports how many Client sessions it revoked. Clients must authorize
    again from here.
 4. Verify: a pre-incident access token gets 401, a pre-incident refresh token
-   gets `invalid_grant`, and a fresh authorization-code flow (consent →
+   gets `invalid_grant`, a pre-incident pending authorization code fails with
+   `invalid_grant`, and a fresh authorization-code flow (consent →
    `/token` → `/api` → refresh) succeeds end to end.
 5. Follow up: rotate the pair's label in your records, audit recent
    authorizations for the compromised window, and consider rotating
    `OAUTH_ENCRYPTION_KEY` too (below) if the incident may have exposed more
    than the signing key.
 
-What stays valid after step 3, and why that is accepted: access tokens minted
-with the *new* key (none exist yet, so nothing), and outstanding authorization
-codes (10-minute TTL, each bound to its client and PKCE verifier) which redeem
-exactly once into new-key families. Killing codes as well would strand
-legitimate clients mid-authorize for no meaningful gain — the codes were
-server-issued, never signed by the compromised key.
+What stays valid after step 3, and why that is accepted: already-issued
+access tokens stay valid until their short (15-minute) expiry — inherent to
+self-contained tokens. Everything else is dead: refresh-token families and
+pending authorization codes are all revoked, so even a client mid-authorize
+restarts its flow instead of redeeming a pre-incident code into a new-key
+family. Connections are kept, so re-authorization auto-approves.
 
 ## Encryption-material rotation plan
 
@@ -152,7 +154,7 @@ history.
 
 - `php bin/console lint:container` — the container does not boot with an
   unreadable key path, so this catches most deployment typos before traffic.
-- `./bin/console app:oauth:revoke-refresh-families` — emergency family
-  revocation; prints the revoked count.
+- `./bin/console app:oauth:revoke-refresh-families` — emergency
+  Client-session revocation; prints the revoked count.
 - Decode a token header to confirm its `kid`:
   `php -r '$p=json_decode(base64_decode(explode(".", $argv[1])[0]),true); echo $p["kid"]??"(none)",PHP_EOL;' <token>`.

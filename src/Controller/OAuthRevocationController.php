@@ -4,8 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
-use App\OAuth2\ConsentRevoker;
-use App\OAuth2\RefreshTokenFamilyRepository;
+use App\Connection\ConnectionLifecycle;
 use League\Bundle\OAuth2ServerBundle\Manager\ClientManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
@@ -16,12 +15,14 @@ use Symfony\Component\PasswordHasher\PasswordHasherInterface;
 use Symfony\Component\Routing\Attribute\Route;
 
 /**
- * RFC 7009 token revocation for OAuth2 clients (issue #92).
+ * RFC 7009 token revocation for OAuth2 clients (ADR 0005).
  *
  * A client presents its refresh token with its own identity (plus its secret
- * when confidential) and the whole usable family behind that token is
+ * when confidential) and the one usable Client session behind that token is
  * revoked: the presented token and every other usable token of its family
- * stop refreshing, so only fresh User authorization helps.
+ * stop refreshing. The Connection stays — the remembered consent is kept, so
+ * the next authorization auto-approves instead of showing the consent screen
+ * again.
  *
  * Self-contained access tokens cannot be revoked: presenting one succeeds
  * without claiming a revocation, and the token stays usable until its
@@ -33,8 +34,7 @@ final class OAuthRevocationController extends AbstractController
 {
     public function __construct(
         private readonly ClientManagerInterface $clients,
-        private readonly RefreshTokenFamilyRepository $families,
-        private readonly ConsentRevoker $consents,
+        private readonly ConnectionLifecycle $connections,
         #[Autowire(service: 'league.oauth2_server.password_hasher')]
         private readonly PasswordHasherInterface $passwordHasher,
     ) {
@@ -78,19 +78,12 @@ final class OAuthRevocationController extends AbstractController
             );
         }
 
-        // The hint is advisory only: a refresh token revokes its whole
-        // usable family whatever the hint says, while an access token (or an
-        // unknown token) simply has no revocable family and succeeds. A
-        // revoked refresh token also forgets the remembered consent, so the
-        // client asks the User for consent again instead of silently
-        // re-authorizing on its old grant.
-        $family = $this->families->revokeByOpaqueToken($token, $clientId);
-        if (null !== $family) {
-            $user = $family->getUser();
-            if (null !== $user) {
-                $this->consents->forget($user, $clientId);
-            }
-        }
+        // The hint is advisory only: a refresh token revokes its one usable
+        // Client session whatever the hint says, while an access token (or an
+        // unknown token) simply has no revocable session and succeeds. The
+        // Connection is deliberately kept, so the client re-authorizes without
+        // the User consenting again.
+        $this->connections->revokeSessionByOpaqueToken($token, $clientId);
 
         return $this->noCache(new Response('', Response::HTTP_OK));
     }

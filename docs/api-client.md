@@ -35,7 +35,8 @@ in v1.
    `scope=api:full`, an S256 `code_challenge`, your registered `client_id`
    and `redirect_uri`, and a `state`. The User signs in with the existing web
    login if needed, sees your client name and the full-access permission, and
-   allows or denies. Consent is remembered per User, client, and scope.
+   allows or denies. The Connection — the User's standing approval for your
+   client — is remembered per User, client, and scope.
 3. `POST` the `token_endpoint` with `grant_type=authorization_code` and the
    `code_verifier`. The response carries a 15-minute Bearer access token
    (`aud` = the API audience, `iss` = the issuer from discovery) and a
@@ -56,10 +57,12 @@ Clients are manually approved: there is no self-service registration. Public
   because the device grant is disabled; do not use it.
 - **Token revocation** (RFC 7009): implemented at `POST /revoke` but no
   `revocation_endpoint` is advertised in discovery — call the documented
-  URL (see `docs/api-operations.md` §5). Revoking a refresh token ends its
-  whole family; already-issued access tokens stay valid until their
-  15-minute expiry. Consent is revoked through the app (Profile →
-  Connected apps) and takes effect on refresh.
+  URL (see `docs/api-operations.md` §5). Revoking a refresh token ends
+  that one Client session and keeps the Connection — the next
+  authorization auto-approves. Already-issued access tokens stay valid
+  until their 15-minute expiry. Connections end through the app
+  (Profile → Connected apps): disconnecting ends the Connection, so the
+  next authorization shows the consent screen again.
 - **Token introspection** (RFC 7662): no endpoint exists and none is
   advertised.
 - **MCP endpoint**: no Model Context Protocol surface exists in API v1.

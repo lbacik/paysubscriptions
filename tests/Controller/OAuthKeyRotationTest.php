@@ -140,7 +140,7 @@ final class OAuthKeyRotationTest extends DatabaseTestCase
         self::assertResponseStatusCodeSame(Response::HTTP_UNAUTHORIZED);
     }
 
-    public function testEmergencyRotationInvalidatesOldKeyAndRevokesFamilies(): void
+    public function testEmergencyRotationInvalidatesOldKeyAndRevokesSessions(): void
     {
         $this->client->loginUser($this->user);
         $first = $this->authorizeAndExchange();
@@ -154,10 +154,10 @@ final class OAuthKeyRotationTest extends DatabaseTestCase
         self::assertResponseIsSuccessful();
 
         // Emergency: the compromised key is unpublished and every
-        // refresh-token family is revoked.
+        // Client session is revoked.
         $this->unpublishPreviousKey();
         $revoked = $this->runRevokeCommand();
-        self::assertStringContainsString('Revoked 1 refresh-token family', $revoked);
+        self::assertStringContainsString('Revoked 1 Client session', $revoked);
 
         // The old key stops validating immediately…
         $this->client->request('GET', '/api', [], [], ['HTTP_Authorization' => 'Bearer '.$oldAccessToken]);
@@ -194,7 +194,7 @@ final class OAuthKeyRotationTest extends DatabaseTestCase
         $this->setEnvAndReboot('OAUTH_ENCRYPTION_KEY', 'rotated-dummy-encryption-key-for-tests-only-02');
 
         // Outstanding refresh tokens fail with a protocol error, never a 500:
-        // the family behind them is unreachable, so clients must authorize again.
+        // the Client session behind them is unreachable, so clients must authorize again.
         $this->client->request('POST', '/token', [
             'grant_type' => 'refresh_token',
             'client_id' => self::CLIENT_ID,
