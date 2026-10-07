@@ -29,8 +29,16 @@ The user-entered next known payment date of a Subscription. It is the anchor fro
 _Avoid_: First payment (legacy name), due date
 
 **Renewal** (upcoming renewal):
-A future payment date computed from the next payment date anchor by stepping whole billing cycles while preserving the anchor's calendar day. An occurrence landing in a month without that day uses that month's last day for that occurrence, and later occurrences return to the anchor day when possible (a January 31st monthly anchor renews February 28th/29th, then March 31st; a February 29th yearly anchor renews February 28th except in leap years). An anchor in the past rolls forward to the first occurrence on or after the reference day.
+A future payment date computed from the next payment date anchor by stepping whole billing cycles while preserving the anchor's calendar day. An occurrence landing in a month without that day uses that month's last day for that occurrence, and later occurrences return to the anchor day when possible (a January 31st monthly anchor renews February 28th/29th, then March 31st; a February 29th yearly anchor renews February 28th except in leap years). An anchor in the past rolls forward to the first occurrence on or after the reference day. A Subscription is charged in a given calendar month when it has a Renewal in that month; a yearly Subscription is charged only in its Renewal month, never by its next payment date alone.
 _Avoid_: Billing date, charge date
+
+**Pending review**:
+The state of a cross-currency Subscription whose converted amount was entered for a different main currency than the User's current one. It still counts as one of the User's Subscriptions, but it is left out of every monetary total and chart until the User reviews the converted amount.
+_Avoid_: Stale, unreportable
+
+**Dashboard report**:
+A User's spending summary plus one chart, optionally narrowed to one ExpenseCategory. It means the same thing whether the User sees it on the dashboard or a Client fetches it through the API. Subscriptions pending review are counted in it but contribute no money.
+_Avoid_: Stats, analytics
 
 **Recipient restriction**:
 The current SES deliverability state of one normalized email address: *undeliverable* after a permanent bounce, *do-not-send* after a complaint. Only SES feedback creates or tightens it; no later event loosens it. Only an audited operator action with a reason clears it, and it never changes email verification or password-reset state. It belongs to the address, not the User, so a User who changes address starts unrestricted. Restricted addresses receive no email.
