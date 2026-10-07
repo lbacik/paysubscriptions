@@ -25,7 +25,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
  */
 #[AsCommand(
     name: 'app:oauth:revoke-refresh-families',
-    description: 'Revoke all OAuth2 refresh-token families (emergency key-compromise response)',
+    description: 'Revoke all OAuth2 Client sessions (emergency key-compromise response)',
 )]
 final class RevokeRefreshFamiliesCommand extends Command
 {
@@ -40,7 +40,7 @@ final class RevokeRefreshFamiliesCommand extends Command
         $revoked = $this->connections->revokeAllCredentials();
 
         $io = new SymfonyStyle($input, $output);
-        $io->success(\sprintf('Revoked %d refresh-token %s. Clients must authorize again.', $revoked, 1 === $revoked ? 'family' : 'families'));
+        $io->success(\sprintf('Revoked %d Client %s. Clients must authorize again.', $revoked, 1 === $revoked ? 'session' : 'sessions'));
 
         return Command::SUCCESS;
     }

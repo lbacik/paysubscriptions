@@ -74,17 +74,17 @@ final class ConnectionLifecycle
      * Idempotent: ending a Connection with nothing left to revoke succeeds
      * without effect (like RFC 7009 for unknown tokens).
      *
-     * @return bool whether anything was revoked: a consent, a usable family,
-     *              or a pending authorization code
+     * @return bool whether anything was revoked: a consent, a usable Client
+     *              session, or a pending authorization code
      */
     public function endConnection(User $user, string $clientId): bool
     {
         $codes = $this->revokePendingCodesForPair($user, $clientId);
-        $families = $this->revokeFamilies($this->familiesForPair($user, $clientId));
+        $sessions = $this->revokeSessions($this->sessionsForPair($user, $clientId));
         $hadConnection = null !== $this->consents->findForClient($user, $clientId);
         $this->removeConsents($this->consentsForPair($user, $clientId));
 
-        return $hadConnection || $families > 0 || $codes > 0;
+        return $hadConnection || $sessions > 0 || $codes > 0;
     }
 
     /**
@@ -96,10 +96,10 @@ final class ConnectionLifecycle
     public function endConnectionsForUser(User $user): int
     {
         $this->revokePendingCodesForUser($user->getEmail());
-        $families = $this->revokeFamilies($this->familiesForUser($user));
+        $sessions = $this->revokeSessions($this->sessionsForUser($user));
         $this->removeConsents($this->em->getRepository(OAuthConsent::class)->findBy(['user' => $user]));
 
-        return $families;
+        return $sessions;
     }
 
     /**
@@ -108,8 +108,8 @@ final class ConnectionLifecycle
      * consents, so a Client re-registered under the same identifier starts
      * with no Connections.
      *
-     * Safe to call after the Client row itself is gone: families and consents
-     * key off the plain identifier string, and pending codes cascade with
+     * Safe to call after the Client row itself is gone: session and consent
+     * rows key off the plain identifier string, and pending codes cascade with
      * the Client row at the database level.
      *
      * @return int the number of Client sessions revoked
@@ -121,10 +121,10 @@ final class ConnectionLifecycle
         }
 
         $this->revokePendingCodesForClientId($clientId);
-        $families = $this->revokeFamilies($this->em->getRepository(OAuthRefreshFamily::class)->findBy(['clientId' => $clientId]));
+        $sessions = $this->revokeSessions($this->em->getRepository(OAuthRefreshFamily::class)->findBy(['clientId' => $clientId]));
         $this->removeConsents($this->em->getRepository(OAuthConsent::class)->findBy(['clientId' => $clientId]));
 
-        return $families;
+        return $sessions;
     }
 
     /**
@@ -132,7 +132,7 @@ final class ConnectionLifecycle
      * encrypted) refresh-token value. The Connection stays: the next
      * authorization auto-approves.
      *
-     * Returns the revoked family, or null for unknown values
+     * Returns the revoked session, or null for unknown values
      * (self-contained access tokens, malformed input) and for tokens owned
      * by another client, which are left untouched. Callers answer success
      * either way, so the endpoint never discloses token ownership.
@@ -146,18 +146,18 @@ final class ConnectionLifecycle
         }
 
         $link = $this->em->find(OAuthRefreshFamilyToken::class, $tokenId);
-        $family = $link?->getFamily();
-        if (null === $family) {
+        $session = $link?->getFamily();
+        if (null === $session) {
             return null;
         }
 
-        if (null !== $expectedClientId && $family->getClientId() !== $expectedClientId) {
+        if (null !== $expectedClientId && $session->getClientId() !== $expectedClientId) {
             return null;
         }
 
-        $this->revokeFamilies([$family]);
+        $this->revokeSessions([$session]);
 
-        return $family;
+        return $session;
     }
 
     /**
@@ -169,9 +169,9 @@ final class ConnectionLifecycle
     public function revokeCredentialsForUser(User $user): int
     {
         $this->revokePendingCodesForUser($user->getEmail());
-        $families = $this->revokeFamilies($this->familiesForUser($user));
+        $sessions = $this->revokeSessions($this->sessionsForUser($user));
 
-        return $families;
+        return $sessions;
     }
 
     /**
@@ -188,9 +188,9 @@ final class ConnectionLifecycle
         }
 
         $this->revokePendingCodesForClientId($clientId);
-        $families = $this->revokeFamilies($this->em->getRepository(OAuthRefreshFamily::class)->findBy(['clientId' => $clientId]));
+        $sessions = $this->revokeSessions($this->em->getRepository(OAuthRefreshFamily::class)->findBy(['clientId' => $clientId]));
 
-        return $families;
+        return $sessions;
     }
 
     /**
@@ -200,10 +200,10 @@ final class ConnectionLifecycle
      * This is the emergency response to a suspected signing-key compromise:
      * with the old verification key unpublished, forged access tokens already
      * fail validation, and revoking all sessions additionally kills every
-     * legitimate session. Families are marked revoked (never deleted) and
+     * legitimate session. Sessions are marked revoked (never deleted) and
      * every token link is superseded with its bundle row revoked, mirroring
      * the single-session path. Pending authorization codes are revoked too,
-     * so a code issued before the emergency cannot mint a fresh family after
+     * so a code issued before the emergency cannot mint a fresh session after
      * it — in-flight authorizations restart instead.
      *
      * @return int the number of Client sessions revoked
@@ -217,15 +217,15 @@ final class ConnectionLifecycle
             ->getQuery()
             ->execute();
 
-        $families = $this->em->getRepository(OAuthRefreshFamily::class)->findBy(['revoked' => false]);
+        $sessions = $this->em->getRepository(OAuthRefreshFamily::class)->findBy(['revoked' => false]);
 
-        return $this->revokeFamilies($families);
+        return $this->revokeSessions($sessions);
     }
 
     /**
      * @return list<OAuthRefreshFamily>
      */
-    private function familiesForPair(User $user, string $clientId): array
+    private function sessionsForPair(User $user, string $clientId): array
     {
         /** @var list<OAuthRefreshFamily> */
         return $this->em->getRepository(OAuthRefreshFamily::class)->findBy([
@@ -237,7 +237,7 @@ final class ConnectionLifecycle
     /**
      * @return list<OAuthRefreshFamily>
      */
-    private function familiesForUser(User $user): array
+    private function sessionsForUser(User $user): array
     {
         /** @var list<OAuthRefreshFamily> */
         return $this->em->getRepository(OAuthRefreshFamily::class)->findBy([
@@ -278,15 +278,15 @@ final class ConnectionLifecycle
      * bundle's own refresh-token row revoked, so a pending code cannot mint
      * a fresh session after the fact either.
      *
-     * @param list<OAuthRefreshFamily> $families
+     * @param list<OAuthRefreshFamily> $sessions
      *
      * @return int the number of sessions revoked
      */
-    private function revokeFamilies(array $families): int
+    private function revokeSessions(array $sessions): int
     {
         $usable = array_values(array_filter(
-            $families,
-            static fn (OAuthRefreshFamily $family): bool => !$family->isRevoked(),
+            $sessions,
+            static fn (OAuthRefreshFamily $session): bool => !$session->isRevoked(),
         ));
 
         if ([] === $usable) {
@@ -296,10 +296,10 @@ final class ConnectionLifecycle
         $tokenIds = [];
         $linkRepository = $this->em->getRepository(OAuthRefreshFamilyToken::class);
 
-        foreach ($usable as $family) {
-            $family->setRevoked(true);
+        foreach ($usable as $session) {
+            $session->setRevoked(true);
 
-            foreach ($linkRepository->findBy(['family' => $family]) as $link) {
+            foreach ($linkRepository->findBy(['family' => $session]) as $link) {
                 $link->setSuperseded(true);
                 $tokenId = $link->getTokenId();
                 if (\is_string($tokenId) && '' !== $tokenId) {

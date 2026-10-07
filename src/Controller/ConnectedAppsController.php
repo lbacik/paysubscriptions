@@ -39,7 +39,7 @@ class ConnectedAppsController extends AbstractController
         }
 
         return $this->render('profile/connected_apps.html.twig', [
-            'grants' => $this->connections->listConnections($user),
+            'connections' => $this->connections->listConnections($user),
         ]);
     }
 

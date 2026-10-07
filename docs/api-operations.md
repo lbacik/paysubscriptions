@@ -138,7 +138,7 @@ curl -fsS https://paysubscriptions.com/token \
 
 - **User side:** Profile → Connected apps → disconnect. This deletes the
   remembered consent (next authorization asks again) and revokes the
-  client's refresh-token families immediately: it cannot refresh or
+  client's Client sessions immediately: it cannot refresh or
   mint new access without renewed consent.
 - **Client side:** `POST /revoke` (RFC 7009) with the refresh token;
   revokes that one Client session (the token and its usable family) and
@@ -177,7 +177,7 @@ curl -fsS https://paysubscriptions.com/token \
   empty the previous-key values. Zero re-authorization; refresh families
   survive untouched.
 - **Emergency rotation:** new pair, previous-key values empty (old
-  tokens fail at once), revoke all families, clients re-authorize.
+  tokens fail at once), revoke all Client sessions, clients re-authorize.
 - **Encryption rotation:** no overlap — changing the value fails old
   codes and refresh tokens closed with `invalid_grant`; announce a
   low-traffic window, keep the old value in secrets history for a

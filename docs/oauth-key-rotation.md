@@ -106,7 +106,7 @@ each) and ends every session.
    stolen sessions cannot mint new-key tokens and in-flight authorizations
    cannot complete into them:
    `./bin/console app:oauth:revoke-refresh-families`
-   The command reports how many families it revoked. Clients must authorize
+   The command reports how many Client sessions it revoked. Clients must authorize
    again from here.
 4. Verify: a pre-incident access token gets 401, a pre-incident refresh token
    gets `invalid_grant`, a pre-incident pending authorization code fails with
@@ -154,7 +154,7 @@ history.
 
 - `php bin/console lint:container` — the container does not boot with an
   unreadable key path, so this catches most deployment typos before traffic.
-- `./bin/console app:oauth:revoke-refresh-families` — emergency family
-  revocation; prints the revoked count.
+- `./bin/console app:oauth:revoke-refresh-families` — emergency
+  Client-session revocation; prints the revoked count.
 - Decode a token header to confirm its `kid`:
   `php -r '$p=json_decode(base64_decode(explode(".", $argv[1])[0]),true); echo $p["kid"]??"(none)",PHP_EOL;' <token>`.
