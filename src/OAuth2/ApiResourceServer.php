@@ -48,11 +48,13 @@ class ApiResourceServer extends ResourceServer
     /**
      * @param CryptKeyInterface|string      $publicKey         current verification key (path or contents)
      * @param CryptKeyInterface|string|null $previousPublicKey previous verification key, if a rotation is in flight
+     * @param string                        $clockSkewLeeway   clock-skew tolerance, injected from app.oauth2.clock_skew_leeway (issue #135, problem 6)
      */
     public function __construct(
         AccessTokenRepositoryInterface $accessTokenRepository,
         CryptKeyInterface|string $publicKey,
         private readonly string $issuer,
+        string $clockSkewLeeway,
         ?string $keyId = null,
         CryptKeyInterface|string|null $previousPublicKey = null,
         ?string $previousKeyId = null,
@@ -64,14 +66,14 @@ class ApiResourceServer extends ResourceServer
 
         $this->currentValidator = new BearerTokenValidator(
             $accessTokenRepository,
-            new DateInterval(OAuth2Config::CLOCK_SKEW_LEEWAY),
+            new DateInterval($clockSkewLeeway),
         );
         $this->currentValidator->setPublicKey(self::asPublicKey($publicKey));
 
         $previous = self::asPublicKeyOrNull($previousPublicKey);
         $this->previousValidator = null === $previous ? null : new BearerTokenValidator(
             $accessTokenRepository,
-            new DateInterval(OAuth2Config::CLOCK_SKEW_LEEWAY),
+            new DateInterval($clockSkewLeeway),
         );
         if (null !== $previous && null !== $this->previousValidator) {
             $this->previousValidator->setPublicKey($previous);

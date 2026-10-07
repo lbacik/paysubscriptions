@@ -16,6 +16,13 @@ parameters:
     # Public identifier of this authorization server, carried as the `iss`
     # claim of every access token and enforced by the API resource server.
     app.oauth2.issuer: '%env(OAUTH2_ISSUER)%'
+    # OAuth2 token lifetimes, defined once here (issue #135, problem 6). The
+    # League bundle config references these parameters and code that needs
+    # the values gets them injected, so no lifetime is repeated in both
+    # config and App\OAuth2 constants.
+    app.oauth2.access_token_ttl: 'PT15M'
+    app.oauth2.refresh_idle_ttl: 'P30D'
+    app.oauth2.clock_skew_leeway: 'PT60S'
 
 services:
     # default configuration for services in *this* file
@@ -98,6 +105,19 @@ services:
         decorates: 'league.oauth2_server.repository.refresh_token'
         arguments:
             $inner: '@App\OAuth2\RefreshTokenFamilyRepository.inner'
+            $refreshIdleTtl: '%app.oauth2.refresh_idle_ttl%'
+
+    # Single definition of the OAuth2 token lifetimes (issue #135, problem 6):
+    # the bundle config references the same parameters, and the rotation
+    # overlap derives from them here instead of being hard-coded.
+    App\OAuth2\OAuthTokenLifetimes:
+        # Public so the overlap window stays inspectable (tests, runbooks)
+        # even though no runtime service injects the whole object yet.
+        public: true
+        arguments:
+            $accessTokenTtl: '%app.oauth2.access_token_ttl%'
+            $refreshIdleTtl: '%app.oauth2.refresh_idle_ttl%'
+            $clockSkewLeeway: '%app.oauth2.clock_skew_leeway%'
 
     # Signing-key rotation (issue #94): the resource server verifies against
     # the current public key plus, while a rotation is in flight, the previous
@@ -113,6 +133,7 @@ services:
             $keyId: '%env(OAUTH_KEY_ID)%'
             $previousPublicKey: '%env(OAUTH_PREVIOUS_PUBLIC_KEY)%'
             $previousKeyId: '%env(OAUTH_PREVIOUS_KEY_ID)%'
+            $clockSkewLeeway: '%app.oauth2.clock_skew_leeway%'
     League\OAuth2\Server\ResourceServer: '@App\OAuth2\ApiResourceServer'
 
     # Public verification key for the API resource server. The permission

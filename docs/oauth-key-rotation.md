@@ -55,14 +55,15 @@ rotation.
 
 ## Timing: the overlap window
 
-Access tokens live 15 minutes (`access_token_ttl`, mirrored as
-`OAuth2Config::ACCESS_TOKEN_TTL`) plus 60 seconds of clock-skew tolerance
-(`jwt_leeway`, mirrored as `OAuth2Config::CLOCK_SKEW_LEEWAY`). No pre-rotation
-token can outlive that, so a routine rotation only needs the previous
-verification key published for **16 minutes** (`OAuth2Config::ROTATION_OVERLAP`).
+Access tokens live 15 minutes (`app.oauth2.access_token_ttl`) plus 60 seconds
+of clock-skew tolerance (`app.oauth2.clock_skew_leeway`). Both are defined
+once as container parameters (issue #135, problem 6): the bundle config
+references them for issued tokens, and `App\OAuth2\OAuthTokenLifetimes`
+derives the overlap from those same parameters. No pre-rotation token can
+outlive that sum, so a routine rotation only needs the previous verification
+key published for **16 minutes** (`OAuthTokenLifetimes::getRotationOverlap()`).
 The documented recommendation is **30 minutes** — generous margin, same
-operational shape. Keep the two constants and the bundle settings in step;
-they are cross-referenced in code comments.
+operational shape.
 
 ## Routine signing-key rotation (no incident)
 
