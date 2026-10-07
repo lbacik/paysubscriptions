@@ -7,18 +7,25 @@ namespace App\Tests\Service;
 use App\Entity\Subscription;
 use App\Enum\BillingCycle;
 use App\Service\ChartService;
-use PHPUnit\Framework\TestCase;
-use Symfony\UX\Chartjs\Builder\ChartBuilder;
+use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
-final class ChartServiceTest extends TestCase
+/**
+ * ChartService as a pure DashboardReport renderer (candidate 03).
+ *
+ * The array call shapes below are compatibility shims over the Dashboard
+ * report module; they build the same report the controllers render, so the
+ * worked chart examples here still pin the rendered output.
+ */
+final class ChartServiceTest extends KernelTestCase
 {
     private ChartService $chartService;
 
     protected function setUp(): void
     {
         parent::setUp();
+        self::bootKernel();
 
-        $this->chartService = new ChartService(new ChartBuilder());
+        $this->chartService = static::getContainer()->get(ChartService::class);
     }
 
     public function testCreateBarChartBuildsDatasetsWithAmountAndLabels(): void
@@ -54,8 +61,7 @@ final class ChartServiceTest extends TestCase
 
     public function testBarChartUsesConvertedAmountsInMainCurrency(): void
     {
-        $chartBuilder = new ChartBuilder();
-        $chartService = new ChartService($chartBuilder);
+        $chartService = $this->chartService;
 
         $subscription = new Subscription();
         $subscription->setName('Foreign Service');
@@ -75,8 +81,7 @@ final class ChartServiceTest extends TestCase
 
     public function testChartsExcludeStaleConvertedAmountsPendingReview(): void
     {
-        $chartBuilder = new ChartBuilder();
-        $chartService = new ChartService($chartBuilder);
+        $chartService = $this->chartService;
 
         $stale = new Subscription();
         $stale->setName('Stale Service');
@@ -94,7 +99,7 @@ final class ChartServiceTest extends TestCase
 
     public function testMonthlyChartWithCalculatedNormalizesYearlyPlans(): void
     {
-        $chartService = new ChartService(new ChartBuilder());
+        $chartService = $this->chartService;
 
         $chart = $chartService->createMonthlyChart(
             [$this->subscription('Monthly', BillingCycle::Monthly, 12.00), $this->subscription('Yearly', BillingCycle::Yearly, 120.00)],
@@ -110,7 +115,7 @@ final class ChartServiceTest extends TestCase
 
     public function testMonthlyChartWithoutCalculatedShowsOnlyMonthlyPlans(): void
     {
-        $chartService = new ChartService(new ChartBuilder());
+        $chartService = $this->chartService;
 
         $chart = $chartService->createMonthlyChart(
             [$this->subscription('Monthly', BillingCycle::Monthly, 12.00), $this->subscription('Yearly', BillingCycle::Yearly, 120.00)],
@@ -124,7 +129,7 @@ final class ChartServiceTest extends TestCase
 
     public function testYearlyChartWithCalculatedNormalizesMonthlyPlans(): void
     {
-        $chartService = new ChartService(new ChartBuilder());
+        $chartService = $this->chartService;
 
         $chart = $chartService->createYearlyChart(
             [$this->subscription('Monthly', BillingCycle::Monthly, 10.00), $this->subscription('Yearly', BillingCycle::Yearly, 120.00)],
@@ -140,7 +145,7 @@ final class ChartServiceTest extends TestCase
 
     public function testYearlyChartWithoutCalculatedShowsOnlyYearlyPlans(): void
     {
-        $chartService = new ChartService(new ChartBuilder());
+        $chartService = $this->chartService;
 
         $chart = $chartService->createYearlyChart(
             [$this->subscription('Monthly', BillingCycle::Monthly, 10.00), $this->subscription('Yearly', BillingCycle::Yearly, 120.00)],
@@ -154,7 +159,7 @@ final class ChartServiceTest extends TestCase
 
     public function testMonthlyChartMonthFilterKeepsYearlyPlansInThatMonthOnly(): void
     {
-        $chartService = new ChartService(new ChartBuilder());
+        $chartService = $this->chartService;
         $mayYearly = $this->subscription('May Yearly', BillingCycle::Yearly, 120.00);
         $mayYearly->setNextPayment(new \DateTime('2024-05-15'));
 
@@ -169,7 +174,7 @@ final class ChartServiceTest extends TestCase
 
     public function testEquivalentChartsUseConvertedAmountsInMainCurrency(): void
     {
-        $chartService = new ChartService(new ChartBuilder());
+        $chartService = $this->chartService;
         $cross = $this->subscription('Cross', BillingCycle::Yearly, 120.00);
         $cross->setCurrency('EUR');
         $cross->setConvertedAmount(132.00);
@@ -185,7 +190,7 @@ final class ChartServiceTest extends TestCase
 
     public function testEquivalentChartsRoundYearlyNormalizationToCents(): void
     {
-        $chartService = new ChartService(new ChartBuilder());
+        $chartService = $this->chartService;
 
         $chart = $chartService->createMonthlyChart(
             [$this->subscription('Yearly', BillingCycle::Yearly, 100.00)],
@@ -198,7 +203,7 @@ final class ChartServiceTest extends TestCase
 
     public function testEmptySubscriptionsProduceEmptyChartsWithoutErrors(): void
     {
-        $chartService = new ChartService(new ChartBuilder());
+        $chartService = $this->chartService;
 
         $bar = $chartService->createBarChart([]);
         self::assertSame([], $bar->getData()['datasets']);

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Report\DashboardReporter;
+use App\Report\ReportQuery;
 use App\Service\ChartService;
 use App\Service\SubscriptionListState;
 use App\Service\SubscriptionService;
@@ -19,6 +21,7 @@ class DashboardController extends AbstractController
 {
     public function __construct(
         private readonly SubscriptionService $subscriptionService,
+        private readonly DashboardReporter $reporter,
         private readonly ChartService $chartService,
         private readonly UpcomingRenewals $upcomingRenewals,
         private readonly SubscriptionListState $listState,
@@ -36,23 +39,36 @@ class DashboardController extends AbstractController
 
         // The same session-backed filter/sort state the table component reads,
         // so charts, totals, and renewals describe the filtered list.
+        $sort = $this->listState->sort();
+        $order = $this->listState->order();
+        $categoryId = $this->listState->categoryId();
         $subscriptions = $this->subscriptionService->get(
             $this->getUser(),
-            $this->listState->sort(),
-            $this->listState->order(),
-            $this->listState->categoryId(),
+            $sort,
+            $order,
+            $categoryId,
             $mainCurrency,
         );
 
-        $chart = match($chartType) {
-            'monthly' => $this->chartService->createMonthlyChart($subscriptions, $withCalculated, $month, $mainCurrency),
-            'yearly' => $this->chartService->createYearlyChart($subscriptions, $withCalculated, $mainCurrency),
-            default => $this->chartService->createBarChart($subscriptions, $mainCurrency),
+        $mode = match ($chartType) {
+            'monthly' => ReportQuery::MODE_MONTHLY,
+            'yearly' => ReportQuery::MODE_YEARLY,
+            default => ReportQuery::MODE_BAR,
         };
+        $report = $this->reporter->report(
+            $this->getUser(),
+            new ReportQuery(
+                mode: $mode,
+                basis: $withCalculated ? ReportQuery::BASIS_EQUIVALENT : ReportQuery::BASIS_DIRECT,
+                month: $month,
+                categoryId: $categoryId,
+                sort: $sort,
+                order: $order,
+            ),
+        );
+        $chart = $this->chartService->createChart($report);
 
-        $totals = $this->subscriptionService->getTotals($subscriptions, $mainCurrency);
         $pendingReviewSubscriptions = $this->subscriptionService->getPendingReviewSubscriptions($subscriptions, $mainCurrency);
-        $chartMeta = $this->describeChart($chartType, $withCalculated, $month, $subscriptions, $mainCurrency);
         $subscriptionLimit = $user instanceof \App\Entity\User
             ? $user->getSubscriptionsLimit()
             : \App\Entity\Limits::DEFAULT_SUBSCRIPTIONS_LIMIT;
@@ -67,7 +83,7 @@ class DashboardController extends AbstractController
             'chart' => $chart,
             'fullWidth' => $chartType === 'bar',
             'active' => ['type' => $chartType, 'withCalculated' => $withCalculated, 'month' => $month],
-            'totals' => $totals,
+            'totals' => $report->summary,
             'mainCurrency' => $mainCurrency,
             'pendingReviewSubscriptions' => $pendingReviewSubscriptions,
             'subscriptionLimit' => $subscriptionLimit,
@@ -75,73 +91,7 @@ class DashboardController extends AbstractController
             'limitPercentage' => $limitPercentage,
             'addSubscriptionDisabled' => ! $this->subscriptionService->isAbleToAddSubscription($this->getUser()),
             'upcomingRenewals' => $this->upcomingRenewals->nextOccurrences($subscriptions),
-            'chartMeta' => $chartMeta,
+            'chartMeta' => $report->visibility(),
         ]);
-    }
-
-    /**
-     * Describes what the active chart draws so the template can label its
-     * currency and basis (normalized equivalents vs direct-cycle charges vs
-     * the bar view's per-month charge distribution) and render clear
-     * empty/filtered states. The inclusion rules mirror ChartService: only
-     * reportable Subscriptions (nothing pending converted-amount review)
-     * ever reach a chart.
-     *
-     * @param array<\App\Entity\Subscription> $subscriptions
-     * @return array{basis: string, currency: ?string, empty: bool, hiddenCount: int, hiddenCycle: ?string}
-     */
-    private function describeChart(
-        string $chartType,
-        bool $withCalculated,
-        int|null $month,
-        array $subscriptions,
-        ?string $mainCurrency,
-    ): array {
-        $reportable = $this->chartService->filterReportable($subscriptions, $mainCurrency);
-        $meta = [
-            'basis' => 'charges',
-            'currency' => \App\Service\CurrencyService::normalizeCode($mainCurrency),
-            'empty' => $reportable === [],
-            'hiddenCount' => 0,
-            'hiddenCycle' => null,
-        ];
-
-        if ($chartType === 'monthly') {
-            if ($withCalculated) {
-                $meta['basis'] = 'monthly_equivalent';
-
-                return $meta;
-            }
-
-            $meta['basis'] = 'monthly_direct';
-            $included = array_filter(
-                $reportable,
-                static fn(\App\Entity\Subscription $s) => $s->isMonthly()
-                    || ($month !== null && $s->getNextPayment()?->format('n') === (string) $month),
-            );
-            $meta['empty'] = $included === [];
-            $meta['hiddenCount'] = \count($reportable) - \count($included);
-            $meta['hiddenCycle'] = $meta['hiddenCount'] > 0 ? 'yearly' : null;
-
-            return $meta;
-        }
-
-        if ($chartType === 'yearly') {
-            if ($withCalculated) {
-                $meta['basis'] = 'yearly_equivalent';
-
-                return $meta;
-            }
-
-            $meta['basis'] = 'yearly_direct';
-            $included = array_filter($reportable, static fn(\App\Entity\Subscription $s) => $s->isYearly());
-            $meta['empty'] = $included === [];
-            $meta['hiddenCount'] = \count($reportable) - \count($included);
-            $meta['hiddenCycle'] = $meta['hiddenCount'] > 0 ? 'monthly' : null;
-
-            return $meta;
-        }
-
-        return $meta;
     }
 }

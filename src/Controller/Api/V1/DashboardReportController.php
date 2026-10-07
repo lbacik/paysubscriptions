@@ -6,12 +6,11 @@ namespace App\Controller\Api\V1;
 
 use App\Api\Problem;
 use App\Entity\ExpenseCategory;
-use App\Entity\Subscription;
 use App\Entity\User;
 use App\Repository\ExpenseCategoryRepository;
-use App\Service\ChartService;
-use App\Service\CurrencyService;
-use App\Service\SubscriptionService;
+use App\Report\DashboardReport;
+use App\Report\DashboardReporter;
+use App\Report\ReportQuery;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -24,9 +23,10 @@ use Symfony\Component\Uid\Uuid;
  *
  * Returns the current User's summary-card values and the numeric data behind
  * one dashboard chart mode in a single JSON response. Calculations reuse the
- * web dashboard services, so figures match the dashboard exactly: totals come
- * from SubscriptionService::getTotals(), chart series from ChartService, and
- * visibility metadata follows the DashboardController rules.
+ * Dashboard report module, so figures match the dashboard exactly: the
+ * summary comes from SubscriptionService::getTotals() through
+ * DashboardReporter, and the chart series and visibility metadata are the
+ * same DashboardReport the web dashboard renders.
  *
  * The request is stateless: the optional category filter and the month-of-year
  * selector travel as explicit query parameters rather than web-session list
@@ -41,8 +41,7 @@ class DashboardReportController extends AbstractController
     private const BASES = ['direct', 'equivalent'];
 
     public function __construct(
-        private readonly SubscriptionService $subscriptions,
-        private readonly ChartService $charts,
+        private readonly DashboardReporter $reporter,
         private readonly ExpenseCategoryRepository $categories,
     ) {
     }
@@ -100,22 +99,23 @@ class DashboardReportController extends AbstractController
         /** @var string|null $categoryId */
         $categoryId = \is_string($categoryId) ? $categoryId : null;
 
-        $mainCurrency = $user->getMainCurrency();
-        $subscriptions = $this->subscriptions->get($user, 'name', 'asc', $categoryId, $mainCurrency);
-        $totals = $this->subscriptions->getTotals($subscriptions, $mainCurrency);
+        $report = $this->reporter->report(
+            $user,
+            new ReportQuery(mode: $chartMode, basis: $basis, month: $month, categoryId: $categoryId),
+        );
 
         return new JsonResponse([
             'summary' => [
-                'monthly' => $totals['monthly'],
-                'yearly' => $totals['yearly'],
-                'monthlyEquivalent' => $totals['monthlyCalculated'],
-                'yearlyEquivalent' => $totals['yearlyCalculated'],
-                'count' => $totals['count'],
+                'monthly' => $report->summary['monthly'],
+                'yearly' => $report->summary['yearly'],
+                'monthlyEquivalent' => $report->summary['monthlyCalculated'],
+                'yearlyEquivalent' => $report->summary['yearlyCalculated'],
+                'count' => $report->summary['count'],
                 'limit' => $user->getSubscriptionsLimit(),
-                'currency' => $totals['currency'],
-                'pendingReview' => $totals['pendingReview'],
+                'currency' => $report->summary['currency'],
+                'pendingReview' => $report->summary['pendingReview'],
             ],
-            'chart' => $this->chart($chartMode, $basis, $month, $subscriptions, $mainCurrency),
+            'chart' => $this->chart($report),
             'filters' => [
                 'chartMode' => $chartMode,
                 'basis' => $basis,
@@ -127,8 +127,8 @@ class DashboardReportController extends AbstractController
 
     /**
      * Validates the month-of-year selector. Only the monthly direct view uses
-     * it (monthly Subscriptions plus yearly ones whose next-payment month
-     * matches); any other use, or a value outside 1-12, is an invalid filter.
+     * it (monthly Subscriptions plus yearly ones charged in that month);
+     * any other use, or a value outside 1-12, is an invalid filter.
      *
      * @return int|null|JsonResponse The selector, or a 422 problem response
      */
@@ -166,124 +166,43 @@ class DashboardReportController extends AbstractController
     }
 
     /**
-     * Numeric chart data plus visibility metadata, mirroring the dashboard
-     * without Chart.js presentation options (colors, radii, legend/tooltip
-     * settings). Series values come straight from ChartService so they match
-     * the rendered charts; the basis/empty/hidden fields follow the
-     * DashboardController caption rules.
-     *
-     * @param array<Subscription> $subscriptions
+     * Numeric chart data plus visibility metadata, built straight from the
+     * DashboardReport: no Chart.js presentation (colors, radii,
+     * legend/tooltip settings) ever crosses into API v1.
      *
      * @return array<string, mixed>
      */
-    private function chart(
-        string $chartMode,
-        string $basis,
-        int|null $month,
-        array $subscriptions,
-        ?string $mainCurrency,
-    ): array {
-        $currency = CurrencyService::normalizeCode($mainCurrency);
-
-        if ('bar' === $chartMode) {
-            $data = $this->charts->createBarChart($subscriptions, $mainCurrency)->getData();
-
+    private function chart(DashboardReport $report): array
+    {
+        if (ReportQuery::MODE_BAR === $report->mode) {
             return [
                 'mode' => 'bar',
-                'basis' => 'charges',
-                'currency' => $currency,
-                'labels' => $data['labels'],
+                'basis' => $report->basis,
+                'currency' => $report->currency,
+                'labels' => $report->labels,
                 'datasets' => array_map(
                     static fn(array $dataset): array => [
                         'label' => $dataset['label'],
                         'data' => array_map(static fn(mixed $value): float => (float) $value, $dataset['data']),
                     ],
-                    $data['datasets'],
+                    $report->datasets,
                 ),
-                'empty' => $this->charts->filterReportable($subscriptions, $mainCurrency) === [],
+                'empty' => $report->empty,
                 'hiddenCount' => 0,
                 'hiddenCycle' => null,
             ];
         }
 
-        $withCalculated = 'equivalent' === $basis;
-        if ('monthly' === $chartMode) {
-            $data = $this->charts->createMonthlyChart($subscriptions, $withCalculated, $month, $mainCurrency)->getData();
-        } else {
-            $data = $this->charts->createYearlyChart($subscriptions, $withCalculated, $mainCurrency)->getData();
-        }
-
-        $meta = $this->describeChart($chartMode, $withCalculated, $month, $subscriptions, $mainCurrency);
-
         return [
-            'mode' => $chartMode,
-            'basis' => $meta['basis'],
-            'currency' => $currency,
-            'labels' => $data['labels'],
-            'data' => array_map(static fn(mixed $value): float => (float) $value, $data['datasets'][0]['data']),
-            'empty' => $meta['empty'],
-            'hiddenCount' => $meta['hiddenCount'],
-            'hiddenCycle' => $meta['hiddenCycle'],
+            'mode' => $report->mode,
+            'basis' => $report->basis,
+            'currency' => $report->currency,
+            'labels' => $report->labels,
+            'data' => array_map(static fn(mixed $value): float => (float) $value, $report->data),
+            'empty' => $report->empty,
+            'hiddenCount' => $report->hiddenCount,
+            'hiddenCycle' => $report->hiddenCycle,
         ];
-    }
-
-    /**
-     * The same visibility rules DashboardController::describeChart() uses for
-     * chart captions and empty states: only reportable Subscriptions (nothing
-     * pending converted-amount review) ever reach a chart.
-     *
-     * @param array<Subscription> $subscriptions
-     *
-     * @return array{basis: string, empty: bool, hiddenCount: int, hiddenCycle: ?string}
-     */
-    private function describeChart(
-        string $chartMode,
-        bool $withCalculated,
-        int|null $month,
-        array $subscriptions,
-        ?string $mainCurrency,
-    ): array {
-        $reportable = $this->charts->filterReportable($subscriptions, $mainCurrency);
-        $meta = [
-            'basis' => 'charges',
-            'empty' => $reportable === [],
-            'hiddenCount' => 0,
-            'hiddenCycle' => null,
-        ];
-
-        if ('monthly' === $chartMode) {
-            if ($withCalculated) {
-                $meta['basis'] = 'monthly_equivalent';
-
-                return $meta;
-            }
-
-            $meta['basis'] = 'monthly_direct';
-            $included = array_filter(
-                $reportable,
-                static fn(Subscription $s) => $s->isMonthly()
-                    || ($month !== null && $s->getNextPayment()?->format('n') === (string) $month),
-            );
-            $meta['empty'] = $included === [];
-            $meta['hiddenCount'] = \count($reportable) - \count($included);
-            $meta['hiddenCycle'] = $meta['hiddenCount'] > 0 ? 'yearly' : null;
-
-            return $meta;
-        }
-
-        if ($withCalculated) {
-            $meta['basis'] = 'yearly_equivalent';
-
-            return $meta;
-        }
-
-        $meta['basis'] = 'yearly_direct';
-        $included = array_filter($reportable, static fn(Subscription $s) => $s->isYearly());
-        $meta['empty'] = $included === [];
-        $meta['hiddenCount'] = \count($reportable) - \count($included);
-        $meta['hiddenCycle'] = $meta['hiddenCount'] > 0 ? 'monthly' : null;
-
-        return $meta;
     }
 
     private function invalidFilter(string $field, string $message): JsonResponse

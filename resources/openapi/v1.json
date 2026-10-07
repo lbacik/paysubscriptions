@@ -1026,11 +1026,11 @@
               },
               "count": {
                 "type": "integer",
-                "description": "Subscription count including pending-review items."
+                "description": "Subscription count within the report (after the category filter), including pending-review items. The account-wide total compared against limit is not exposed here."
               },
               "limit": {
                 "type": "integer",
-                "description": "User subscription limit."
+                "description": "User subscription limit (account-wide, independent of the category filter)."
               },
               "currency": {
                 "type": "string",
