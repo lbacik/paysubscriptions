@@ -222,6 +222,30 @@ final class OAuthAuthorizeTest extends DatabaseTestCase
         self::assertStringContainsString('error=invalid_scope', $this->redirectLocation());
     }
 
+    public function testInactiveClientFailsWithInvalidScope(): void
+    {
+        $this->deactivateClient();
+        $this->client->loginUser($this->user);
+
+        $this->client->request('GET', $this->authorizeUrl());
+
+        self::assertResponseStatusCodeSame(Response::HTTP_FOUND);
+        self::assertStringContainsString('error=invalid_scope', $this->redirectLocation());
+    }
+
+    public function testUnverifiedUserFailsWithInvalidScope(): void
+    {
+        // Web login normally stops unverified accounts (UserChecker), but the
+        // checkpoint still refuses them fail-closed when reached directly.
+        $unverified = $this->createUser('unverified-cli-user@example.com', 'Fixture-Password-1', false);
+        $this->client->loginUser($unverified);
+
+        $this->client->request('GET', $this->authorizeUrl());
+
+        self::assertResponseStatusCodeSame(Response::HTTP_FOUND);
+        self::assertStringContainsString('error=invalid_scope', $this->redirectLocation());
+    }
+
     public function testPlainPkceChallengeFails(): void
     {
         $this->client->loginUser($this->user);
@@ -522,6 +546,15 @@ final class OAuthAuthorizeTest extends DatabaseTestCase
         $client = $manager->find(self::CLIENT_ID);
         self::assertNotNull($client);
         $client->setName($name);
+        $manager->save($client);
+    }
+
+    private function deactivateClient(): void
+    {
+        $manager = static::getContainer()->get(ClientManagerInterface::class);
+        $client = $manager->find(self::CLIENT_ID);
+        self::assertNotNull($client);
+        $client->setActive(false);
         $manager->save($client);
     }
 }

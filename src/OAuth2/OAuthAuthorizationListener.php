@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\OAuth2;
 
+use App\Connection\ClientApprovalPolicy;
+use App\Connection\ConnectionDecision;
 use App\Entity\OAuthConsent;
 use App\Entity\User;
 use App\Repository\OAuthConsentRepository;
@@ -29,7 +31,9 @@ use Twig\Environment;
  * - rejects requests whose raw `scope` parameter is not exactly api:full
  *   (empty, unknown, and unapproved scope requests fail; the bundle would
  *   otherwise silently default an omitted scope),
- * - rejects requests whose client is not approved for api:full,
+ * - rejects requests whose Client may not act for the User (unverified User,
+ *   unknown or inactive Client, Client not approved for api:full) through the
+ *   shared ClientApprovalPolicy,
  * - requires S256 PKCE for every client (RFC 9700),
  * - auto-approves when the User already consented to this client identity and
  *   scope set, otherwise renders the consent screen and honors an explicit
@@ -46,6 +50,7 @@ final class OAuthAuthorizationListener
         private readonly EntityManagerInterface $em,
         private readonly Environment $twig,
         private readonly CsrfTokenManagerInterface $csrf,
+        private readonly ClientApprovalPolicy $approvals,
     ) {
     }
 
@@ -60,8 +65,6 @@ final class OAuthAuthorizationListener
         }
 
         $this->assertExplicitFullScope($request, $event->getRedirectUri());
-        $this->assertClientAllowsFullScope($event);
-        $this->assertS256Pkce($event);
 
         $user = $event->getUser();
         if (!$user instanceof User) {
@@ -71,6 +74,10 @@ final class OAuthAuthorizationListener
         }
 
         $client = $event->getClient();
+
+        $this->assertConnectionApproved($user, $client, $event->getRedirectUri());
+        $this->assertS256Pkce($event);
+
         $scopes = [OAuth2Config::SCOPE_FULL];
 
         $consent = $this->consents->findForClient($user, $client->getIdentifier());
@@ -119,17 +126,18 @@ final class OAuthAuthorizationListener
     }
 
     /**
-     * The registered client itself must be approved for api:full.
+     * The Client may act for this User only as the shared ClientApprovalPolicy
+     * decides: the User must exist and be verified, and the Client must exist,
+     * be active, and be approved for api:full. Any refusal keeps the
+     * checkpoint's protocol error (invalid_scope with the redirect).
+     *
+     * @param object{isActive(): bool, getScopes(): iterable<mixed>} $client
      */
-    private function assertClientAllowsFullScope(AuthorizationRequestResolveEvent $event): void
+    private function assertConnectionApproved(User $user, object $client, ?string $redirectUri): void
     {
-        foreach ($event->getClient()->getScopes() as $scope) {
-            if (OAuth2Config::SCOPE_FULL === (string) $scope) {
-                return;
-            }
+        if (ConnectionDecision::Allowed !== $this->approvals->decide($user, $client)) {
+            throw OAuthServerException::invalidScope(OAuth2Config::SCOPE_FULL, $redirectUri);
         }
-
-        throw OAuthServerException::invalidScope(OAuth2Config::SCOPE_FULL, $event->getRedirectUri());
     }
 
     /**

@@ -138,6 +138,70 @@ final class OAuthRefreshTest extends DatabaseTestCase
         self::assertStringContainsString('invalid_grant', (string) $this->client->getResponse()->getContent());
     }
 
+    public function testDeactivatedClientIsRejectedAndFamilyRevoked(): void
+    {
+        $this->client->loginUser($this->user);
+        $first = $this->authorizeAndExchange();
+
+        $manager = static::getContainer()->get(ClientManagerInterface::class);
+        $client = $manager->find(self::CLIENT_ID);
+        self::assertNotNull($client);
+        $client->setActive(false);
+        $manager->save($client);
+
+        $this->refresh($first['refresh_token']);
+        self::assertResponseStatusCodeSame(Response::HTTP_BAD_REQUEST);
+        self::assertStringContainsString('invalid_grant', (string) $this->client->getResponse()->getContent());
+
+        // Fail-closed: the family is revoked, so no later use can succeed.
+        $family = $this->newestFamily();
+        self::assertNotNull($family);
+        self::assertTrue($family->isRevoked());
+    }
+
+    public function testUnverifiedUserIsRejectedAndFamilyRevoked(): void
+    {
+        $this->client->loginUser($this->user);
+        $first = $this->authorizeAndExchange();
+
+        $em = $this->freshEm();
+        $stored = $em->getRepository(User::class)->findOneBy(['email' => 'refresh-user@example.com']);
+        self::assertNotNull($stored);
+        $stored->setVerified(false);
+        $em->flush();
+        $em->clear();
+
+        $this->refresh($first['refresh_token']);
+        self::assertResponseStatusCodeSame(Response::HTTP_BAD_REQUEST);
+        self::assertStringContainsString('invalid_grant', (string) $this->client->getResponse()->getContent());
+
+        // Fail-closed: the family is revoked, so no later use can succeed.
+        $family = $this->newestFamily();
+        self::assertNotNull($family);
+        self::assertTrue($family->isRevoked());
+    }
+
+    public function testNarrowedClientIsRejectedAndFamilyRevoked(): void
+    {
+        $this->client->loginUser($this->user);
+        $first = $this->authorizeAndExchange();
+
+        $manager = static::getContainer()->get(ClientManagerInterface::class);
+        $client = $manager->find(self::CLIENT_ID);
+        self::assertNotNull($client);
+        $client->setScopes(new Scope('api:limited'));
+        $manager->save($client);
+
+        $this->refresh($first['refresh_token']);
+        self::assertResponseStatusCodeSame(Response::HTTP_BAD_REQUEST);
+        self::assertStringContainsString('invalid_grant', (string) $this->client->getResponse()->getContent());
+
+        // Fail-closed: the family is revoked, so no later use can succeed.
+        $family = $this->newestFamily();
+        self::assertNotNull($family);
+        self::assertTrue($family->isRevoked());
+    }
+
     public function testWrongResourceIsRejected(): void
     {
         $this->client->loginUser($this->user);

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\OAuth2;
 
+use App\Connection\ClientApprovalPolicy;
+use App\Connection\ConnectionDecision;
 use App\Entity\OAuthRefreshFamily;
 use App\Entity\OAuthRefreshFamilyToken;
 use App\Entity\User;
@@ -82,6 +84,7 @@ final class RefreshTokenFamilyRepository implements RefreshTokenRepositoryInterf
         private readonly ClientManagerInterface $clients,
         private readonly string $refreshIdleTtl,
         private readonly RequestStack $requestStack,
+        private readonly ClientApprovalPolicy $approvals,
     ) {
         $this->pendingRotations = new WeakMap();
     }
@@ -248,10 +251,10 @@ final class RefreshTokenFamilyRepository implements RefreshTokenRepositoryInterf
     /**
      * Rejects revoked, absolutely expired, and idle-expired families,
      * revoking the family on expiry so no later use can succeed. Also rejects
-     * families whose User is gone or ineligible and whose client is gone,
-     * disabled, or no longer approved for api:full (issue #93): lifecycle
-     * revocation normally marks such families first, and this check closes
-     * the gap fail-closed — revoking the family — when it did not.
+     * families whose Client may no longer act for their User (issue #93):
+     * lifecycle revocation normally marks such families first, and the shared
+     * ClientApprovalPolicy closes the gap fail-closed — revoking the family
+     * — when it did not.
      */
     private function assertFamilyUsable(OAuthRefreshFamily $family, DateTimeImmutable $now): void
     {
@@ -259,8 +262,7 @@ final class RefreshTokenFamilyRepository implements RefreshTokenRepositoryInterf
             throw OAuthServerException::invalidRefreshToken('The refresh token family has been revoked.');
         }
 
-        $this->assertUserEligible($family);
-        $this->assertClientApproved($family);
+        $this->assertConnectionApproved($family);
 
         $absoluteExpiresAt = $family->getAbsoluteExpiresAt();
         if (null === $absoluteExpiresAt || $now >= $absoluteExpiresAt) {
@@ -279,50 +281,34 @@ final class RefreshTokenFamilyRepository implements RefreshTokenRepositoryInterf
     }
 
     /**
-     * The family must still belong to an existing, eligible (verified) User.
-     * Account deletion normally removes the family with the User; this check
-     * fails closed when it did not.
+     * The family's Client must still be allowed to act for its User: an
+     * existing, eligible (verified) User, and a registered, active Client
+     * approved for api:full. Account deletion normally removes the family
+     * with the User and disabling a client normally revokes its families
+     * first; this check fails closed — revoking the family — when either did
+     * not, and also covers client deletion and scope narrowing.
      */
-    private function assertUserEligible(OAuthRefreshFamily $family): void
+    private function assertConnectionApproved(OAuthRefreshFamily $family): void
     {
         try {
             $user = $family->getUser();
-            $eligible = null !== $user && $user->isVerified();
         } catch (EntityNotFoundException) {
-            $eligible = false;
+            $user = null;
         }
 
-        if (!$eligible) {
-            $this->revokeFamily($family);
-            throw OAuthServerException::invalidRefreshToken('The User behind this authorization no longer exists.');
-        }
-    }
+        $decision = $this->approvals->decide($user, $this->clients->find((string) $family->getClientId()));
 
-    /**
-     * The family client must still be registered, active, and approved for
-     * api:full. Disabling a client normally revokes its families first; this
-     * check fails closed — revoking the family — when it did not, and also
-     * covers client deletion and scope narrowing.
-     */
-    private function assertClientApproved(OAuthRefreshFamily $family): void
-    {
-        $client = $this->clients->find((string) $family->getClientId());
-
-        $approved = null !== $client && $client->isActive();
-        if ($approved) {
-            $approved = false;
-            foreach ($client->getScopes() as $scope) {
-                if (OAuth2Config::SCOPE_FULL === (string) $scope) {
-                    $approved = true;
-                    break;
-                }
-            }
+        if (ConnectionDecision::Allowed === $decision) {
+            return;
         }
 
-        if (!$approved) {
-            $this->revokeFamily($family);
-            throw OAuthServerException::invalidRefreshToken('The client behind this authorization is no longer approved.');
-        }
+        $this->revokeFamily($family);
+
+        throw OAuthServerException::invalidRefreshToken(
+            ConnectionDecision::UserNotEligible === $decision
+                ? 'The User behind this authorization no longer exists.'
+                : 'The client behind this authorization is no longer approved.'
+        );
     }
 
     private function persistRotation(
