@@ -238,6 +238,48 @@ final class SubscriptionCurrencyTest extends TestCase
         self::assertTrue($subscription->isPendingReview('PLN'));
     }
 
+    public function testGetConvertedDisplayAmountReturnsConvertedAmountOnlyWhenReportingUsesIt(): void
+    {
+        // Same currency: no converted line.
+        self::assertNull($this->monthlySubscription('USD', 10.0)->getConvertedDisplayAmount('USD'));
+
+        // Cross-currency, fresh, with a converted amount: show it.
+        $fresh = $this->monthlySubscription('EUR', 10.0);
+        $fresh->setConvertedAmount(11.0);
+        $fresh->setConvertedCurrency('USD');
+        self::assertSame(11.0, $fresh->getConvertedDisplayAmount('USD'));
+
+        // Stale converted amount (entered against a previous main currency):
+        // pending review, so no converted line.
+        $stale = $this->monthlySubscription('EUR', 10.0);
+        $stale->setConvertedAmount(11.0);
+        $stale->setConvertedCurrency('USD');
+        self::assertNull($stale->getConvertedDisplayAmount('PLN'));
+
+        // Cross-currency without any converted amount: pending review, no line.
+        self::assertNull($this->monthlySubscription('EUR', 10.0)->getConvertedDisplayAmount('USD'));
+
+        // No main currency: never cross-currency, no line.
+        $noMain = $this->monthlySubscription('EUR', 10.0);
+        $noMain->setConvertedAmount(11.0);
+        $noMain->setConvertedCurrency('USD');
+        self::assertNull($noMain->getConvertedDisplayAmount(null));
+        self::assertNull($this->monthlySubscription(null, 10.0)->getConvertedDisplayAmount(null));
+    }
+
+    public function testGetConvertedDisplayAmountStaysConsistentWithReportingAmount(): void
+    {
+        $fresh = $this->monthlySubscription('EUR', 10.0);
+        $fresh->setConvertedAmount(11.0);
+        $fresh->setConvertedCurrency('USD');
+
+        self::assertSame($fresh->getConvertedDisplayAmount('USD'), $fresh->getReportingAmount('USD'));
+
+        $same = $this->monthlySubscription('USD', 10.0);
+        self::assertNull($same->getConvertedDisplayAmount('USD'));
+        self::assertSame(10.0, $same->getReportingAmount('USD'));
+    }
+
     private function monthlySubscription(?string $currency, float $amount): Subscription
     {
         $subscription = new Subscription();
