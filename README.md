@@ -49,7 +49,7 @@ The committed `.env` and development Compose database service still default to P
 
    ```dotenv
    APP_SECRET=<random-secret>
-   DATABASE_URL="mysql://app:local-password@127.0.0.1:3306/paysub?serverVersion=8.4&charset=utf8mb4"
+   DATABASE_URL="mysql://app:local-password@127.0.0.1:3306/paysub?charset=utf8mb4"
    APP_URL=http://localhost:8000
    DEFAULT_URI=http://localhost:8000
    OAUTH2_ISSUER=http://localhost:8000
@@ -136,7 +136,7 @@ The API is available under `/api/v1`, with an OpenAPI document at `/api/v1/opena
 Run the suite against a local MySQL instance:
 
 ```sh
-DATABASE_URL="mysql://root:root@127.0.0.1:3306/paysub?serverVersion=8.4&charset=utf8mb4" \
+DATABASE_URL="mysql://root:root@127.0.0.1:3306/paysub?charset=utf8mb4" \
   vendor/bin/phpunit
 ```
 
