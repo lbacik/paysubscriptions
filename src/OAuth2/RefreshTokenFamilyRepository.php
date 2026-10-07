@@ -45,6 +45,12 @@ use WeakMap;
  * `invalid_scope`); a mismatched `resource` indicator is rejected with
  * `invalid_target` by RefreshResourceListener.
  *
+ * This repository is League token storage only. Trigger-driven revocation
+ * (disconnect, `/revoke`, password change, client lifecycle, account
+ * deletion, emergency command) lives in App\Connection\ConnectionLifecycle
+ * (ADR 0005); the only family revocation here is storage-internal —
+ * replayed-token containment, expiry, and the fail-closed approval check.
+ *
  * Concurrency note: League validates, revokes, and persists through three
  * separate repository calls, so two truly simultaneous uses of one token can
  * both pass validation before either is marked superseded. The window is one
@@ -80,7 +86,6 @@ final class RefreshTokenFamilyRepository implements RefreshTokenRepositoryInterf
     public function __construct(
         private readonly RefreshTokenRepositoryInterface $inner,
         private readonly EntityManagerInterface $em,
-        private readonly OpaqueTokenDecryptor $decryptor,
         private readonly ClientManagerInterface $clients,
         private readonly string $refreshIdleTtl,
         private readonly RequestStack $requestStack,
@@ -125,76 +130,6 @@ final class RefreshTokenFamilyRepository implements RefreshTokenRepositoryInterf
         $this->inner->revokeRefreshToken($tokenId);
     }
 
-    /**
-     * Revokes the whole usable family behind one client-facing (opaque,
-     * encrypted) refresh-token value (issue #92): the presented token and
-     * every other usable token of its family become unusable, so only fresh
-     * authorization helps.
-     *
-     * Returns the revoked family, or null for unknown values
-     * (self-contained access tokens, malformed input) and for tokens owned
-     * by another client, which are left untouched. Callers answer success
-     * either way, so the endpoint never discloses token ownership.
-     */
-    public function revokeByOpaqueToken(string $opaqueToken, ?string $expectedClientId = null): ?OAuthRefreshFamily
-    {
-        $family = $this->findFamilyByOpaqueToken($opaqueToken);
-        if (null === $family) {
-            return null;
-        }
-
-        if (null !== $expectedClientId && $family->getClientId() !== $expectedClientId) {
-            return null;
-        }
-
-        $this->revokeFamily($family);
-
-        return $family;
-    }
-
-    /**
-     * Finds the usable family behind one client-facing (opaque, encrypted)
-     * refresh-token value, or null when the value is unknown or not a
-     * refresh token this server issued (issue #92).
-     */
-    public function findFamilyByOpaqueToken(string $opaqueToken): ?OAuthRefreshFamily
-    {
-        $payload = $this->decryptor->decryptToArray($opaqueToken);
-        $tokenId = $payload['refresh_token_id'] ?? null;
-        if (!\is_string($tokenId) || '' === $tokenId) {
-            return null;
-        }
-
-        $link = $this->em->find(OAuthRefreshFamilyToken::class, $tokenId);
-
-        return $link?->getFamily();
-    }
-
-    /**
-     * Revokes every usable refresh-token family for one (User, client) pair
-     * (issue #92): User disconnect takes effect on refresh immediately.
-     * Already-issued self-contained access tokens stay valid until their
-     * short expiry. Returns the number of families revoked.
-     */
-    public function revokeFamiliesForUserClient(User $user, string $clientId): int
-    {
-        $families = $this->em->getRepository(OAuthRefreshFamily::class)->findBy([
-            'user' => $user,
-            'clientId' => $clientId,
-        ]);
-
-        $revoked = 0;
-        foreach ($families as $family) {
-            if ($family->isRevoked()) {
-                continue;
-            }
-            $this->revokeFamily($family);
-            ++$revoked;
-        }
-
-        return $revoked;
-    }
-
     public function isRefreshTokenRevoked(string $tokenId): bool
     {
         $link = $this->em->find(OAuthRefreshFamilyToken::class, $tokenId);
@@ -220,32 +155,6 @@ final class RefreshTokenFamilyRepository implements RefreshTokenRepositoryInterf
         $this->rememberPendingRotation($tokenId, null !== $id ? (string) $id : null);
 
         return $this->inner->isRefreshTokenRevoked($tokenId);
-    }
-
-    /**
-     * Revokes every active refresh-token family (issue #94).
-     *
-     * This is the emergency response to a suspected signing-key compromise:
-     * with the old verification key unpublished, forged access tokens already
-     * fail validation, and revoking all families additionally kills every
-     * legitimate session, so clients must authorize again. Families are marked
-     * revoked (never deleted) and every token link is superseded with its
-     * bundle row revoked, mirroring the single-family path. Outstanding
-     * authorization codes are left to their 10-minute expiry: redeeming one
-     * mints a new-key family for whoever completed the authorize dance, which
-     * the runbook accepts to avoid stranding in-flight clients.
-     *
-     * @return int the number of families revoked
-     */
-    public function revokeAllFamilies(): int
-    {
-        $families = $this->em->getRepository(OAuthRefreshFamily::class)->findBy(['revoked' => false]);
-
-        foreach ($families as $family) {
-            $this->revokeFamily($family);
-        }
-
-        return \count($families);
     }
 
     /**

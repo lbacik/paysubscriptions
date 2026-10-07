@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service;
 
+use App\Connection\ConnectionLifecycle;
 use App\Entity\OAuthConsent;
 use App\Entity\OAuthRefreshFamily;
 use App\Entity\OAuthRefreshFamilyToken;
@@ -21,7 +22,7 @@ use League\Bundle\OAuth2ServerBundle\Model\RefreshToken;
  *   (cascade remove on User::$limits) via the ORM remove cascade.
  * - Reset-password requests, which point at the User with a non-nullable
  *   foreign key and no cascade, so they are deleted explicitly first.
- * - OAuth2 records (issue #93): remembered per-client consents (grants),
+ * - OAuth2 records (ADR 0005): remembered per-client consents (grants),
  *   refresh-token families with their token links, the bundle's own
  *   refresh-token rows (attributed only through those links), and pending
  *   authorization codes. Family rows would cascade with the User, but they
@@ -53,6 +54,7 @@ class AccountDeletionService
 {
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
+        private readonly ConnectionLifecycle $connections,
     ) {
     }
 
@@ -104,9 +106,16 @@ class AccountDeletionService
      * pending authorization codes. Links are removed before their families so
      * the cleanup never depends on database cascade ordering within the
      * flush.
+     *
+     * The deletion routes through the Connection lifecycle module first
+     * (ADR 0005): ending all of the User's Connections revokes the sessions
+     * and codes and removes the consents, and the hard delete below stays as
+     * the mechanism that removes the rows themselves.
      */
     private function removeOAuthRecords(User $user, string $email): void
     {
+        $this->connections->endConnectionsForUser($user);
+
         $this->removeOwned($user, OAuthConsent::class, 'user');
 
         $families = $this->entityManager->getRepository(OAuthRefreshFamily::class)->findBy(['user' => $user]);

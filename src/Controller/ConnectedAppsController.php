@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Connection\ConnectionLifecycle;
 use App\Entity\User;
-use App\OAuth2\ConsentRevoker;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -13,12 +13,12 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 /**
- * User-facing list of approved OAuth2 clients (issue #92).
+ * User-facing list of Connections (ADR 0005).
  *
- * A User sees every remembered grant and disconnects each client
- * individually. Disconnecting deletes the remembered consent — so the next
- * authorization asks for consent again — and revokes the client's usable
- * refresh-token families and pending authorization codes immediately.
+ * A User sees every Connection and disconnects each client individually.
+ * Disconnecting ends the Connection: the consent is removed — so the next
+ * authorization asks for consent again — and every Client session and
+ * pending authorization code under it is revoked immediately.
  * Already-issued access tokens stay usable until their 15-minute expiry; the
  * page states this delay.
  */
@@ -26,7 +26,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 class ConnectedAppsController extends AbstractController
 {
     public function __construct(
-        private readonly ConsentRevoker $revoker,
+        private readonly ConnectionLifecycle $connections,
     ) {
     }
 
@@ -39,7 +39,7 @@ class ConnectedAppsController extends AbstractController
         }
 
         return $this->render('profile/connected_apps.html.twig', [
-            'grants' => $this->revoker->listFor($user),
+            'grants' => $this->connections->listConnections($user),
         ]);
     }
 
@@ -61,7 +61,7 @@ class ConnectedAppsController extends AbstractController
             return $this->redirectToRoute('app_connected_apps', [], Response::HTTP_SEE_OTHER);
         }
 
-        if ($this->revoker->revoke($user, $clientId)) {
+        if ($this->connections->endConnection($user, $clientId)) {
             $this->addFlash('success', 'The application was disconnected. It will ask for your consent again before accessing your data.');
         }
 

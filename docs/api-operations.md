@@ -141,17 +141,22 @@ curl -fsS https://paysubscriptions.com/token \
   client's refresh-token families immediately: it cannot refresh or
   mint new access without renewed consent.
 - **Client side:** `POST /revoke` (RFC 7009) with the refresh token;
-  revokes the token and its usable family.
+  revokes that one Client session (the token and its usable family) and
+  keeps the Connection — the next authorization auto-approves.
 - **Residual window:** already-issued access tokens stay valid until
   their 15-minute expiry. A disconnected client can still read for at
   most 15 minutes — inherent to self-contained tokens, stated in the
   UI and the client docs. Plan for it; it is not a bug.
 - **Account/client lifecycle:** password change or reset revokes the
-  User's families; disabling a client revokes its families; deleting
-  the account removes grants and token records. Web logout ends only
+  User's Client sessions and pending authorization codes but keeps their
+  Connections; disabling a client revokes its sessions and codes but keeps
+  its Connections; deleting a client ends all of its Connections (a client
+  re-registered under the same identifier starts with none); deleting
+  the account ends all of the User's Connections. Web logout ends only
   the web session — the CLI stays connected.
 - **Emergency:** suspected signing-key compromise → rotate per
-  `docs/oauth-key-rotation.md` and revoke every family with
+  `docs/oauth-key-rotation.md` and revoke every Client session **and**
+  pending authorization code with
   `./bin/console app:oauth:revoke-refresh-families`.
 
 ## 6. Secret storage, backup, access, rotation, recovery

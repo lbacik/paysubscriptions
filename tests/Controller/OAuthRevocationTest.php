@@ -318,7 +318,7 @@ final class OAuthRevocationTest extends DatabaseTestCase
         self::assertResponseStatusCodeSame(Response::HTTP_BAD_REQUEST);
     }
 
-    public function testClientRevocationAsksConsentAgain(): void
+    public function testClientRevocationKeepsConsentAndAutoApproves(): void
     {
         $this->client->loginUser($this->user);
         $first = $this->authorizeAndExchange();
@@ -329,14 +329,21 @@ final class OAuthRevocationTest extends DatabaseTestCase
         ]);
         self::assertResponseIsSuccessful();
 
-        // The remembered consent is forgotten with the family: the next
-        // authorization shows the screen again instead of auto-approving.
+        // The Connection stays: the remembered consent survives the revoked
+        // session, so the next authorization auto-approves without showing
+        // the consent screen again (ADR 0005).
+        self::assertNotNull($this->freshEm()->getRepository(OAuthConsent::class)->findOneBy([
+            'clientId' => self::CLIENT_ID,
+        ]));
         $this->client->request('GET', $this->authorizeUrl());
-        self::assertResponseIsSuccessful();
-        self::assertStringContainsString(self::CLIENT_NAME, (string) $this->client->getResponse()->getContent());
+        self::assertResponseStatusCodeSame(Response::HTTP_FOUND);
+        $code = $this->codeFromRedirect();
 
-        // Renewed consent mints a working family.
-        $fresh = $this->authorizeAndExchange();
+        // The auto-approved authorization mints a working family.
+        $this->exchangeCode($code);
+        self::assertResponseIsSuccessful();
+        $fresh = json_decode((string) $this->client->getResponse()->getContent(), true);
+        self::assertIsArray($fresh);
         $this->client->request('POST', '/token', [
             'grant_type' => 'refresh_token',
             'client_id' => self::CLIENT_ID,
