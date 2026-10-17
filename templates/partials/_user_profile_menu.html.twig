@@ -1,4 +1,5 @@
 <div
+        class="relative"
         data-controller="user-menu"
 >
     <button type="button"
@@ -12,12 +13,12 @@
     </button>
 
     <!-- Dropdown menu -->
-    <div class="absolute z-50 hidden my-4 text-base list-none bg-white divide-y divide-gray-100 rounded-lg shadow"
+    <div class="absolute right-0 top-full z-50 hidden mt-2 w-64 max-w-[calc(100vw-2rem)] origin-top-right text-base list-none bg-white divide-y divide-gray-100 rounded-lg shadow"
          id="user-dropdown"
          data-user-menu-target="menu"
     >
         <div class="px-4 py-3">
-            <span class="block text-sm text-gray-500 truncate">{{ app.user.email }}</span>
+            <span class="block text-sm text-gray-500 break-all" title="{{ app.user.email }}">{{ app.user.email }}</span>
         </div>
         <ul class="py-2" aria-labelledby="user-menu-button">
             <twig:UserMenuElement href="{{ path('app_settings') }}">{{ 'user.settings'|trans }}</twig:UserMenuElement>
