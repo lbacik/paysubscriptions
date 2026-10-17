@@ -40,7 +40,7 @@ final class AccountDeletionTest extends DatabaseTestCase
 
         self::assertResponseIsSuccessful();
         self::assertStringContainsString('permanently', strtolower($this->client->getResponse()->getContent()));
-        self::assertStringContainsString('gprodb.com', $this->client->getResponse()->getContent());
+        self::assertStringContainsString('our own newsletter list', $this->client->getResponse()->getContent());
         self::assertCount(1, $crawler->filter('form[action="/account/delete"] input[name="_token"]'));
         self::assertCount(1, $crawler->filter('form[action="/account/delete"] input[name="confirm"]'));
         self::assertCount(1, $crawler->filter('form[action="/account/delete"] input[name="currentPassword"][type="password"]'));

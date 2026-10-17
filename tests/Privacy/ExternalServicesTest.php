@@ -42,7 +42,6 @@ final class ExternalServicesTest extends WebTestCase
      * data is disclosed only when the visitor deliberately follows them).
      */
     private const ALLOWED_LINK_HOSTS = [
-        'gprodb.com',
         'www.buymeacoffee.com',
     ];
 

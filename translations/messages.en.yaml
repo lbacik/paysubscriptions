@@ -169,7 +169,7 @@ account:
   delete_removes_limits: "Your subscription limits"
   delete_removes_reset_requests: "Pending password-reset requests"
   delete_removes_reminders: "Reminder preferences and reminder state"
-  delete_newsletter_note: "The product-updates newsletter is a separate opt-in handled via our shared <a class=\"underline hover:text-slate-600\" href=\"%url%\" target=\"_blank\" rel=\"noopener noreferrer\">gprodb.com</a> list. Deleting your account does not unsubscribe that list — please unsubscribe there separately if you no longer want those emails."
+  delete_newsletter_note: "The product-updates newsletter is a separate opt-in to our own newsletter list. Deleting your account does not unsubscribe that list — please unsubscribe there separately if you no longer want those emails. <a class=\"underline hover:text-slate-600\" href=\"%url%\">How we handle your address</a>."
   delete_confirm_label: "I understand my account and all of its data will be permanently deleted and this cannot be undone."
   delete_password_label: "Confirm with your current password"
   delete_password_help: "Deletion is permanent, so your password is required even though you are already signed in."

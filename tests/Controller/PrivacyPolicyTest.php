@@ -92,7 +92,9 @@ final class PrivacyPolicyTest extends DatabaseTestCase
         self::assertStringContainsString('cdnjs.cloudflare.com', $content);
 
         // On-action disclosures.
-        self::assertStringContainsString('gprodb.com', $content);
+        self::assertStringContainsString('our own newsletter list', $content);
+        self::assertStringContainsString('listmonk', $content);
+        self::assertStringContainsString('Amazon SES', $content);
         self::assertStringContainsString('BuyMeACoffee', $content);
 
         // The request-metadata baseline every automatic request discloses.

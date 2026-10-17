@@ -23,7 +23,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
  * email. Output holds only that User's application records as JSON: account
  * profile, Subscriptions, ExpenseCategories, and Limits. Credentials,
  * password-reset tokens, reminder send-state, messenger rows, other Users'
- * records, and the separate newsletter list are never included.
+ * records, and the separate self-hosted listmonk newsletter list is never included.
  */
 #[AsCommand(
     name: 'user:export',

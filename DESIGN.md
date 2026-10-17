@@ -90,7 +90,7 @@ This document records the design system, page architecture, and user experience 
 - **Structured Footer**:
   - Brand overview with semantic version stamp (`appVersion`).
   - Clear site directory navigation links.
-  - Product updates newsletter form with transparent disclaimer regarding the shared `gprodb.com` mailing list.
+  - Product updates newsletter form with transparent double opt-in disclaimer.
   - Bottom bar with copyright and privacy/contact links.
 
 ---

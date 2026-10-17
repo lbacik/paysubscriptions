@@ -17,7 +17,7 @@ The single request route is the contact process:
   `ContactController`, which sends via Symfony Mailer from `SYSTEM_EMAIL`).
 
 Keep this route separate from the newsletter list: the product-updates list
-is a shared `gprodb.com` opt-in on an external provider
+is the separate self-hosted listmonk newsletter list
 (`MailingSubscriptionService`). An export request never subscribes,
 unsubscribes, or discloses that list.
 
