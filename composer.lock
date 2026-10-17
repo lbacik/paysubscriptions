@@ -2443,16 +2443,16 @@
         },
         {
             "name": "league/oauth2-server-bundle",
-            "version": "v1.2.3",
+            "version": "v1.2.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/thephpleague/oauth2-server-bundle.git",
-                "reference": "cbe2ab7e47b071b5f0f5c1011798e4c4c823b6d8"
+                "reference": "db8d6a267b3bb76451816751539d50aa56588247"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/thephpleague/oauth2-server-bundle/zipball/cbe2ab7e47b071b5f0f5c1011798e4c4c823b6d8",
-                "reference": "cbe2ab7e47b071b5f0f5c1011798e4c4c823b6d8",
+                "url": "https://api.github.com/repos/thephpleague/oauth2-server-bundle/zipball/db8d6a267b3bb76451816751539d50aa56588247",
+                "reference": "db8d6a267b3bb76451816751539d50aa56588247",
                 "shasum": ""
             },
             "require": {
@@ -2462,12 +2462,12 @@
                 "php": "^8.1",
                 "psr/http-factory": "^1.0",
                 "symfony/deprecation-contracts": "^3.0",
-                "symfony/event-dispatcher": "^6.4|^7.4|^8.1",
-                "symfony/filesystem": "^6.4|^7.4|^8.1",
-                "symfony/framework-bundle": "^6.4|^7.4|^8.1",
-                "symfony/password-hasher": "^6.4|^7.4|^8.1",
-                "symfony/psr-http-message-bridge": "^6.4|^7.4|^8.1",
-                "symfony/security-bundle": "^6.4|^7.4|^8.1"
+                "symfony/event-dispatcher": "^6.4|^7.4|^8.0",
+                "symfony/filesystem": "^6.4|^7.4|^8.0",
+                "symfony/framework-bundle": "^6.4|^7.4|^8.0",
+                "symfony/password-hasher": "^6.4|^7.4|^8.0",
+                "symfony/psr-http-message-bridge": "^6.4|^7.4|^8.0",
+                "symfony/security-bundle": "^6.4|^7.4|^8.0"
             },
             "conflict": {
                 "doctrine/doctrine-bundle": "<2.8.0",
@@ -2483,7 +2483,7 @@
                 "phpstan/phpstan": "^2.1",
                 "phpstan/phpstan-symfony": "^2.0",
                 "rector/rector": "^2.5",
-                "symfony/browser-kit": "^6.4|^7.4|^8.1",
+                "symfony/browser-kit": "^6.4|^7.4|^8.0",
                 "symfony/phpunit-bridge": "^8.1"
             },
             "suggest": {
@@ -2521,9 +2521,9 @@
             ],
             "support": {
                 "issues": "https://github.com/thephpleague/oauth2-server-bundle/issues",
-                "source": "https://github.com/thephpleague/oauth2-server-bundle/tree/v1.2.3"
+                "source": "https://github.com/thephpleague/oauth2-server-bundle/tree/v1.2.2"
             },
-            "time": "2026-09-27T15:50:17+00:00"
+            "time": "2026-07-26T12:46:32+00:00"
         },
         {
             "name": "league/uri",
