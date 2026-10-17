@@ -10,6 +10,7 @@ use App\Entity\OAuthRefreshFamily;
 use App\Entity\OAuthRefreshFamilyToken;
 use App\Entity\ResetPasswordRequest;
 use App\Entity\User;
+use App\Message\MailingSubscribe;
 use Doctrine\ORM\EntityManagerInterface;
 use League\Bundle\OAuth2ServerBundle\Model\AuthorizationCode;
 use League\Bundle\OAuth2ServerBundle\Model\RefreshToken;
@@ -37,12 +38,15 @@ use League\Bundle\OAuth2ServerBundle\Model\RefreshToken;
  * - Queued account mail (verification, password-reset, reminders) sitting in
  *   the Doctrine messenger transport: rows mentioning the deleted address are
  *   purged so a late worker cannot send mail for an account that no longer
- *   exists, nor trigger code paths that re-persist the User.
+ *   exists, nor trigger code paths that re-persist the User. Queued
+ *   newsletter signups are the exception (see below).
  *
  * What is deliberately left alone:
  * - The gprodb.com newsletter list. It is a separate opt-in managed by an
  *   external provider (see MailingSubscriptionService); deletion never
- *   unsubscribes it, silently or otherwise.
+ *   unsubscribes it, silently or otherwise. The purge below leaves queued
+ *   newsletter signups (MailingSubscribe rows) alone for the same reason:
+ *   deleting your account never unsubscribes you.
  *
  * Forward compatibility: sibling v1.0 slices add account-owned entities
  * (expense categories in #39, durable reminder-send state in #45). Where such
@@ -176,9 +180,12 @@ class AccountDeletionService
      * Best-effort purge of queued messenger rows mentioning the deleted
      * address. Only the Doctrine `async` transport stores rows here; the
      * newsletter transport is intentionally never purged (the gprodb.com list
-     * is a separate opt-in and must survive deletion). A missing table
-     * (transports with auto_setup=0 in a fresh test schema) is not an error:
-     * there is simply nothing queued to purge.
+     * is a separate opt-in and must survive deletion). Queued newsletter
+     * signups (MailingSubscribe rows, on `async` once #233 reroutes them)
+     * are excluded by message type for the same reason: deleting your
+     * account never unsubscribes you. A missing table (transports with
+     * auto_setup=0 in a fresh test schema) is not an error: there is simply
+     * nothing queued to purge.
      */
     private function purgeQueuedAccountMessages(string $email): void
     {
@@ -202,12 +209,33 @@ class AccountDeletionService
             // Match the address in its quoted (JSON/serialized) form inside
             // the body, so queued@example.com cannot over-match a longer
             // address that merely contains it (e.g. notqueued@example.com).
-            // Headers are matched bare: stamps there are not uniformly
-            // quoted. Two distinct placeholders: reusing one named
-            // parameter twice is rejected by native MySQL prepares.
+            // Both quote styles are covered: plain `"..."` (JSON bodies) and
+            // backslash-escaped `\"...\"` (PhpSerializer bodies, which the
+            // Doctrine `async` transport stores addslashes()-escaped; the
+            // escaped quotes still bound the address, so the longer-address
+            // guard holds for that form too). Headers are matched bare:
+            // stamps there are not uniformly quoted. Distinct placeholders
+            // throughout: reusing one named parameter twice is rejected by
+            // native MySQL prepares.
+            // The MailingSubscribe exclusion is by message type, not by
+            // address: its serialized body carries the (escaped-)quoted
+            // address, so an address-only match would silently drop a pending
+            // or failed signup. The short class name is matched in both
+            // columns: the Doctrine `async` transport serializes with
+            // PhpSerializer (the type lives in the body, headers are `[]`),
+            // while the Symfony serializer used elsewhere records the type
+            // in the headers. The short name appears in both forms with no
+            // backslash-escaping pitfalls.
+            $excludedMessageType = basename(str_replace('\\', '/', MailingSubscribe::class));
             $connection->executeStatement(
-                'DELETE FROM messenger_messages WHERE POSITION(:email_quoted IN body) > 0 OR POSITION(:email_headers IN headers) > 0',
-                ['email_quoted' => '"' . $email . '"', 'email_headers' => $email]
+                'DELETE FROM messenger_messages WHERE (POSITION(:email_quoted IN body) > 0 OR POSITION(:email_escaped IN body) > 0 OR POSITION(:email_headers IN headers) > 0) AND POSITION(:mailing_body IN body) = 0 AND POSITION(:mailing_headers IN headers) = 0',
+                [
+                    'email_quoted' => '"' . $email . '"',
+                    'email_escaped' => '\\"' . $email . '\\"',
+                    'email_headers' => $email,
+                    'mailing_body' => $excludedMessageType,
+                    'mailing_headers' => $excludedMessageType,
+                ]
             );
         } catch (\Throwable) {
             // A purge failure must not block the deletion itself; the
