@@ -14,6 +14,7 @@ use App\Service\AccountDeletionService;
 use App\Service\ExpenseCategoryService;
 use App\Tests\DatabaseTestCase;
 use Symfony\Component\Messenger\MessageBusInterface;
+use Symfony\Component\Messenger\Stamp\TransportNamesStamp;
 
 final class AccountDeletionTest extends DatabaseTestCase
 {
@@ -208,17 +209,27 @@ final class AccountDeletionTest extends DatabaseTestCase
     {
         $user = $this->createUser('newsletter@example.com');
 
+        // A real MailingSubscribe forced onto the Doctrine `async` transport
+        // (routing still points it at `newsletter`; the transport-names stamp
+        // stands in until the routing changes). Its PhpSerializer body
+        // carries the quoted address (backslash-escaped), so its survival
+        // proves the purge exclusion is type-based rather than address-based.
         $bus = static::getContainer()->get(MessageBusInterface::class);
-        $bus->dispatch(new MailingSubscribe('newsletter@example.com', 'project-uuid'));
+        $bus->dispatch(
+            new MailingSubscribe('newsletter@example.com', 'project-uuid'),
+            [new TransportNamesStamp('async')]
+        );
+
+        // An ordinary queued row for the same address must still be purged.
+        $this->queueMessage(['to' => 'newsletter@example.com', 'subject' => 'Verify your email']);
 
         static::getContainer()->get(AccountDeletionService::class)->delete($user);
 
-        /** @var \Symfony\Component\Messenger\Transport\InMemory\InMemoryTransport $transport */
-        $transport = static::getContainer()->get('messenger.transport.newsletter');
-        $sent = iterator_to_array($transport->getSent());
-
-        self::assertCount(1, $sent);
-        self::assertSame('newsletter@example.com', $sent[0]->getMessage()->email);
+        $rows = $this->freshEm()->getConnection()->fetchAllAssociative('SELECT body, headers FROM messenger_messages');
+        self::assertCount(1, $rows);
+        self::assertStringContainsString('MailingSubscribe', $rows[0]['body']);
+        self::assertStringContainsString('\"newsletter@example.com\"', $rows[0]['body']);
+        self::assertStringNotContainsString('Verify your email', $rows[0]['body']);
     }
 
     public function testVerificationLinkCannotRecreateDeletedAccount(): void
