@@ -59,8 +59,8 @@ your list removes it from your overview only.
 Account and subscription data is not sold. Running the service involves a small number of
 external services — including self-hosted Umami page-view analytics alongside interface fonts, icon
 delivery, contact-form spam protection, and mail delivery — and each receives only the data it
-needs to do its job. The product-updates newsletter is a separate opt-in to the shared
-gprodb.com list with its own unsubscribe path.
+needs to do its job. The product-updates newsletter is a separate opt-in to our own
+newsletter list with its own unsubscribe path.
 
 There is no application-level field encryption at rest: names, amounts, notes, and your email
 address are stored as plain database columns, protected by access control on the account and the

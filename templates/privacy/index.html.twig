@@ -94,9 +94,11 @@
                             the message body by design, and carry no tracking pixels or externally hosted content.
                         </li>
                         <li>
-                            <strong class="text-slate-900">Product-updates newsletter via the shared gprodb.com list.</strong>
-                            A separate opt-in (see below): only the subscriber's email address is forwarded to the
-                            external mailing provider, together with the mailing project identifier and routing key.
+                            <strong class="text-slate-900">Product-updates newsletter on our own newsletter list.</strong>
+                            A separate opt-in (see below): only the subscriber's email address is stored for this
+                            purpose on our own newsletter list, run on our own server with listmonk and sent through
+                            Amazon SES. The signup sends a confirmation email — you're subscribed only after you
+                            click the confirmation link. Newsletters carry no tracking pixels or tracked links.
                         </li>
                         <li>
                             <strong class="text-slate-900">BuyMeACoffee support link, on the pricing page only.</strong>
@@ -134,9 +136,9 @@
                         cannot be undone.
                     </p>
                     <p>
-                        The product-updates newsletter is a separate opt-in handled through our shared
-                        <a class="underline hover:text-slate-600" href="https://gprodb.com" target="_blank" rel="noopener noreferrer">gprodb.com</a>
-                        list. Deleting your account does not unsubscribe that list — please unsubscribe there separately
+                        The product-updates newsletter is a separate opt-in to our own newsletter list
+                        (see <a class="underline hover:text-slate-600" href="#privacy-newsletter">the newsletter section</a>).
+                        Deleting your account does not unsubscribe that list — please unsubscribe there separately
                         if you no longer want those emails.
                     </p>
                 </div>
@@ -163,12 +165,12 @@
                 <h2 id="privacy-newsletter" class="text-2xl font-bold text-slate-900 mt-10 mb-4 pb-2 border-b border-slate-100">The newsletter is a separate opt-in</h2>
                 <div class="text-slate-600 leading-relaxed space-y-4 text-[15px]">
                     <p>
-                        The product-updates signup in the footer is an optional, separate opt-in to the shared
-                        <a class="underline hover:text-slate-600" href="https://gprodb.com" target="_blank" rel="noopener noreferrer">gprodb.com</a>
-                        newsletter list, run by an external mailing provider. Creating an account never subscribes you,
-                        deleting your account never unsubscribes you, and asking for a data export never touches the list.
-                        To stop those emails, unsubscribe through the newsletter list itself — deleting your
-                        PaySubscriptions account will not do it.
+                        The product-updates signup in the footer is an optional, separate opt-in to our own
+                        newsletter list, run on our own server with listmonk and sent through Amazon SES.
+                        Creating an account never subscribes you, deleting your account never unsubscribes you,
+                        and asking for a data export never touches the list. We'll email you a confirmation link —
+                        you're subscribed only after you click it. To stop those emails, unsubscribe through the
+                        newsletter list itself — deleting your PaySubscriptions account will not do it.
                     </p>
                 </div>
             </section>

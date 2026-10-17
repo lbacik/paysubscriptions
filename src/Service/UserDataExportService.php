@@ -17,8 +17,8 @@ use Doctrine\ORM\EntityManagerInterface;
  * Subscriptions (with their ExpenseCategory), ExpenseCategories, and Limits.
  * Credentials (password hash), roles, password-reset tokens, reminder
  * send-state, messenger queue rows, and every other User's records are never
- * included. The newsletter list is a separate opt-in on an external provider
- * and is neither exported nor touched.
+ * included. The separate self-hosted listmonk newsletter list is neither
+ * exported nor touched.
  */
 class UserDataExportService
 {

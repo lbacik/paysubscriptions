@@ -73,7 +73,7 @@ class NewsletterController extends AbstractController
 
             $mailingSubscriptionService->subscribe($form->get('email')->getData());
 
-            $this->addFlash('success', 'Subscription queued. Wait for the confirmation email.');
+            $this->addFlash('success', 'Almost done — check your inbox and click the confirmation link to subscribe.');
 
             // A fixed internal route, never the Referer header: the header is
             // missing (and crashed with a 500) for direct POSTs and is an

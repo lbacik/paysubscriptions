@@ -69,7 +69,7 @@ final class AboutPageTest extends WebTestCase
         // Control: deletion scope with the separate newsletter path, manual export.
         self::assertStringContainsStringIgnoringCase('delete', $content);
         self::assertStringContainsStringIgnoringCase('newsletter', $content);
-        self::assertStringContainsString('gprodb.com', $content);
+        self::assertStringContainsString('our own newsletter list', $content);
         self::assertStringContainsStringIgnoringCase('separate opt-in', $content);
         self::assertStringContainsStringIgnoringCase('manual', $content);
         self::assertStringContainsString('Data export request', $content);
