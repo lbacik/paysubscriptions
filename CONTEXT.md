@@ -44,6 +44,10 @@ _Avoid_: Stats, analytics
 The current SES deliverability state of one normalized email address: *undeliverable* after a permanent bounce, *do-not-send* after a complaint. Only SES feedback creates or tightens it; no later event loosens it. Only an audited operator action with a reason clears it, and it never changes email verification or password-reset state. It belongs to the address, not the User, so a User who changes address starts unrestricted. Restricted addresses receive no email.
 _Avoid_: Blocklist, suppression (SES keeps its own suppression list per tenant)
 
+**Newsletter subscriber**:
+An email address opted in to product updates through its own double opt-in, receiving nothing until it confirms. It is not a User: registering never creates one, and deleting or exporting an account never removes, unsubscribes, or includes it. It leaves the list only through the newsletter's own unsubscribe or erasure path.
+_Avoid_: Subscriber (ambiguous next to Subscription), mailing contact
+
 **Client**:
 An application registered to act on a User's behalf through the API (e.g. the CLI). It can be deactivated or removed, and it must be approved for the scope it requests.
 _Avoid_: App, application, integration
