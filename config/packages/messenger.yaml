@@ -10,8 +10,9 @@ framework:
                     use_notify: true
                     check_delayed_interval: 60000
                 retry_strategy:
-                    max_retries: 3
-                    multiplier: 2
+                    max_retries: 5
+                    delay: 10000
+                    multiplier: 3
             failed: 'doctrine://default?queue_name=failed'
             sync: 'sync://'
             newsletter:
@@ -39,7 +40,9 @@ framework:
             # Route your messages to the transports
             # 'App\Message\YourMessage': async
 
-            App\Message\MailingSubscribe: newsletter
+            # Newsletter signups: the worker's MailingSubscribeHandler
+            # subscribes the address through the self-hosted listmonk API.
+            App\Message\MailingSubscribe: async
 
 when@dev:
     framework:

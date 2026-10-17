@@ -119,7 +119,8 @@ authoritative local gate.
   email; single-use tokens; invalid tokens change nothing).
 - Contact (reCAPTCHA pass/fail) and newsletter signup (CSRF/method rejection,
   reCAPTCHA pass/fail, per-IP throttling, fixed homepage redirect instead of
-  `Referer`, queued `MailingSubscribe` inspection).
+  `Referer`, queued `MailingSubscribe` on `async`, listmonk response
+  classification).
 - Public-endpoint abuse protection (issue #143): login throttling
   (per-account and per-IP lockout with a user-facing message), OAuth2 token
   rate limiting (per client and per IP, 429 + `Retry-After`), and
@@ -166,7 +167,7 @@ Everything else is faked in the test environment:
 | Service | Production | Under test |
 |---|---|---|
 | Mail delivery | SES tenant transport (`MAILER_DSN=ses+tenant://…`) | `sync` routing (`when@test` in `config/packages/messenger.yaml`) + `null://null`; assert via `MailerAssertionsTrait`. The transport itself is tested against a mock SES HTTP client (`tests/Mailer/SesTenantTransportTest.php`) |
-| Newsletter queue | AMQP exchange | `in-memory://` (`when@test`); inspect `messenger.transport.newsletter::getSent()` |
+| Newsletter subscription | self-hosted listmonk API over the internal network | `MockHttpClient` in the handler tests; controller tests read the queued `MailingSubscribe` off the Doctrine `async` transport |
 | reCAPTCHA | Google API | `App\Tests\Double\FakeReCaptcha`, installed per test via `getContainer()->set()` **before** the first request, with `$client->disableReboot()` so the kernel reboot between requests does not drop it |
 | reCAPTCHA/JSON Hub secrets | production secrets | dummy values in `.env.test` (construction only; never used for verification) |
 

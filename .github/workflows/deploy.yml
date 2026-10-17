@@ -63,6 +63,12 @@ jobs:
       CONTACT_EMAIL: ${{ vars.CONTACT_EMAIL }}
       JSON_HUB_PROJECT: ${{ vars.JSON_HUB_PROJECT }}
       MAILING_PROVIDER_ROUTING_KEY: ${{ vars.MAILING_PROVIDER_ROUTING_KEY }}
+      # Self-hosted listmonk newsletter (docs/adr/0006). The URL, user and
+      # list id are topology; the token is a secret.
+      LISTMONK_URL: ${{ vars.LISTMONK_URL }}
+      LISTMONK_API_USER: ${{ vars.LISTMONK_API_USER }}
+      LISTMONK_LIST_ID: ${{ vars.LISTMONK_LIST_ID }}
+      LISTMONK_API_TOKEN: ${{ secrets.LISTMONK_API_TOKEN }}
       MAINTENANCE_MODE: ${{ vars.MAINTENANCE_MODE }}
       # The reCAPTCHA *site* key is rendered into the page for every visitor to
       # read, so it is a variable. Its paired secret is not.
@@ -148,6 +154,7 @@ jobs:
             NETWORK VIRTUAL_HOST LETSENCRYPT_HOST DEFAULT_URI
             SYSTEM_EMAIL CONTACT_EMAIL JSON_HUB_PROJECT
             MAILING_PROVIDER_ROUTING_KEY GOOGLE_RECAPTCHA_SITE_KEY
+            LISTMONK_URL LISTMONK_API_USER LISTMONK_API_TOKEN LISTMONK_LIST_ID
             UMAMI_SCRIPT_URL UMAMI_WEBSITE_ID
             APP_SECRET DATABASE_URL MAILER_DSN MESSENGER_TRANSPORT_DSN
             GOOGLE_RECAPTCHA_SECRET

@@ -8,7 +8,6 @@ final class MailingSubscribe
 {
     public function __construct(
         public string $email,
-        public string $entityId,
     ) {
     }
 }

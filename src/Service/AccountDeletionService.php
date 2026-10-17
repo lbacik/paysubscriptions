@@ -42,11 +42,11 @@ use League\Bundle\OAuth2ServerBundle\Model\RefreshToken;
  *   newsletter signups are the exception (see below).
  *
  * What is deliberately left alone:
- * - The gprodb.com newsletter list. It is a separate opt-in managed by an
- *   external provider (see MailingSubscriptionService); deletion never
- *   unsubscribes it, silently or otherwise. The purge below leaves queued
- *   newsletter signups (MailingSubscribe rows) alone for the same reason:
- *   deleting your account never unsubscribes you.
+ * - The self-hosted listmonk newsletter list. It is a separate opt-in
+ *   (see MailingSubscriptionService); deletion never unsubscribes it,
+ *   silently or otherwise. The purge below leaves queued newsletter signups
+ *   (MailingSubscribe rows) alone for the same reason: deleting your account
+ *   never unsubscribes you.
  *
  * Forward compatibility: sibling v1.0 slices add account-owned entities
  * (expense categories in #39, durable reminder-send state in #45). Where such
@@ -178,14 +178,13 @@ class AccountDeletionService
 
     /**
      * Best-effort purge of queued messenger rows mentioning the deleted
-     * address. Only the Doctrine `async` transport stores rows here; the
-     * newsletter transport is intentionally never purged (the gprodb.com list
-     * is a separate opt-in and must survive deletion). Queued newsletter
-     * signups (MailingSubscribe rows, on `async` once #233 reroutes them)
-     * are excluded by message type for the same reason: deleting your
-     * account never unsubscribes you. A missing table (transports with
-     * auto_setup=0 in a fresh test schema) is not an error: there is simply
-     * nothing queued to purge.
+     * address. Only the Doctrine `async` transport stores rows here. Queued
+     * newsletter signups (MailingSubscribe rows, which share `async`) are
+     * excluded by message type: the self-hosted listmonk list is a separate
+     * opt-in and must survive deletion — deleting your account never
+     * unsubscribes you. A missing table (transports with auto_setup=0 in a
+     * fresh test schema) is not an error: there is simply nothing queued to
+     * purge.
      */
     private function purgeQueuedAccountMessages(string $email): void
     {
