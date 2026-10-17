@@ -154,7 +154,12 @@ jobs:
       # with phpunit/phpunit <11.0, and we're still on ^9.5. It's not an actionable
       # update until PHPUnit is upgraded, so it's excluded here to keep this job red
       # only for updates we can actually take right now.
-      - run: composer outdated --direct --strict --minor-only --ignore=dama/doctrine-test-bundle
+      #
+      # league/oauth2-server-bundle is held at 1.2.2: v1.2.3 adds its own inactive-client
+      # check in ClientRepository, which pre-empts our App\Connection policy (#194) and
+      # changes the responses for deactivated clients (400/302 expectations in the
+      # OAuth tests). Drop the pin and this ignore once the policy is reconciled.
+      - run: composer outdated --direct --strict --minor-only --ignore=dama/doctrine-test-bundle --ignore=league/oauth2-server-bundle
 
   # PERMANENT WATCHER. The runtime we do not ship yet: the whole PHPUnit suite on
   # PHP 8.5, so that a deprecation or a break introduced by the next language
