@@ -340,7 +340,6 @@ final class SubscriptionTest extends ApiV1TestCase
             'notes' => 'Family plan',
             'category' => self::CATEGORIES.'/'.$category->getId(),
             // Server-controlled fields must be ignored, never accepted.
-            'id' => (string) Uuid::v4(),
             'convertedCurrency' => 'PLN',
             'pendingReview' => true,
             'createdAt' => '2001-01-01T00:00:00+00:00',
@@ -359,7 +358,7 @@ final class SubscriptionTest extends ApiV1TestCase
         self::assertSame('Family plan', $data['notes']);
         self::assertSame(['href' => self::CATEGORIES.'/'.$category->getId()], $data['_links']['category']);
         self::assertArrayNotHasKey('convertedCurrency', $data);
-        self::assertArrayNotHasKey('pendingReview', $data, 'A fresh same-currency record is not pending review and omits the flag.');
+        self::assertFalse($data['pendingReview'], 'A fresh same-currency record is not pending review.');
         self::assertNotSame('2001-01-01T00:00:00+00:00', $data['createdAt']);
         self::assertArrayHasKey('createdAt', $data);
         self::assertArrayHasKey('updatedAt', $data);
@@ -375,7 +374,7 @@ final class SubscriptionTest extends ApiV1TestCase
     {
         $category = $this->categories->create($this->user, 'Video', '#111111');
 
-        $data = $this->requestAs($this->user, 'POST', self::URL, ['json' => $this->validPayload() + ['category' => self::CATEGORIES.'/'.$category->getId()]])->toArray();
+        $data = $this->requestAs($this->user, 'POST', self::URL, ['json' => array_merge($this->validPayload(), ['category' => self::CATEGORIES.'/'.$category->getId()])])->toArray();
         self::assertResponseStatusCodeSame(201);
 
         // The other User never sees it: the collection hides it, the detail 404s.
@@ -396,7 +395,7 @@ final class SubscriptionTest extends ApiV1TestCase
             self::CATEGORIES.'/'.$foreignCategory->getId(),
             self::CATEGORIES.'/not-a-uuid',
         ] as $badCategory) {
-            $response = $this->requestAs($this->user, 'POST', self::URL, ['json' => $this->validPayload() + ['category' => $badCategory]]);
+            $response = $this->requestAs($this->user, 'POST', self::URL, ['json' => array_merge($this->validPayload(), ['category' => $badCategory])]);
 
             self::assertSame(422, $response->getStatusCode(), sprintf('category %s must be rejected', $badCategory));
             self::assertSame(['category'], $this->violatedPaths());
@@ -470,7 +469,7 @@ final class SubscriptionTest extends ApiV1TestCase
         $this->user->setMainCurrency('USD');
         $this->em->flush();
 
-        $this->requestAs($this->user, 'POST', self::URL, ['json' => $this->validPayload() + ['currency' => 'EUR']]);
+        $this->requestAs($this->user, 'POST', self::URL, ['json' => array_merge($this->validPayload(), ['currency' => 'EUR'])]);
 
         self::assertResponseStatusCodeSame(422);
         self::assertSame(['convertedAmount'], $this->violatedPaths());
@@ -481,10 +480,10 @@ final class SubscriptionTest extends ApiV1TestCase
         $this->user->setMainCurrency('USD');
         $this->em->flush();
 
-        $data = $this->requestAs($this->user, 'POST', self::URL, ['json' => $this->validPayload() + [
+        $data = $this->requestAs($this->user, 'POST', self::URL, ['json' => array_merge($this->validPayload(), [
             'currency' => 'EUR',
             'convertedAmount' => '11.00',
-        ]])->toArray();
+        ])])->toArray();
 
         self::assertResponseStatusCodeSame(201);
         self::assertSame('EUR', $data['currency']);
@@ -498,10 +497,11 @@ final class SubscriptionTest extends ApiV1TestCase
         $this->user->setMainCurrency('USD');
         $this->em->flush();
 
-        $this->requestAs($this->user, 'POST', self::URL, ['json' => $this->validPayload() + [
+        $this->requestAs($this->user, 'POST', self::URL, ['json' => array_merge($this->validPayload(), [
             'currency' => 'USD',
             'convertedAmount' => '10.00',
-        ]]);
+        ])]);
+
 
         self::assertResponseStatusCodeSame(422);
         self::assertSame(['convertedAmount'], $this->violatedPaths());
@@ -539,7 +539,7 @@ final class SubscriptionTest extends ApiV1TestCase
 
     public function testCreateWithIdInBodyIsBadRequest(): void
     {
-        $this->requestAs($this->user, 'POST', self::URL, ['json' => $this->validPayload() + ['id' => (string) Uuid::v4()]]);
+        $this->requestAs($this->user, 'POST', self::URL, ['json' => array_merge($this->validPayload(), ['id' => (string) Uuid::v4()])]);
 
         self::assertResponseStatusCodeSame(400);
         self::assertResponseHeaderSame('content-type', 'application/problem+json');
@@ -553,10 +553,11 @@ final class SubscriptionTest extends ApiV1TestCase
         $category = $this->categories->create($this->user, 'Video', '#111111');
         $this->makeSubscription($this->user, $category, 'First', BillingCycle::Monthly, '2026-03-05', 10.0);
 
-        $response = $this->requestAs($this->user, 'POST', self::URL, ['json' => $this->validPayload() + [
+        $response = $this->requestAs($this->user, 'POST', self::URL, ['json' => array_merge($this->validPayload(), [
             'name' => 'Second',
             'category' => self::CATEGORIES.'/'.$category->getId(),
-        ]]);
+        ])]);
+
 
         self::assertSame(409, $response->getStatusCode());
         self::assertResponseHeaderSame('content-type', 'application/problem+json');
@@ -580,7 +581,7 @@ final class SubscriptionTest extends ApiV1TestCase
         // gate serializes concurrent creates on the owner row, so a raced
         // request takes the same 409 path instead of slipping a second row
         // past the check.
-        $this->requestAs($this->other, 'POST', self::URL, ['json' => $this->validPayload() + ['name' => 'Other Sub']]);
+        $this->requestAs($this->other, 'POST', self::URL, ['json' => array_merge($this->validPayload(), ['name' => 'Other Sub'])]);
 
         self::assertResponseStatusCodeSame(201);
     }
@@ -594,7 +595,7 @@ final class SubscriptionTest extends ApiV1TestCase
         $this->makeSubscription($this->user, $category, 'First', BillingCycle::Monthly, '2026-03-05', 10.0);
 
         // Invalid data stays 422 even when the limit is also reached.
-        $this->requestAs($this->user, 'POST', self::URL, ['json' => $this->validPayload() + ['name' => 'AB']]);
+        $this->requestAs($this->user, 'POST', self::URL, ['json' => array_merge($this->validPayload(), ['name' => 'AB'])]);
 
         self::assertResponseStatusCodeSame(422);
     }
