@@ -179,6 +179,7 @@ services:
       - --time-limit=3600
       - --memory-limit=128M
       - --no-interaction
+      - -v
     environment:
       <<: *app-environment
     # messenger:consume finishes the message in hand on SIGTERM (pcntl, see the
