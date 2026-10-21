@@ -121,6 +121,10 @@ class SubscriptionType extends AbstractType
             'data_class' => Subscription::class,
             'user' => null,
             'main_currency' => null,
+            // The required category lives in the `web` group (as on
+            // ExpenseCategoryType): API Platform also validates the mapped
+            // entity in the Default group, where the API omits it on purpose.
+            'validation_groups' => ['Default', Subscription::WEB_VALIDATION_GROUP],
         ]);
 
         $resolver->setAllowedTypes('user', [User::class, 'null']);

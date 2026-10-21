@@ -186,11 +186,11 @@ jobs:
       - name: Validate Doctrine mapping
         run: php bin/console doctrine:schema:validate --skip-sync --env=prod
 
-      # Every route the hand-written v1 contract documents must exist, and the
+      # Every route the v1 API serves must exist, and the
       # OAuth2 discovery/token surface must be registered. A renamed route that
       # the contract still names is a 404 behind a 200-documented operation.
-      # Resources served by API Platform (ExpenseCategory) get generated
-      # routes and are covered by their tests in tests/Api/V1.
+      # Resources served by API Platform (ExpenseCategory, Subscription) keep
+      # stable route names and are covered by their tests in tests/Api/V1.
       - name: Verify v1 and discovery routes
         run: |
           routes=$(php bin/console debug:router --env=prod)

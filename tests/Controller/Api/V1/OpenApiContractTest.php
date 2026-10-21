@@ -17,8 +17,8 @@ use Symfony\Component\Routing\RouterInterface;
  * documented operation the implementation does not serve.
  *
  * Until the docs switch, the document covers only the hand-written v1
- * resources: routes served by API Platform (ExpenseCategory) are described by
- * API Platform's generated document and skipped here.
+ * resources: routes served by API Platform (ExpenseCategory, Subscription)
+ * are described by API Platform's generated document and skipped here.
  *
  * Needs no database: it boots the kernel for the route collection and reads
  * the committed file. Per-resource behavior (isolation, validation statuses,
@@ -108,23 +108,13 @@ final class OpenApiContractTest extends KernelTestCase
     {
         $schemas = self::contract()['components']['schemas'];
 
-        foreach (['Subscription', 'SubscriptionCreate', 'SubscriptionUpdate'] as $name) {
-            self::assertArrayHasKey($name, $schemas, sprintf('Schema %s is missing from the contract.', $name));
-        }
-
-        self::assertSame(
-            ['name', 'billingCycle', 'amount', 'nextPayment', 'currency', 'convertedAmount', 'categoryId', 'notes'],
-            array_keys($schemas['SubscriptionCreate']['properties'])
-        );
-        self::assertContains('confirmConvertedFor', array_keys($schemas['SubscriptionUpdate']['properties']));
+        self::assertArrayHasKey('DashboardReport', $schemas, 'Schema DashboardReport is missing from the contract.');
 
         // Ownership is bearer-implied: no response schema may leak an owner reference.
-        foreach (['Subscription', 'DashboardReport'] as $name) {
-            $properties = array_keys($schemas[$name]['properties'] ?? []);
-            self::assertNotContains('owner', $properties, sprintf('%s must not expose owner.', $name));
-            self::assertNotContains('owner_id', $properties, sprintf('%s must not expose owner_id.', $name));
-            self::assertNotContains('ownerId', $properties, sprintf('%s must not expose ownerId.', $name));
-        }
+        $properties = array_keys($schemas['DashboardReport']['properties'] ?? []);
+        self::assertNotContains('owner', $properties, 'DashboardReport must not expose owner.');
+        self::assertNotContains('owner_id', $properties, 'DashboardReport must not expose owner_id.');
+        self::assertNotContains('ownerId', $properties, 'DashboardReport must not expose ownerId.');
     }
 
     public function testSecurityUsesSingleFullAccessScope(): void
@@ -169,12 +159,6 @@ final class OpenApiContractTest extends KernelTestCase
         }
 
         $expectations = [
-            '/subscriptions' => ['get' => ['200', '401', '403'], 'post' => ['201', '401', '403', '409', '422']],
-            '/subscriptions/{id}' => [
-                'get' => ['200', '401', '403', '404'],
-                'patch' => ['200', '401', '403', '404', '409', '422'],
-                'delete' => ['204', '401', '403', '404'],
-            ],
             '/reports/dashboard' => ['get' => ['200', '401', '403', '404', '422']],
             '/openapi.json' => ['get' => ['200', '401', '403']],
         ];
@@ -190,14 +174,9 @@ final class OpenApiContractTest extends KernelTestCase
         }
     }
 
-    public function testListFiltersAndReportSelectorsAreDocumented(): void
+    public function testReportSelectorsAreDocumented(): void
     {
         $doc = self::contract();
-
-        $listParams = array_column($doc['paths']['/subscriptions']['get']['parameters'] ?? [], 'name');
-        foreach (['categoryId', 'sort', 'order', 'page'] as $filter) {
-            self::assertContains($filter, $listParams);
-        }
 
         $reportParams = array_column($doc['paths']['/reports/dashboard']['get']['parameters'] ?? [], 'name');
         foreach (['chartMode', 'basis', 'categoryId', 'month'] as $selector) {

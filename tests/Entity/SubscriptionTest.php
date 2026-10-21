@@ -22,7 +22,7 @@ final class SubscriptionTest extends TestCase
             ->getValidator();
     }
 
-    public function testEmptySubscriptionViolatesCycleAmountNextPaymentAndCategory(): void
+    public function testEmptySubscriptionViolatesCycleAmountAndNextPaymentWhileCategoryIsWebOnly(): void
     {
         $violations = $this->validator->validate(new Subscription());
 
@@ -34,7 +34,22 @@ final class SubscriptionTest extends TestCase
         self::assertContains('billingCycle', $paths);
         self::assertContains('amount', $paths);
         self::assertContains('nextPayment', $paths);
-        self::assertContains('category', $paths);
+        // The API applies the default-category rule instead, so category is
+        // only required for the web form.
+        self::assertNotContains('category', $paths);
+
+        $webViolations = $this->validator->validate(
+            new Subscription(),
+            null,
+            ['Default', Subscription::WEB_VALIDATION_GROUP]
+        );
+
+        $webPaths = array_map(
+            fn($violation) => $violation->getPropertyPath(),
+            iterator_to_array($webViolations),
+        );
+
+        self::assertContains('category', $webPaths);
     }
 
     public function testSubscriptionWithCycleAmountAndNextPaymentIsValid(): void
