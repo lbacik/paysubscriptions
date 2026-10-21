@@ -49,6 +49,22 @@ final class OAuthApiFirewallTest extends DatabaseTestCase
         self::assertResponseStatusCodeSame(Response::HTTP_UNAUTHORIZED);
     }
 
+    public function testApiDocsArePublic(): void
+    {
+        $this->client->request('GET', '/api/docs');
+        self::assertResponseIsSuccessful();
+
+        $this->client->request('GET', '/api/docs.jsonopenapi');
+        self::assertResponseIsSuccessful();
+    }
+
+    public function testApiDocsCarveOutDoesNotOpenOtherApiPaths(): void
+    {
+        $this->client->request('GET', '/api/v1/openapi.json');
+
+        self::assertResponseStatusCodeSame(Response::HTTP_UNAUTHORIZED);
+    }
+
     public function testIssuedTokenOpensApi(): void
     {
         $this->registerPublicClient();

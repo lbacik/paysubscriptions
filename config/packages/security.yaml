@@ -93,6 +93,9 @@ security:
         # traffic would fall through to the resource (issue #88). Every /api
         # caller — including docs and entrypoint — presents a User-delegated
         # token; sibling issues carve out anything that must stay public.
+        # The interactive API documentation (Swagger UI and its generated
+        # spec formats) is the one public carve-out: /api/docs, /api/docs.json…
+        - { path: ^/api/docs(\.|$), roles: PUBLIC_ACCESS }
         - { path: ^/api, roles: IS_AUTHENTICATED_FULLY }
         # - { path: ^/admin, roles: ROLE_ADMIN }
         # - { path: ^/profile, roles: ROLE_USER }
