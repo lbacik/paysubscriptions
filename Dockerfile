@@ -55,13 +55,10 @@ RUN apt -y update && apt-get install -y \
     git \
     unzip \
     libicu-dev \
-    librabbitmq-dev \
     libssl-dev \
     && apt -y clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* \
     && rm -rf /var/cache/apk/* \
-    && pecl install amqp \
-    && docker-php-ext-enable amqp \
     && docker-php-ext-configure \
     intl \
 	&& docker-php-ext-install \

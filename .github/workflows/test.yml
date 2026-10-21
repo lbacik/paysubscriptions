@@ -73,10 +73,7 @@ jobs:
       APP_DEBUG: '0'
       APP_SECRET: ci
       DATABASE_URL: "mysql://root:root@127.0.0.1:3306/paysub?charset=utf8mb4"
-      MESSENGER_TRANSPORT_DSN: 'amqp://guest:guest@127.0.0.1:5672/%2f/messages'
       MAILER_DSN: 'null://null'
-      JSON_HUB_PROJECT: '00000000-0000-0000-0000-000000000000'
-      MAILING_PROVIDER_ROUTING_KEY: 'ci'
 
     steps:
       - name: Checkout
@@ -86,10 +83,10 @@ jobs:
         uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # v2
         with:
           php-version: ${{ env.PHP_VERSION }}
-          # The set the Dockerfile builds: amqp via pecl, then pdo_mysql, opcache
-          # and intl via docker-php-ext-install. opcache is omitted here - it
+          # The set the Dockerfile builds: pdo_mysql and intl
+          # via docker-php-ext-install. opcache is omitted here - it
           # changes nothing a lint or a test can observe.
-          extensions: amqp, ctype, iconv, intl, pdo_mysql
+          extensions: ctype, iconv, intl, pdo_mysql
           coverage: none
           ini-values: memory_limit=1G
 
@@ -97,8 +94,8 @@ jobs:
         uses: ramsey/composer-install@26d8a556604053a9612623447203a691f406fbe6 # v4
 
       # The compile check, and the most valuable one this repository has. The app
-      # resolves 14 environment variables through %env()%, binds
-      # $jsonHubProjectUuid, $systemEmail, $contactEmail and $docsPath by
+      # resolves 11 environment variables through %env()%, binds
+      # $systemEmail, $contactEmail and $docsPath by
       # autowiring, and injects %env(bool:MAINTENANCE_MODE)% into
       # MaintenanceKernelRequestSubscriber via #[Autowire]. A container that does
       # not compile is a 500 on every route, which is exactly what a deploy most
@@ -148,10 +145,7 @@ jobs:
       APP_DEBUG: '0'
       APP_SECRET: ci
       DATABASE_URL: "mysql://root:root@127.0.0.1:3306/paysub?charset=utf8mb4"
-      MESSENGER_TRANSPORT_DSN: 'amqp://guest:guest@127.0.0.1:5672/%2f/messages'
       MAILER_DSN: 'null://null'
-      JSON_HUB_PROJECT: '00000000-0000-0000-0000-000000000000'
-      MAILING_PROVIDER_ROUTING_KEY: 'ci'
 
     steps:
       - name: Checkout
@@ -161,7 +155,7 @@ jobs:
         uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # v2
         with:
           php-version: ${{ env.PHP_VERSION }}
-          extensions: amqp, ctype, iconv, intl, pdo_mysql
+          extensions: ctype, iconv, intl, pdo_mysql
           coverage: none
           ini-values: memory_limit=1G
 
@@ -269,9 +263,8 @@ jobs:
         run: kill "$(cat /tmp/smoke-server.pid)" || true
 
   # Functional tests (WebTestCase, ResetDatabase) need a real database to run
-  # against. Shares the MySQL service definition with `migrations` below for the
-  # same reason documented there: the image matches production's MySQL 9.7 and
-  # the AMQP scheme avoids the Doctrine transport factory's option validation.
+  # against. Shares the MySQL service definition with `migrations` below:
+  # the image matches production's MySQL 9.7.
   phpunit:
     name: PHPUnit
     runs-on: ubuntu-latest
@@ -294,10 +287,7 @@ jobs:
       APP_ENV: test
       APP_SECRET: ci
       DATABASE_URL: "mysql://root:root@127.0.0.1:3306/paysub?charset=utf8mb4"
-      MESSENGER_TRANSPORT_DSN: 'amqp://guest:guest@127.0.0.1:5672/%2f/messages'
       MAILER_DSN: 'null://null'
-      JSON_HUB_PROJECT: '00000000-0000-0000-0000-000000000000'
-      MAILING_PROVIDER_ROUTING_KEY: 'ci'
       # Dummy only: the suite replaces the client with a fake before verifying,
       # but merely rendering /contact instantiates it, which requires a secret.
       GOOGLE_RECAPTCHA_SITE_KEY: 'ci'
@@ -311,7 +301,7 @@ jobs:
         uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # v2
         with:
           php-version: ${{ env.PHP_VERSION }}
-          extensions: amqp, ctype, iconv, intl, pdo_mysql
+          extensions: ctype, iconv, intl, pdo_mysql
           coverage: none
           ini-values: memory_limit=1G
 
@@ -352,31 +342,6 @@ jobs:
   # under APP_ENV=prod and then loads the fixtures on top, which is what
   # proves the migrated schema still matches the entity mappings well enough
   # to insert into.
-  #
-  # Why MESSENGER_TRANSPORT_DSN below is an amqp:// URL for a broker that is not
-  # running, rather than the doctrine:// one the rest of this file used to carry.
-  #
-  # config/packages/messenger.yaml gives the `newsletter` transport an AMQP-only
-  # `exchange` options block and, since the `async` transport was pinned to a
-  # literal doctrine:// DSN, `newsletter` is now the sole reader of that variable.
-  # Point it at doctrine:// and the Doctrine transport factory rejects `exchange`:
-  #
-  #   Unknown option found: [exchange]. Allowed options are [table_name, ...]
-  #
-  # That fires in any command running Doctrine's schema listener, because the
-  # listener instantiates every transport whose scheme is doctrine:// - which is
-  # what killed the migrate step below. Of the plausible schemes only doctrine://
-  # validates options strictly; in-memory:// and sync:// ignore unknown ones.
-  #
-  # amqp:// is deliberate over the tolerant in-memory://: it is the scheme
-  # production actually uses, so a genuine AMQP option error still surfaces here
-  # instead of being swallowed. No broker is needed - the AMQP transport connects
-  # lazily and nothing in these steps sends or consumes a message.
-  #
-  # Still unresolved: the variable is named for messenger at large while only
-  # feeding an AMQP-only transport, so a doctrine:// value supplied by habit
-  # breaks every schema command again. Renaming it (MAILING_TRANSPORT_DSN) is the
-  # actual fix and needs the deploy secret and host env renamed with it.
   migrations:
     name: Migrations
     runs-on: ubuntu-latest
@@ -400,11 +365,8 @@ jobs:
 
     env:
       DATABASE_URL: "mysql://root:root@127.0.0.1:3306/paysub?charset=utf8mb4"
-      MESSENGER_TRANSPORT_DSN: 'amqp://guest:guest@127.0.0.1:5672/%2f/messages'
       MAILER_DSN: 'null://null'
       APP_SECRET: ci
-      JSON_HUB_PROJECT: '00000000-0000-0000-0000-000000000000'
-      MAILING_PROVIDER_ROUTING_KEY: 'ci'
 
     steps:
       - name: Checkout
@@ -414,7 +376,7 @@ jobs:
         uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # v2
         with:
           php-version: ${{ env.PHP_VERSION }}
-          extensions: amqp, ctype, iconv, intl, pdo_mysql
+          extensions: ctype, iconv, intl, pdo_mysql
           coverage: none
           ini-values: memory_limit=1G
 
@@ -485,12 +447,9 @@ jobs:
       APP_DEBUG: '0'
       APP_SECRET: ci
       DATABASE_URL: "mysql://root:root@127.0.0.1:3306/paysub?charset=utf8mb4"
-      MESSENGER_TRANSPORT_DSN: 'amqp://guest:guest@127.0.0.1:5672/%2f/messages'
       MAILER_DSN: 'null://null'
       GOOGLE_RECAPTCHA_SITE_KEY: '6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI'
       GOOGLE_RECAPTCHA_SECRET: '6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe'
-      JSON_HUB_PROJECT: '00000000-0000-0000-0000-000000000000'
-      MAILING_PROVIDER_ROUTING_KEY: 'ci'
       BASE_URL: 'http://127.0.0.1:8000'
       A11Y_USER_EMAIL: 'foo@bar.com'
       A11Y_USER_PASSWORD: 'alamakota'
@@ -503,7 +462,7 @@ jobs:
         uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # v2
         with:
           php-version: ${{ env.PHP_VERSION }}
-          extensions: amqp, ctype, iconv, intl, pdo_mysql
+          extensions: ctype, iconv, intl, pdo_mysql
           coverage: none
           ini-values: memory_limit=1G
 
@@ -519,9 +478,6 @@ jobs:
       # under test, fixtures under dev) would seed `paysub` while the server
       # reads the empty `paysub_test` and every login fails. database:create is
       # explicit because the MySQL service only creates `paysub`.
-      # MESSENGER_TRANSPORT_DSN stays amqp:// with no broker: the transport
-      # connects lazily and nothing here sends or consumes a message (same
-      # reasoning as the `migrations` job above).
       - name: Migrate and load fixtures
         run: |
           APP_ENV=test php bin/console doctrine:database:create --if-not-exists --no-interaction

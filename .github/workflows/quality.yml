@@ -84,16 +84,13 @@ jobs:
       APP_ENV: prod
       APP_SECRET: ci
       DATABASE_URL: "mysql://root:root@127.0.0.1:3306/paysub?charset=utf8mb4"
-      MESSENGER_TRANSPORT_DSN: 'amqp://guest:guest@127.0.0.1:5672/%2f/messages'
       MAILER_DSN: 'null://null'
-      JSON_HUB_PROJECT: '00000000-0000-0000-0000-000000000000'
-      MAILING_PROVIDER_ROUTING_KEY: 'ci'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # v2
         with:
           php-version: ${{ env.PHP_VERSION }}
-          extensions: amqp, ctype, iconv, intl, pdo_mysql
+          extensions: ctype, iconv, intl, pdo_mysql
           coverage: none
           ini-values: memory_limit=1G
       - uses: ramsey/composer-install@26d8a556604053a9612623447203a691f406fbe6 # v4
@@ -119,7 +116,7 @@ jobs:
       - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # v2
         with:
           php-version: ${{ env.PHP_VERSION }}
-          extensions: amqp, ctype, iconv, intl, pdo_mysql
+          extensions: ctype, iconv, intl, pdo_mysql
           coverage: none
       - uses: ramsey/composer-install@26d8a556604053a9612623447203a691f406fbe6 # v4
       - run: composer audit
@@ -147,7 +144,7 @@ jobs:
       - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # v2
         with:
           php-version: ${{ env.PHP_VERSION }}
-          extensions: amqp, ctype, iconv, intl, pdo_mysql
+          extensions: ctype, iconv, intl, pdo_mysql
           coverage: none
       - uses: ramsey/composer-install@26d8a556604053a9612623447203a691f406fbe6 # v4
       # dama/doctrine-test-bundle is pinned behind phpunit/phpunit: v8.6.0 conflicts
@@ -201,10 +198,7 @@ jobs:
       APP_ENV: test
       APP_SECRET: ci
       DATABASE_URL: "mysql://root:root@127.0.0.1:3306/paysub?charset=utf8mb4"
-      MESSENGER_TRANSPORT_DSN: 'amqp://guest:guest@127.0.0.1:5672/%2f/messages'
       MAILER_DSN: 'null://null'
-      JSON_HUB_PROJECT: '00000000-0000-0000-0000-000000000000'
-      MAILING_PROVIDER_ROUTING_KEY: 'ci'
       GOOGLE_RECAPTCHA_SITE_KEY: 'ci'
       GOOGLE_RECAPTCHA_SECRET: 'ci'
       # A fixed path: the `runner` context is not available in job-level env.
@@ -215,7 +209,7 @@ jobs:
       - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # v2
         with:
           php-version: '8.5'
-          extensions: amqp, ctype, iconv, intl, pdo_mysql
+          extensions: ctype, iconv, intl, pdo_mysql
           coverage: none
           ini-values: memory_limit=1G
       - uses: ramsey/composer-install@26d8a556604053a9612623447203a691f406fbe6 # v4

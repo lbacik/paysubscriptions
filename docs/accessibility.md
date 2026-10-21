@@ -64,10 +64,7 @@ running locally, Node 20.
 # login would fail.
 export APP_SECRET=ci \
   DATABASE_URL='mysql://root:root@127.0.0.1:3306/paysub?charset=utf8mb4' \
-  MESSENGER_TRANSPORT_DSN='amqp://guest:guest@127.0.0.1:5672/%2f/messages' \
-  MAILER_DSN='null://null' \
-  JSON_HUB_PROJECT='00000000-0000-0000-0000-000000000000' \
-  MAILING_PROVIDER_ROUTING_KEY='ci'
+  MAILER_DSN='null://null'
 APP_ENV=test php bin/console doctrine:database:create --if-not-exists --no-interaction
 APP_ENV=test php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
 APP_ENV=test php bin/console doctrine:fixtures:load --no-interaction
@@ -78,12 +75,9 @@ php bin/console tailwind:build
 # 3. Start the test-kernel server (router bridges env into $_SERVER)
 export APP_ENV=test APP_DEBUG=0 APP_SECRET=ci \
   DATABASE_URL='mysql://root:root@127.0.0.1:3306/paysub?charset=utf8mb4' \
-  MESSENGER_TRANSPORT_DSN='amqp://guest:guest@127.0.0.1:5672/%2f/messages' \
   MAILER_DSN='null://null' \
   GOOGLE_RECAPTCHA_SITE_KEY='6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI' \
-  GOOGLE_RECAPTCHA_SECRET='6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe' \
-  JSON_HUB_PROJECT='00000000-0000-0000-0000-000000000000' \
-  MAILING_PROVIDER_ROUTING_KEY='ci'
+  GOOGLE_RECAPTCHA_SECRET='6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe'
 php -S 127.0.0.1:8000 tests/accessibility/router.php &
 
 # 4. Registry guard (uses the default test DATABASE_URL handling)
