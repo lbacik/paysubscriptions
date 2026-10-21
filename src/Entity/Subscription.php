@@ -17,9 +17,11 @@ use Symfony\Component\Validator\Constraints as Assert;
 use Gedmo\Mapping\Annotation as Gedmo;
 
 #[ORM\Entity(repositoryClass: SubscriptionRepository::class)]
-class Subscription
+class Subscription implements UserOwned
 {
     use Timestampable;
+
+    public const WEB_VALIDATION_GROUP = 'web';
 
     #[ORM\Id]
     #[ORM\Column(type: UuidType::NAME, unique: true)]
@@ -64,7 +66,11 @@ class Subscription
 
     #[ORM\ManyToOne(targetEntity: ExpenseCategory::class, inversedBy: 'subscriptions', cascade: ['persist'])]
     #[ORM\JoinColumn(nullable: false)]
-    #[Assert\NotNull]
+    // Web forms only (SubscriptionType validates the `web` group): API
+    // Platform also validates the mapped entity in the Default group, and the
+    // API applies the default-category rule for an omitted category in
+    // SubscriptionProcessor instead.
+    #[Assert\NotNull(groups: [self::WEB_VALIDATION_GROUP])]
     private ?ExpenseCategory $category = null;
 
     #[Gedmo\Timestampable(on: 'create')]
