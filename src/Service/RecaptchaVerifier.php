@@ -44,11 +44,23 @@ final class RecaptchaVerifier implements RecaptchaVerifierInterface
         try {
             $recaptcha = new ReCaptcha($this->recaptchaSecret, $this->requestMethod);
 
-            return $recaptcha->verify($response, $remoteIp)->isSuccess();
+            $result = $recaptcha->verify($response, $remoteIp);
         } catch (\Throwable $exception) {
             $this->logger->error('reCAPTCHA verification failed.', ['exception' => $exception]);
 
             return false;
         }
+
+        // Google's error codes are the only record of why a visitor saw
+        // "Invalid reCAPTCHA response" (expired token, hostname mismatch, bad
+        // secret...). Info, not warning: bots fail this routinely.
+        if (!$result->isSuccess()) {
+            $this->logger->info('reCAPTCHA verification rejected.', [
+                'error_codes' => $result->getErrorCodes(),
+                'hostname' => $result->getHostname(),
+            ]);
+        }
+
+        return $result->isSuccess();
     }
 }
