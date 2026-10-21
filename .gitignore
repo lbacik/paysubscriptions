@@ -42,3 +42,6 @@ config/reference.php
 .claude/
 
 .agent/
+
+# Local OAuth2 key material
+/oauth-*.pem
