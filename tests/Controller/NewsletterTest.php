@@ -9,7 +9,6 @@ use App\Tests\DatabaseTestCase;
 use App\Tests\Double\FakeRecaptchaRequestMethod;
 use App\Tests\RateLimitTestHelper;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Messenger\Bridge\Amqp\Transport\AmqpStamp;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\Transport\Receiver\ListableReceiverInterface;
 
@@ -75,11 +74,6 @@ final class NewsletterTest extends DatabaseTestCase
         $message = $envelope->getMessage();
         self::assertInstanceOf(MailingSubscribe::class, $message);
         self::assertSame(['email' => 'reader@example.com'], get_object_vars($message));
-
-        self::assertNull(
-            $envelope->last(AmqpStamp::class),
-            'MailingSubscribe goes to the Doctrine async transport with no AMQP stamp.'
-        );
     }
 
     public function testMissingRefererRedirectsHomeWithout500(): void

@@ -61,8 +61,6 @@ jobs:
       UMAMI_SCRIPT_URL: ${{ vars.UMAMI_SCRIPT_URL }}
       UMAMI_WEBSITE_ID: ${{ vars.UMAMI_WEBSITE_ID }}
       CONTACT_EMAIL: ${{ vars.CONTACT_EMAIL }}
-      JSON_HUB_PROJECT: ${{ vars.JSON_HUB_PROJECT }}
-      MAILING_PROVIDER_ROUTING_KEY: ${{ vars.MAILING_PROVIDER_ROUTING_KEY }}
       # Self-hosted listmonk newsletter (docs/adr/0006). The URL, user and
       # list id are topology; the token is a secret.
       LISTMONK_URL: ${{ vars.LISTMONK_URL }}
@@ -78,11 +76,6 @@ jobs:
       APP_SECRET: ${{ secrets.APP_SECRET }}
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
       MAILER_DSN: ${{ secrets.MAILER_DSN }}
-      # No credentials in this one today (doctrine://default?auto_setup=0), but
-      # it is a transport DSN and the suite's other repositories keep it as a
-      # secret - it becomes credential-bearing the moment it points at AMQP,
-      # which is what .env.docker.gin used.
-      MESSENGER_TRANSPORT_DSN: ${{ secrets.MESSENGER_TRANSPORT_DSN }}
       GOOGLE_RECAPTCHA_SECRET: ${{ secrets.GOOGLE_RECAPTCHA_SECRET }}
       # The paysubs-feedback-reader IAM user (aws-config PaysubsSesTenantStack),
       # passed to restriction-consumer only. The queue URL names the account
@@ -152,11 +145,10 @@ jobs:
           required='
             DEPLOY_SSH_HOST DEPLOY_SSH_PORT DEPLOY_SSH_USER REGISTRY_HOST
             NETWORK VIRTUAL_HOST LETSENCRYPT_HOST DEFAULT_URI
-            SYSTEM_EMAIL CONTACT_EMAIL JSON_HUB_PROJECT
-            MAILING_PROVIDER_ROUTING_KEY GOOGLE_RECAPTCHA_SITE_KEY
+            SYSTEM_EMAIL CONTACT_EMAIL GOOGLE_RECAPTCHA_SITE_KEY
             LISTMONK_URL LISTMONK_API_USER LISTMONK_API_TOKEN LISTMONK_LIST_ID
             UMAMI_SCRIPT_URL UMAMI_WEBSITE_ID
-            APP_SECRET DATABASE_URL MAILER_DSN MESSENGER_TRANSPORT_DSN
+            APP_SECRET DATABASE_URL MAILER_DSN
             GOOGLE_RECAPTCHA_SECRET
             SES_RESTRICTION_QUEUE_URL SES_RESTRICTION_ACCESS_KEY_ID
             SES_RESTRICTION_SECRET_ACCESS_KEY
@@ -233,14 +225,6 @@ jobs:
       # failure can leave the schema partly migrated. Recovery relies on
       # additive, re-runnable migrations (see AdditiveMigrationTest). A failure
       # still aborts the deploy before any running container is restarted.
-      #
-      # MESSENGER_TRANSPORT_DSN must be an amqp:// URL for this step to survive.
-      # config/packages/messenger.yaml gives `newsletter` an AMQP-only `exchange`
-      # options block, and Doctrine's schema listener instantiates every transport
-      # whose scheme is doctrine://, so a doctrine:// value makes the Doctrine
-      # factory reject `exchange` and kills the command here. test.yml's
-      # `migrations` job replays this exact command and would stop a tag first.
-      # See the comment above that job for the full mechanism.
       - name: Run database migrations
         run: |
           $COMPOSE run --rm --no-deps --pull always web \
@@ -284,10 +268,7 @@ jobs:
           exit 1
 
       # (2) The database, from inside the web container - the one thing the public
-      #     surface cannot demonstrate. Shares the migration step's dependency on
-      #     bin/console being able to boot, so it will fail for the messenger
-      #     reason above until that is fixed; by then the deploy has already
-      #     stopped at the migration step, so this never fails alone.
+      #     surface cannot demonstrate.
       #     The worker gets its own check, (5).
       - name: Smoke test the database connection
         run: |

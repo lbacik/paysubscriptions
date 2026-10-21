@@ -93,8 +93,8 @@ first exactly as CI does (`php bin/console doctrine:database:create
 --allow-no-migration` under `APP_ENV=test`), then run the command above.
 
 Without a local PHP 8.4, run the same suite inside the project image with
-the working tree bind-mounted (the `Dockerfile` adds `pdo_mysql`, `intl`
-and `amqp` over the base image, so build it rather than using the bare
+the working tree bind-mounted (the `Dockerfile` adds `pdo_mysql` and `intl`
+over the base image, so build it rather than using the bare
 `dunglas/frankenphp:1-php8.4` image, which lacks them; `--network host` keeps
 the host MySQL reachable at `127.0.0.1`):
 
@@ -169,7 +169,7 @@ Everything else is faked in the test environment:
 | Mail delivery | SES tenant transport (`MAILER_DSN=ses+tenant://…`) | `sync` routing (`when@test` in `config/packages/messenger.yaml`) + `null://null`; assert via `MailerAssertionsTrait`. The transport itself is tested against a mock SES HTTP client (`tests/Mailer/SesTenantTransportTest.php`) |
 | Newsletter subscription | self-hosted listmonk API over the internal network | `MockHttpClient` in the handler tests; controller tests read the queued `MailingSubscribe` off the Doctrine `async` transport |
 | reCAPTCHA | Google API | `App\Tests\Double\FakeReCaptcha`, installed per test via `getContainer()->set()` **before** the first request, with `$client->disableReboot()` so the kernel reboot between requests does not drop it |
-| reCAPTCHA/JSON Hub secrets | production secrets | dummy values in `.env.test` (construction only; never used for verification) |
+| reCAPTCHA secrets | production secrets | dummy values in `.env.test` (construction only; never used for verification) |
 
 ## What is not covered yet
 

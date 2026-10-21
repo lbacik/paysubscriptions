@@ -24,8 +24,6 @@
 #     postgres container here would be an unused second database.
 #   - the `mailcatcher` service is gone. Production mail goes out over MAILER_DSN.
 #   - `worker` runs `messenger:consume async` from the same image as `web`.
-#     Nothing else drains that transport: lbacik/mailing-workers consumes only
-#     the AMQP `mailing` exchange that MESSENGER_TRANSPORT_DSN points at.
 #     `restriction-consumer` runs `app:ses:consume-recipient-restrictions`,
 #     also from that image, and is the only service with SQS credentials.
 #   - APP_ENV and APP_DEBUG are fixed here rather than passed in, so a stray
@@ -61,7 +59,6 @@ x-app-environment: &app-environment
   UMAMI_WEBSITE_ID: "${UMAMI_WEBSITE_ID:?UMAMI_WEBSITE_ID is required}"
   DATABASE_URL: "${DATABASE_URL:?DATABASE_URL is required}"
   MAILER_DSN: "${MAILER_DSN:?MAILER_DSN is required}"
-  MESSENGER_TRANSPORT_DSN: "${MESSENGER_TRANSPORT_DSN:?MESSENGER_TRANSPORT_DSN is required}"
   # What Symfony uses to build absolute URLs outside an HTTP request - the
   # links in the verify-email and reset-password messages, and anything
   # bin/console generates. APP_URL, which compose.yaml passes, is not set
@@ -70,11 +67,6 @@ x-app-environment: &app-environment
   DEFAULT_URI: "${DEFAULT_URI:-https://paysubscriptions.com}"
   SYSTEM_EMAIL: "${SYSTEM_EMAIL:?SYSTEM_EMAIL is required}"
   CONTACT_EMAIL: "${CONTACT_EMAIL:?CONTACT_EMAIL is required}"
-  # Both are compile-time container parameters (config/services.yaml), so
-  # the container will not boot at all if either is missing - hence :? even
-  # though neither is a credential.
-  JSON_HUB_PROJECT: "${JSON_HUB_PROJECT:?JSON_HUB_PROJECT is required}"
-  MAILING_PROVIDER_ROUTING_KEY: "${MAILING_PROVIDER_ROUTING_KEY:?MAILING_PROVIDER_ROUTING_KEY is required}"
   # Self-hosted listmonk newsletter (docs/adr/0006): the worker subscribes
   # footer signups through this API, so a deploy without them must fail
   # before converging.

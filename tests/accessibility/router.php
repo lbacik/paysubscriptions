@@ -19,12 +19,9 @@ foreach ([
     'APP_DEBUG',
     'APP_SECRET',
     'DATABASE_URL',
-    'MESSENGER_TRANSPORT_DSN',
     'MAILER_DSN',
     'GOOGLE_RECAPTCHA_SITE_KEY',
     'GOOGLE_RECAPTCHA_SECRET',
-    'JSON_HUB_PROJECT',
-    'MAILING_PROVIDER_ROUTING_KEY',
 ] as $name) {
     $value = getenv($name);
     if (false !== $value) {

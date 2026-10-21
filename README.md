@@ -32,7 +32,7 @@ Frontend assets are managed through Symfony; a Node.js build pipeline is not req
 
 ### Requirements
 
-Install PHP 8.4 with the extensions required by Composer, plus `pdo_mysql`, `intl`, and OpenSSL, Composer 2, and a reachable MySQL database (CI uses MySQL 8.4). The newsletter integration also needs the AMQP extension and a RabbitMQ-compatible broker. Symfony CLI is used below to serve the application locally.
+Install PHP 8.4 with the extensions required by Composer, plus `pdo_mysql`, `intl`, and OpenSSL, Composer 2, and a reachable MySQL database (CI uses MySQL 8.4). Symfony CLI is used below to serve the application locally.
 
 The committed `.env` and development Compose database service still default to PostgreSQL, while the migration SQL targets MySQL. Use a MySQL `DATABASE_URL` for the setup below.
 
@@ -56,7 +56,6 @@ The committed `.env` and development Compose database service still default to P
    OAUTH_PASSPHRASE=<random-key-passphrase>
    OAUTH_ENCRYPTION_KEY=<random-encryption-key>
    MAILER_DSN=smtp://127.0.0.1:1025
-   MESSENGER_TRANSPORT_DSN=amqp://guest:guest@localhost:5672/%2f/messages
    ```
 
    Replace placeholders with local values. Generate each secret independently with `openssl rand -hex 32`. The database user must be able to create the development database. Keep secrets and private keys out of version control; see [development setup](docs/development-setup.md).
@@ -112,7 +111,7 @@ php bin/console app:ses:clear-recipient-restriction bounce@simulator.amazonses.c
 
 The address is normalized the same way as when it was restricted. Both options are required, and the command fails when the address has no restriction. Each clear is written as a JSON record on the `audit` log channel (stderr in production, outside the error-triggered buffer) with the address, previous state, operator, process user and reason; the record's timestamp is the time of the clear. The record exists only in the container log, so keep that log for as long as the audit trail is needed. `--operator` is not verified: shell access to the host is the authentication. A later bounce or complaint restricts the address again.
 
-Newsletter messages are published to the configured AMQP `mailing` exchange for the external mailing integration. Set `JSON_HUB_PROJECT_UUID` and `MAILING_PROVIDER_ROUTING_KEY` when enabling that integration.
+Newsletter signups dispatch `MailingSubscribe` on the `async` transport and the worker subscribes them through the self-hosted listmonk API. Configure `LISTMONK_URL`, `LISTMONK_API_USER`, `LISTMONK_API_TOKEN` and `LISTMONK_LIST_ID` to enable that integration.
 
 Run renewal reminders from a daily scheduler. Preview due reminders before sending:
 

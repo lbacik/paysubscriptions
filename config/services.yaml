@@ -10,7 +10,6 @@ parameters:
     docsPath: '%kernel.project_dir%/resources/docs/'
     systemEmail: '%env(SYSTEM_EMAIL)%'
     contactEmail: '%env(CONTACT_EMAIL)%'
-    mailingProviderRoutingKey: '%env(MAILING_PROVIDER_ROUTING_KEY)%'
     google_recaptcha_site_key: '%env(GOOGLE_RECAPTCHA_SITE_KEY)%'
     google_recaptcha_secret: '%env(GOOGLE_RECAPTCHA_SECRET)%'
     # Public identifier of this authorization server, carried as the `iss`
@@ -33,8 +32,6 @@ services:
             $docsPath: '%docsPath%'
             $systemEmail: '%systemEmail%'
             $contactEmail: '%contactEmail%'
-            $jsonHubProjectUuid: '%env(JSON_HUB_PROJECT)%'
-            $mailingProviderRoutingKey: '%mailingProviderRoutingKey%'
             $recaptchaSecret: '%google_recaptcha_secret%'
 
 
