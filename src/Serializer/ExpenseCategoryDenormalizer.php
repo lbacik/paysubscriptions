@@ -43,14 +43,6 @@ final class ExpenseCategoryDenormalizer implements DenormalizerInterface
         return ExpenseCategoryDto::class === $type && \is_string($data);
     }
 
-    /**
-     * @return array<string, mixed>
-     */
-    public function prepareForDenormalization(mixed $data, string $type, ?string $format = null, array $context = []): array
-    {
-        return [];
-    }
-
     public function denormalize(mixed $data, string $type, ?string $format = null, array $context = []): ?ExpenseCategoryDto
     {
         \assert(\is_string($data));
@@ -59,6 +51,13 @@ final class ExpenseCategoryDenormalizer implements DenormalizerInterface
             $item = $this->iriConverter->getResourceFromIri($data, $context + ['fetch_data' => true]);
         } catch (\Throwable $exception) {
             throw $this->invalidCategory($exception);
+        }
+
+        // The IRI converter runs the resource read path, so a found category
+        // comes back as its DTO; accept it directly (the processor re-checks
+        // ownership against the managed entity before writing).
+        if ($item instanceof ExpenseCategoryDto) {
+            return $item;
         }
 
         if (!$item instanceof ExpenseCategoryEntity) {

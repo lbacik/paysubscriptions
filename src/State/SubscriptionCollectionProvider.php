@@ -69,10 +69,14 @@ final class SubscriptionCollectionProvider implements ProviderInterface
      */
     private function sort(\Symfony\Component\HttpFoundation\Request $request): array
     {
-        $order = $request->query->get('order');
-        if (null === $order) {
+        // Read through all(): query bags reject array values in get(), so a
+        // scalar `order` must reach the 422 below instead of a 400.
+        $query = $request->query->all();
+        if (!\array_key_exists('order', $query)) {
             return [SubscriptionListState::DEFAULT_SORT, SubscriptionListState::DEFAULT_ORDER];
         }
+
+        $order = $query['order'];
 
         if (!\is_array($order) || 1 !== \count($order)) {
             throw new ValidationException($this->violations('order', 'Sort must be a single "order[field]" parameter with direction "asc" or "desc".'));
