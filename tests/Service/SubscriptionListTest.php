@@ -225,7 +225,7 @@ final class SubscriptionListTest extends TestCase
      */
     private function service(array $ownerSubscriptions, array $strangerSubscriptions = []): SubscriptionService
     {
-        $repository = $this->createMock(SubscriptionRepository::class);
+        $repository = $this->createStub(SubscriptionRepository::class);
         $repository->method('findBy')->willReturnCallback(
             static function (array $criteria) use ($ownerSubscriptions, $strangerSubscriptions): array {
                 $wanted = $criteria['owner'] ?? null;
@@ -242,8 +242,8 @@ final class SubscriptionListTest extends TestCase
 
         return new SubscriptionService(
             $repository,
-            $this->createMock(UserRepository::class),
-            $this->createMock(ExpenseCategoryService::class),
+            $this->createStub(UserRepository::class),
+            $this->createStub(ExpenseCategoryService::class),
             new RenewalCalculator(),
         );
     }

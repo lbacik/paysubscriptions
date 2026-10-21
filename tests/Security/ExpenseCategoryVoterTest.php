@@ -7,6 +7,7 @@ namespace App\Tests\Security;
 use App\Entity\ExpenseCategory;
 use App\Entity\User;
 use App\Security\ExpenseCategoryVoter;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 use Symfony\Component\Security\Core\Authorization\Voter\VoterInterface;
@@ -22,7 +23,7 @@ final class ExpenseCategoryVoterTest extends TestCase
 
     private function tokenFor(mixed $user): TokenInterface
     {
-        $token = $this->createMock(TokenInterface::class);
+        $token = $this->createStub(TokenInterface::class);
         $token->method('getUser')->willReturn($user);
 
         return $token;
@@ -41,9 +42,7 @@ final class ExpenseCategoryVoterTest extends TestCase
         return (new User())->setEmail($email);
     }
 
-    /**
-     * @dataProvider protectedAttributeProvider
-     */
+    #[DataProvider('protectedAttributeProvider')]
     public function testOwnerIsGranted(string $attribute): void
     {
         self::assertSame(
@@ -52,16 +51,14 @@ final class ExpenseCategoryVoterTest extends TestCase
         );
     }
 
-    public function protectedAttributeProvider(): iterable
+    public static function protectedAttributeProvider(): iterable
     {
         yield 'view' => [ExpenseCategoryVoter::VIEW];
         yield 'edit' => [ExpenseCategoryVoter::EDIT];
         yield 'delete' => [ExpenseCategoryVoter::DELETE];
     }
 
-    /**
-     * @dataProvider protectedAttributeProvider
-     */
+    #[DataProvider('protectedAttributeProvider')]
     public function testOtherUserIsDenied(string $attribute): void
     {
         self::assertSame(
@@ -70,9 +67,7 @@ final class ExpenseCategoryVoterTest extends TestCase
         );
     }
 
-    /**
-     * @dataProvider protectedAttributeProvider
-     */
+    #[DataProvider('protectedAttributeProvider')]
     public function testAnonymousIsDenied(string $attribute): void
     {
         self::assertSame(

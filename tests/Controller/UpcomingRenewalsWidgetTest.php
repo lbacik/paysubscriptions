@@ -13,14 +13,11 @@ use App\Repository\UserRepository;
 use App\Service\ExpenseCategoryService;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-use Zenstruck\Foundry\Test\Factories;
-use Zenstruck\Foundry\Test\ResetDatabase;
+use Zenstruck\Foundry\Attribute\ResetDatabase;
 
+#[ResetDatabase]
 final class UpcomingRenewalsWidgetTest extends WebTestCase
 {
-    use ResetDatabase;
-    use Factories;
-
     public function testWidgetOrdersNextFiveRenewalsByDateAndLinksEachToItsSubscription(): void
     {
         $client = static::createClient();

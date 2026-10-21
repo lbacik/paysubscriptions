@@ -21,6 +21,7 @@ use League\Bundle\OAuth2ServerBundle\ValueObject\RedirectUri;
 use League\Bundle\OAuth2ServerBundle\ValueObject\Scope;
 use League\OAuth2\Server\CryptKey;
 use League\OAuth2\Server\Entities\ScopeEntityInterface;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -132,9 +133,7 @@ final class DashboardReportApiTest extends DatabaseTestCase
         self::assertNull($report['chart']['hiddenCycle']);
     }
 
-    /**
-     * @dataProvider doughnutModes
-     */
+    #[DataProvider('doughnutModes')]
     public function testDoughnutModesMatchDashboardChartsAndVisibility(
         string $chartMode,
         string $basis,
@@ -293,9 +292,7 @@ final class DashboardReportApiTest extends DatabaseTestCase
         self::assertEqualsWithDelta($may['summary']['monthlyEquivalent'], $june['summary']['monthlyEquivalent'], 0.001);
     }
 
-    /**
-     * @dataProvider invalidFilters
-     */
+    #[DataProvider('invalidFilters')]
     public function testInvalidFiltersReturnProblemError(string $query): void
     {
         $this->client->request(

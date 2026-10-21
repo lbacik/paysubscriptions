@@ -15,8 +15,7 @@ use App\Repository\SubscriptionRepository;
 use App\Repository\UserRepository;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-use Zenstruck\Foundry\Test\Factories;
-use Zenstruck\Foundry\Test\ResetDatabase;
+use Zenstruck\Foundry\Attribute\ResetDatabase;
 
 /**
  * Category filtering and name/price/renewal sorting of the Subscription list
@@ -24,11 +23,9 @@ use Zenstruck\Foundry\Test\ResetDatabase;
  * results, session survival across navigation and Turbo updates, and two-User
  * isolation.
  */
+#[ResetDatabase]
 final class SubscriptionListTest extends WebTestCase
 {
-    use ResetDatabase;
-    use Factories;
-
     public function testCategoryFilterShowsOnlyMatchingSubscriptions(): void
     {
         $client = static::createClient();

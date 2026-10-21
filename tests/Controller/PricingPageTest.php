@@ -10,8 +10,7 @@ use App\Factory\UserFactory;
 use App\Repository\UserRepository;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-use Zenstruck\Foundry\Test\Factories;
-use Zenstruck\Foundry\Test\ResetDatabase;
+use Zenstruck\Foundry\Attribute\ResetDatabase;
 
 /**
  * Aligns the pricing page with the v1.0 product package (issue #55, part of
@@ -24,11 +23,9 @@ use Zenstruck\Foundry\Test\ResetDatabase;
  * copy implying bank/inbox integration, provider cancellation, shared
  * household access, or self-service export.
  */
+#[ResetDatabase]
 final class PricingPageTest extends WebTestCase
 {
-    use ResetDatabase;
-    use Factories;
-
     public function testPricingPageIsPublicWithOneHeadingAndMainLandmark(): void
     {
         $client = static::createClient();

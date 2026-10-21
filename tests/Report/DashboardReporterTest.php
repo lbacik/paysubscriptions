@@ -9,6 +9,7 @@ use App\Report\DashboardReporter;
 use App\Report\ReportQuery;
 use App\Service\ExpenseCategoryService;
 use App\Tests\DatabaseTestCase;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
  * The Dashboard report module (candidate 03): one seam answering
@@ -141,10 +142,9 @@ final class DashboardReporterTest extends DatabaseTestCase
     }
 
     /**
-     * @dataProvider equivalentModes
-     *
      * @param list<float> $expectedData
      */
+    #[DataProvider('equivalentModes')]
     public function testEquivalentModesNormalizeEveryReportableSubscription(
         string $mode,
         string $expectedBasis,

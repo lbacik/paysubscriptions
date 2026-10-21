@@ -13,8 +13,7 @@ use App\Repository\UserRepository;
 use App\Service\ExpenseCategoryService;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-use Zenstruck\Foundry\Test\Factories;
-use Zenstruck\Foundry\Test\ResetDatabase;
+use Zenstruck\Foundry\Attribute\ResetDatabase;
 
 /**
  * Dashboard cost equivalents in the User's main currency (#41).
@@ -24,11 +23,9 @@ use Zenstruck\Foundry\Test\ResetDatabase;
  * converted amount. Aggregates stay distinct from the dated renewal
  * forecasts of the upcoming-renewals widget.
  */
+#[ResetDatabase]
 final class DashboardTotalsTest extends WebTestCase
 {
-    use ResetDatabase;
-    use Factories;
-
     public function testDashboardShowsMonthlyAndYearlyEquivalentsLabelledWithMainCurrency(): void
     {
         $client = static::createClient();

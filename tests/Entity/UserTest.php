@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Entity;
 
 use App\Entity\User;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 final class UserTest extends KernelTestCase
@@ -47,9 +48,7 @@ final class UserTest extends KernelTestCase
         self::assertContains('timezone', $paths);
     }
 
-    /**
-     * @dataProvider invalidLeadDays
-     */
+    #[DataProvider('invalidLeadDays')]
     public function testOutOfRangeLeadDaysFailValidation(int $leadDays): void
     {
         $user = (new User())
@@ -69,7 +68,7 @@ final class UserTest extends KernelTestCase
     /**
      * @return iterable<string, array{int}>
      */
-    public function invalidLeadDays(): iterable
+    public static function invalidLeadDays(): iterable
     {
         yield 'zero days' => [0];
         yield 'thirty-one days' => [31];

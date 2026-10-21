@@ -9,17 +9,14 @@ use App\Repository\UserRepository;
 use App\Entity\User;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-use Zenstruck\Foundry\Test\Factories;
-use Zenstruck\Foundry\Test\ResetDatabase;
+use Zenstruck\Foundry\Attribute\ResetDatabase;
 
 /**
  * Covers the current homepage design.
  */
+#[ResetDatabase]
 final class HomepageTest extends WebTestCase
 {
-    use ResetDatabase;
-    use Factories;
-
     public function testAnonymousVisitorSeesOutcomeHeadlineAndRegistrationCta(): void
     {
         $client = static::createClient();

@@ -9,7 +9,7 @@ use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\MailerAssertionsTrait;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\Mime\Email;
-use Zenstruck\Foundry\Test\ResetDatabase;
+use Zenstruck\Foundry\Attribute\ResetDatabase;
 
 /**
  * Behavioral coverage for the contact journey (issue #35).
@@ -24,10 +24,10 @@ use Zenstruck\Foundry\Test\ResetDatabase;
  * verifies, any other token fails. A dummy secret is set because the real
  * verifier fail-closes when no secret is configured.
  */
+#[ResetDatabase]
 final class ContactFlowTest extends WebTestCase
 {
     use MailerAssertionsTrait;
-    use ResetDatabase;
 
     private KernelBrowser $client;
 

@@ -12,16 +12,17 @@ use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
-use Zenstruck\Foundry\Test\ResetDatabase;
+use Zenstruck\Foundry\Attribute\ResetDatabase;
 
 /**
  * Base class for tests that need a real database.
  *
  * Set DATABASE_URL before running (e.g. the CI migrations job's
  * mysql://root:root@127.0.0.1:3306/paysub — the `when@test` dbname suffix
- * turns it into paysub_test). Foundry's ResetDatabase builds the schema from
- * the migrations once per run; each test then runs inside a transaction that
- * App\Tests\DatabaseTransactionExtension rolls back, so tests start empty.
+ * turns it into paysub_test). #[ResetDatabase], applied by Foundry's PHPUnit
+ * extension, builds the schema from the migrations once per run; each test
+ * then runs inside a transaction that DAMA's PHPUnit extension rolls back, so
+ * tests start empty (#[SkipDatabaseRollback] opts a test class out).
  *
  * External services are faked, never contacted:
  * - mailer: `null://null` transport plus the test message logger; assert with
@@ -36,10 +37,9 @@ use Zenstruck\Foundry\Test\ResetDatabase;
  * - breach-check API (NotCompromisedPassword): the real API is used, so tests
  *   submit high-entropy passwords that cannot appear in the breach corpus.
  */
+#[ResetDatabase]
 abstract class DatabaseTestCase extends WebTestCase
 {
-    use ResetDatabase;
-
     protected KernelBrowser $client;
 
     protected EntityManagerInterface $em;

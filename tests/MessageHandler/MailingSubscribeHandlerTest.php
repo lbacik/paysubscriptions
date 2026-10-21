@@ -9,6 +9,7 @@ use App\MessageHandler\MailingSubscribeHandler;
 use Monolog\Handler\TestHandler;
 use Monolog\Level;
 use Monolog\Logger;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\Exception\TimeoutException;
 use Symfony\Component\HttpClient\Exception\TransportException;
@@ -84,10 +85,9 @@ final class MailingSubscribeHandlerTest extends TestCase
     }
 
     /**
-     * @dataProvider responseClasses
-     *
      * @param class-string<\Throwable>|null $expectedException
      */
+    #[DataProvider('responseClasses')]
     public function testClassifiesListmonkResponses(int $status, ?string $expectedException): void
     {
         $handler = $this->handler(new MockResponse('{}', ['http_code' => $status]));
@@ -130,10 +130,9 @@ final class MailingSubscribeHandlerTest extends TestCase
     }
 
     /**
-     * @dataProvider failureResponses
-     *
      * @param class-string<\Throwable> $expectedException
      */
+    #[DataProvider('failureResponses')]
     public function testFailuresLogTheStatusCodeWithoutTheEmail(int $status, string $expectedException): void
     {
         $handler = $this->handler(new MockResponse('{}', ['http_code' => $status]));
@@ -158,9 +157,7 @@ final class MailingSubscribeHandlerTest extends TestCase
         $this->assertEmailAbsentFromLogs();
     }
 
-    /**
-     * @dataProvider authenticationFailures
-     */
+    #[DataProvider('authenticationFailures')]
     public function testAuthenticationFailuresHintAtTheApiCredentials(int $status): void
     {
         $handler = $this->handler(new MockResponse('{}', ['http_code' => $status]));

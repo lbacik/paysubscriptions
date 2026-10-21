@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service;
 
 use App\Service\Documentation;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class DocumentationTest extends TestCase
@@ -22,9 +23,7 @@ final class DocumentationTest extends TestCase
         self::assertTrue($this->documentation->hasSection('Api'));
     }
 
-    /**
-     * @dataProvider unsafeSectionProvider
-     */
+    #[DataProvider('unsafeSectionProvider')]
     public function testUnsafeSectionsAreUnknown(string $section): void
     {
         self::assertFalse($this->documentation->hasSection($section));
@@ -33,7 +32,7 @@ final class DocumentationTest extends TestCase
     /**
      * @return iterable<string, array{string}>
      */
-    public function unsafeSectionProvider(): iterable
+    public static function unsafeSectionProvider(): iterable
     {
         yield 'traversal' => ['../../AGENTS'];
         yield 'absolute path' => ['/etc/passwd'];

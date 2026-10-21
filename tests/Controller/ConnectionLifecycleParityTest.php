@@ -13,6 +13,7 @@ use League\Bundle\OAuth2ServerBundle\Model\Client;
 use League\Bundle\OAuth2ServerBundle\ValueObject\Grant;
 use League\Bundle\OAuth2ServerBundle\ValueObject\RedirectUri;
 use League\Bundle\OAuth2ServerBundle\ValueObject\Scope;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\Console\Application;
 use Symfony\Component\Console\Tester\CommandTester;
 use Symfony\Component\HttpFoundation\Response;
@@ -72,9 +73,7 @@ final class ConnectionLifecycleParityTest extends DatabaseTestCase
         $this->challenge = rtrim(strtr(base64_encode(hash('sha256', $this->verifier, true)), '+/', '-_'), '=');
     }
 
-    /**
-     * @dataProvider triggers
-     */
+    #[DataProvider('triggers')]
     public function testTriggerParity(
         string $trigger,
         bool $consentExists,

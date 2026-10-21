@@ -129,7 +129,7 @@ jobs:
   #
   # --minor-only is what keeps that exit code meaningful. Without it the command
   # also counts major releases, and ~47 direct dependencies sit a major behind
-  # (Symfony 7.4 vs 8.1, PHPUnit 9 vs 13, DBAL 3 vs 4). None of those closes
+  # (Symfony 7.4 vs 8.1, DBAL 3 vs 4). None of those closes
   # without a framework migration, so the job would fail on every single run and
   # a watcher that is always red reports nothing at all. Scoped to
   # semver-compatible releases it goes red only when there is a bump we can
@@ -147,16 +147,11 @@ jobs:
           extensions: ctype, iconv, intl, pdo_mysql
           coverage: none
       - uses: ramsey/composer-install@26d8a556604053a9612623447203a691f406fbe6 # v4
-      # dama/doctrine-test-bundle is pinned behind phpunit/phpunit: v8.6.0 conflicts
-      # with phpunit/phpunit <11.0, and we're still on ^9.5. It's not an actionable
-      # update until PHPUnit is upgraded, so it's excluded here to keep this job red
-      # only for updates we can actually take right now.
-      #
       # league/oauth2-server-bundle is held at 1.2.2: v1.2.3 adds its own inactive-client
       # check in ClientRepository, which pre-empts our App\Connection policy (#194) and
       # changes the responses for deactivated clients (400/302 expectations in the
       # OAuth tests). Drop the pin and this ignore once the policy is reconciled.
-      - run: composer outdated --direct --strict --minor-only --ignore=dama/doctrine-test-bundle --ignore=league/oauth2-server-bundle
+      - run: composer outdated --direct --strict --minor-only --ignore=league/oauth2-server-bundle
 
   # PERMANENT WATCHER. The runtime we do not ship yet: the whole PHPUnit suite on
   # PHP 8.5, so that a deprecation or a break introduced by the next language
@@ -168,11 +163,14 @@ jobs:
   # Same continue-on-error shape as `audit` and `outdated`: neutral on a push or PR,
   # *false* on the schedule so a scheduled red actually notifies somebody.
   #
-  # Deprecations never turn the job red. SYMFONY_DEPRECATIONS_HELPER below lifts
-  # the threshold out of reach (real environment variables win over the value in
-  # phpunit.xml.dist, should the gate ever set one), and `logFile` makes the bridge write its report to a file instead of
-  # stdout; that file is summarised per group and uploaded. 8.5-only deprecations
-  # are out of scope for the cleanup: this output is input for a future upgrade.
+  # Deprecations never turn the job red. `--do-not-fail-on-deprecation` and
+  # `--do-not-fail-on-phpunit-deprecation` override the zero-deprecation gate in
+  # phpunit.xml.dist (failOnDeprecation / failOnPhpunitDeprecation), and
+  # `--log-events-text` records every triggered deprecation in a file that is
+  # summarised per message and uploaded (JUnit and TeamCity logs carry no
+  # deprecations). The console output lists the same deprecations in detail.
+  # 8.5-only deprecations are out of scope for the cleanup: this output is input
+  # for a future upgrade.
   #
   # The service container and environment mirror the `phpunit` job in test.yml.
   php85:
@@ -201,8 +199,6 @@ jobs:
       MAILER_DSN: 'null://null'
       GOOGLE_RECAPTCHA_SITE_KEY: 'ci'
       GOOGLE_RECAPTCHA_SECRET: 'ci'
-      # A fixed path: the `runner` context is not available in job-level env.
-      SYMFONY_DEPRECATIONS_HELPER: 'max[total]=999999&logFile=/tmp/php85-deprecations.log'
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -218,35 +214,62 @@ jobs:
         run: |
           php bin/console doctrine:database:create --if-not-exists
           php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
+      # The event log path is fixed so the next two steps can find it.
       - name: Run PHPUnit
-        run: vendor/bin/phpunit
+        run: >-
+          vendor/bin/phpunit
+          --do-not-fail-on-deprecation
+          --do-not-fail-on-phpunit-deprecation
+          --log-events-text /tmp/php85-events.log
 
-      # The bridge only creates the log when it has something to report, so a
-      # missing file means zero deprecations, not a broken step. Group headers
-      # look like "Remaining direct deprecation notices (12)" or "Legacy
-      # deprecation notices (3)".
+      # PHPUnit writes the event log from the start of the run, so a log with no
+      # deprecation event means zero deprecations; a missing log means PHPUnit
+      # never started. Most deprecations are two lines: an event header such as
+      # "Test Triggered PHP Deprecation (<test>, <trigger>) in <file>:<line>",
+      # then the message. A deprecation raised outside any test is logged as
+      # "Test Runner Triggered ..."; the PHPUnit kind carries its message inline,
+      # "Test Runner Triggered PHPUnit Deprecation (<message>)". Occurrences
+      # count trigger events, not unique sites.
       - name: Summarise deprecations
         if: always()
         run: |
           {
             echo '## PHP 8.5 deprecations'
             echo
-            if [ -s /tmp/php85-deprecations.log ]; then
-              echo '| Group | Count |'
-              echo '| --- | ---: |'
-              # `|| true`: under pipefail a log with no recognisable header would
-              # fail this step, and a summary must never redden the job.
-              { grep -E '^[A-Za-z ]+ deprecation notices \([0-9]+\)$' /tmp/php85-deprecations.log || true; } \
-                | sed -E 's/^(.+) deprecation notices \(([0-9]+)\)$/| \1 | \2 |/'
+            if [ ! -f /tmp/php85-events.log ]; then
+              echo 'No event log: PHPUnit did not start.'
+            elif grep -qE '^(Test|Test Runner) Triggered (PHP |PHPUnit )?Deprecation ' /tmp/php85-events.log; then
+              echo '| Kind | Message | Occurrences |'
+              echo '| --- | --- | ---: |'
+              awk '
+                /^Test Runner Triggered PHPUnit Deprecation \(/ {
+                  msg = $0
+                  sub(/^Test Runner Triggered PHPUnit Deprecation \(/, "", msg)
+                  sub(/\)$/, "", msg)
+                  gsub(/\|/, "\\|", msg)
+                  n["Test Runner PHPUnit Deprecation | " msg]++
+                  next
+                }
+                /^(Test|Test Runner) Triggered (PHP |PHPUnit )?Deprecation / {
+                  kind = $0
+                  sub(/ Triggered /, " ", kind)
+                  sub(/ \(.*$/, "", kind)
+                  if ((getline msg) > 0) {
+                    gsub(/\|/, "\\|", msg)
+                    n[kind " | " msg]++
+                  }
+                }
+                END { for (k in n) printf "| %s | %d |\n", k, n[k] }
+              ' /tmp/php85-events.log | sort
             else
               echo 'No deprecations reported.'
             fi
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Upload the deprecation log
+      - name: Upload the event log
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: php85-deprecations
-          path: /tmp/php85-deprecations.log
+          path: /tmp/php85-events.log
           if-no-files-found: ignore
