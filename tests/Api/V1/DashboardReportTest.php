@@ -67,6 +67,7 @@ final class DashboardReportTest extends ApiV1TestCase
 
         // The other User's Subscription never contributes.
         self::assertSame(2, $report['summary']['count']);
+        self::assertNotContains('Foreign', array_column($report['chart']['datasets'], 'label'));
 
         // Bar chart numeric data mirrors the reporter without presentation options.
         self::assertSame('bar', $report['chart']['mode']);

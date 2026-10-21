@@ -189,8 +189,9 @@ jobs:
       # Every route the v1 API serves must exist, and the
       # OAuth2 discovery/token surface must be registered. A renamed route that
       # the contract still names is a 404 behind a 200-documented operation.
-      # Resources served by API Platform (ExpenseCategory, Subscription) keep
-      # stable route names and are covered by their tests in tests/Api/V1.
+      # Resources served by API Platform (ExpenseCategory, Subscription,
+      # dashboard report) keep stable route names and are covered by their
+      # tests in tests/Api/V1.
       - name: Verify v1 and discovery routes
         run: |
           routes=$(php bin/console debug:router --env=prod)
@@ -198,7 +199,7 @@ jobs:
             api_v1_subscriptions_list api_v1_subscriptions_create \
             api_v1_subscriptions_show api_v1_subscriptions_update \
             api_v1_subscriptions_delete \
-            api_v1_reports_dashboard api_v1_openapi \
+            api_v1_openapi \
             oauth_discovery_authorization_server \
             oauth_discovery_protected_resource oauth_discovery_jwks \
             oauth2_authorize oauth2_token; do
