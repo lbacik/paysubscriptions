@@ -10,6 +10,15 @@ framework:
     # Note that the session will be started ONLY if you read or write from it.
     session: true
 
+    # Scoped client for the self-hosted listmonk API (newsletter signups).
+    # listmonk authenticates with `Authorization: token USER:TOKEN`.
+    http_client:
+        scoped_clients:
+            listmonk.client:
+                base_uri: '%env(LISTMONK_URL)%'
+                headers:
+                    Authorization: 'token %env(LISTMONK_API_USER)%:%env(LISTMONK_API_TOKEN)%'
+
     #esi: true
     #fragments: true
 

@@ -10,7 +10,8 @@ use App\Tests\Double\FakeRecaptchaRequestMethod;
 use App\Tests\RateLimitTestHelper;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Messenger\Bridge\Amqp\Transport\AmqpStamp;
-use Symfony\Component\Messenger\Transport\InMemory\InMemoryTransport;
+use Symfony\Component\Messenger\Envelope;
+use Symfony\Component\Messenger\Transport\Receiver\ListableReceiverInterface;
 
 /**
  * Newsletter signup hardening (issue #143).
@@ -18,10 +19,11 @@ use Symfony\Component\Messenger\Transport\InMemory\InMemoryTransport;
  * Signup validates the address and the CSRF token, verifies an invisible
  * reCAPTCHA (the contact-form pattern: enforced whenever keys are
  * configured, which they always are under test), throttles per source IP,
- * then queues a MailingSubscribe message on the `newsletter` transport. In
- * the test environment that transport is `in-memory://` (see the `when@test`
- * override in config/packages/messenger.yaml), so no broker is required and
- * the test inspects exactly what would have been published.
+ * then queues a MailingSubscribe message on the `async` transport. The
+ * worker's MailingSubscribeHandler subscribes the address through the
+ * self-hosted listmonk API, and listmonk sends its own opt-in mail. Under
+ * test `async` stays the real Doctrine transport (no in-memory stand-in), so
+ * the test reads exactly what the worker would consume.
  *
  * Success and captcha failure both redirect to the homepage — never to the
  * `Referer` header, which is both an open-redirect vector and a 500 when the
@@ -31,22 +33,9 @@ final class NewsletterTest extends DatabaseTestCase
 {
     use RateLimitTestHelper;
 
-    private const PROJECT_UUID = '00000000-0000-0000-0000-000000000000';
-    private const ROUTING_KEY = 'test-routing-key';
-
-    /** @var array<string, array{mixed, mixed}> */
-    private array $envBackup = [];
-
     protected function setUp(): void
     {
         parent::setUp();
-
-        // The service binds %env(JSON_HUB_PROJECT)% and
-        // %mailingProviderRoutingKey% lazily on subscribe(); real env vars win
-        // over .env files, so pinning them here keeps the test hermetic.
-        // Originals are restored in tearDown() so nothing leaks into later tests.
-        $this->pinEnv('JSON_HUB_PROJECT', self::PROJECT_UUID);
-        $this->pinEnv('MAILING_PROVIDER_ROUTING_KEY', self::ROUTING_KEY);
 
         // Limiter state survives in the cache across runs; the IP key below
         // is fixed, so every test starts from a full burst.
@@ -55,21 +44,6 @@ final class NewsletterTest extends DatabaseTestCase
 
     protected function tearDown(): void
     {
-        foreach ($this->envBackup as $key => [$server, $env]) {
-            if (null === $server) {
-                unset($_SERVER[$key]);
-            } else {
-                $_SERVER[$key] = $server;
-            }
-
-            if (null === $env) {
-                unset($_ENV[$key]);
-            } else {
-                $_ENV[$key] = $env;
-            }
-        }
-        $this->envBackup = [];
-
         $this->restoreRateLimitEnv();
 
         parent::tearDown();
@@ -94,18 +68,18 @@ final class NewsletterTest extends DatabaseTestCase
         // The Referer is ignored: success always lands on the homepage.
         self::assertResponseRedirects('/');
 
-        $sent = $this->newsletterTransport()->getSent();
+        $sent = $this->queuedSignups();
         self::assertCount(1, $sent);
 
         $envelope = $sent[0];
         $message = $envelope->getMessage();
         self::assertInstanceOf(MailingSubscribe::class, $message);
-        self::assertSame('reader@example.com', $message->email);
-        self::assertSame(self::PROJECT_UUID, $message->entityId);
+        self::assertSame(['email' => 'reader@example.com'], get_object_vars($message));
 
-        $stamp = $envelope->last(AmqpStamp::class);
-        self::assertNotNull($stamp, 'expected a routing stamp for the mailing provider');
-        self::assertSame(self::ROUTING_KEY, $stamp->getRoutingKey());
+        self::assertNull(
+            $envelope->last(AmqpStamp::class),
+            'MailingSubscribe goes to the Doctrine async transport with no AMQP stamp.'
+        );
     }
 
     public function testMissingRefererRedirectsHomeWithout500(): void
@@ -124,7 +98,7 @@ final class NewsletterTest extends DatabaseTestCase
         );
 
         self::assertResponseRedirects('/');
-        self::assertCount(1, $this->newsletterTransport()->getSent());
+        self::assertCount(1, $this->queuedSignups());
     }
 
     public function testFailedCaptchaRedirectsHomeAndQueuesNothing(): void
@@ -144,9 +118,9 @@ final class NewsletterTest extends DatabaseTestCase
         );
 
         // Rejected like a valid submission's evil twin: same fixed redirect,
-        // but nothing reaches the mailing provider.
+        // but nothing reaches the newsletter queue.
         self::assertResponseRedirects('/');
-        self::assertCount(0, $this->newsletterTransport()->getSent());
+        self::assertCount(0, $this->queuedSignups());
     }
 
     public function testMissingCaptchaQueuesNothing(): void
@@ -162,7 +136,7 @@ final class NewsletterTest extends DatabaseTestCase
         );
 
         self::assertResponseRedirects('/');
-        self::assertCount(0, $this->newsletterTransport()->getSent());
+        self::assertCount(0, $this->queuedSignups());
     }
 
     public function testSubscribeIsLimitedPerIp(): void
@@ -171,21 +145,21 @@ final class NewsletterTest extends DatabaseTestCase
         $this->pinRateLimitEnv(['RATE_LIMIT_NEWSLETTER_IP' => '2']);
         $token = $this->newsletterCsrfToken();
 
-        // Each assertion below observes the transport of the request that
-        // just ran (the in-memory transport lives in the request's
-        // container): every accepted signup queues exactly one message…
+        // Unlike the old in-memory stand-in, the Doctrine transport keeps
+        // every queued row for the whole test: each accepted signup adds
+        // exactly one message…
         $this->postSignup('first@example.com', $token);
         self::assertResponseRedirects('/');
-        self::assertCount(1, $this->newsletterTransport()->getSent());
+        self::assertCount(1, $this->queuedSignups());
 
         $this->postSignup('second@example.com', $token);
         self::assertResponseRedirects('/');
-        self::assertCount(1, $this->newsletterTransport()->getSent());
+        self::assertCount(2, $this->queuedSignups());
 
-        // …and the third is rejected before anything is queued.
+        // …and the throttled third adds nothing.
         $this->postSignup('third@example.com', $token);
         self::assertResponseStatusCodeSame(Response::HTTP_TOO_MANY_REQUESTS);
-        self::assertCount(0, $this->newsletterTransport()->getSent());
+        self::assertCount(2, $this->queuedSignups());
     }
 
     public function testMissingCsrfTokenIsRejectedAndQueuesNothing(): void
@@ -199,7 +173,7 @@ final class NewsletterTest extends DatabaseTestCase
         );
 
         self::assertResponseStatusCodeSame(422);
-        self::assertCount(0, $this->newsletterTransport()->getSent());
+        self::assertCount(0, $this->queuedSignups());
     }
 
     public function testForgedCsrfTokenIsRejectedAndQueuesNothing(): void
@@ -213,7 +187,7 @@ final class NewsletterTest extends DatabaseTestCase
         );
 
         self::assertResponseStatusCodeSame(422);
-        self::assertCount(0, $this->newsletterTransport()->getSent());
+        self::assertCount(0, $this->queuedSignups());
     }
 
     public function testSubscribeRouteRejectsGet(): void
@@ -236,19 +210,21 @@ final class NewsletterTest extends DatabaseTestCase
         );
     }
 
-    private function newsletterTransport(): InMemoryTransport
+    /**
+     * Everything the worker would consume: the Doctrine `async` transport
+     * contents, read through its listable receiver. Each request boots a
+     * fresh kernel, so this always observes the transport of the request that
+     * just ran — and, with the per-test transaction rollback, every test
+     * starts from an empty queue.
+     *
+     * @return list<Envelope>
+     */
+    private function queuedSignups(): array
     {
-        $transport = static::getContainer()->get('messenger.transport.newsletter');
-        self::assertInstanceOf(InMemoryTransport::class, $transport);
+        $transport = static::getContainer()->get('messenger.transport.async');
+        self::assertInstanceOf(ListableReceiverInterface::class, $transport);
 
-        return $transport;
-    }
-
-    private function pinEnv(string $key, string $value): void
-    {
-        $this->envBackup[$key] = [$_SERVER[$key] ?? null, $_ENV[$key] ?? null];
-        $_SERVER[$key] = $value;
-        $_ENV[$key] = $value;
+        return iterator_to_array($transport->all());
     }
 
     /**

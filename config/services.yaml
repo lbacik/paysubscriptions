@@ -64,6 +64,14 @@ services:
 
     App\Service\RecaptchaVerifierInterface: '@App\Service\RecaptchaVerifier'
 
+    # Newsletter subscription through the self-hosted listmonk API: the
+    # scoped client carries the base URI and the API credentials, the list id
+    # selects the subscribers list new signups join.
+    App\MessageHandler\MailingSubscribeHandler:
+        arguments:
+            $listmonkClient: '@listmonk.client'
+            $listmonkListId: '%env(int:LISTMONK_LIST_ID)%'
+
     # Tenant-aware SES v2 transport for MAILER_DSN=ses+tenant://KEY:SECRET@default
     # (all application email; see App\Mailer\SesTenantTransport).
     App\Mailer\SesTenantTransportFactory:

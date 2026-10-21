@@ -26,9 +26,10 @@ use Zenstruck\Foundry\Test\ResetDatabase;
  * External services are faked, never contacted:
  * - mailer: `null://null` transport plus the test message logger; assert with
  *   MailerAssertionsTrait (getMailerMessage / assertEmailCount).
- * - messenger `newsletter` transport: overridden to `in-memory://` in
- *   config/packages/messenger.yaml (`when@test`); assert via the
- *   `messenger.transport.newsletter` service's getSent().
+ * - newsletter subscription: the handler tests run over MockHttpClient and
+ *   never contact listmonk; controller tests read the queued
+ *   MailingSubscribe off the real Doctrine `async` transport through its
+ *   listable receiver.
  * - reCAPTCHA: the HTTP transport is replaced with
  *   App\Tests\Double\FakeRecaptchaRequestMethod (config/packages/test/recaptcha.yaml);
  *   the token `valid-test-token` verifies, any other token fails.

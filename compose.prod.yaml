@@ -75,6 +75,13 @@ x-app-environment: &app-environment
   # though neither is a credential.
   JSON_HUB_PROJECT: "${JSON_HUB_PROJECT:?JSON_HUB_PROJECT is required}"
   MAILING_PROVIDER_ROUTING_KEY: "${MAILING_PROVIDER_ROUTING_KEY:?MAILING_PROVIDER_ROUTING_KEY is required}"
+  # Self-hosted listmonk newsletter (docs/adr/0006): the worker subscribes
+  # footer signups through this API, so a deploy without them must fail
+  # before converging.
+  LISTMONK_URL: "${LISTMONK_URL:?LISTMONK_URL is required}"
+  LISTMONK_API_USER: "${LISTMONK_API_USER:?LISTMONK_API_USER is required}"
+  LISTMONK_API_TOKEN: "${LISTMONK_API_TOKEN:?LISTMONK_API_TOKEN is required}"
+  LISTMONK_LIST_ID: "${LISTMONK_LIST_ID:?LISTMONK_LIST_ID is required}"
   # Read as %env(bool:MAINTENANCE_MODE)% by MaintenanceKernelRequestSubscriber.
   # Defaulted rather than required so a deploy cannot accidentally serve the
   # maintenance page because a variable went missing.
