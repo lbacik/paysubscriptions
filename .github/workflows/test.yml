@@ -94,8 +94,8 @@ jobs:
         uses: ramsey/composer-install@26d8a556604053a9612623447203a691f406fbe6 # v4
 
       # The compile check, and the most valuable one this repository has. The app
-      # resolves 14 environment variables through %env()%, binds
-      # $jsonHubProjectUuid, $systemEmail, $contactEmail and $docsPath by
+      # resolves 11 environment variables through %env()%, binds
+      # $systemEmail, $contactEmail and $docsPath by
       # autowiring, and injects %env(bool:MAINTENANCE_MODE)% into
       # MaintenanceKernelRequestSubscriber via #[Autowire]. A container that does
       # not compile is a 500 on every route, which is exactly what a deploy most
