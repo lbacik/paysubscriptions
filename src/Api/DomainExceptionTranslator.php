@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace App\Api;
 
+use ApiPlatform\Metadata\Exception\InvalidIdentifierException;
+use ApiPlatform\Metadata\Exception\ItemNotFoundException;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\Validator\Exception\ValidationException;
+use Symfony\Component\Serializer\Exception\NotNormalizableValueException;
 use App\ApiResource\Subscription as SubscriptionResource;
 use App\Exception\CategoryInUseException;
 use App\Exception\CategoryOwnershipException;
@@ -66,6 +69,29 @@ final class DomainExceptionTranslator
                 null,
                 $exception,
             );
+        }
+
+        // A category IRI that resolves to nothing usable — foreign or
+        // unknown (item not found), malformed (invalid IRI), or a nested
+        // document where an IRI belongs — is an invalid field without
+        // disclosure, never a 400/404. Scoped to Subscription writes by
+        // operation class and the deserialization path, so an unknown
+        // Subscription id (which the scoped item read rejects first as a
+        // 404) is never relabeled.
+        if ($exception instanceof NotNormalizableValueException
+            && $operation instanceof Operation
+            && SubscriptionResource::class === $operation->getClass()
+            && 'category' === $exception->getPath()
+        ) {
+            return $this->invalidCategory($exception);
+        }
+
+        if (($exception instanceof ItemNotFoundException || $exception instanceof InvalidIdentifierException)
+            && $operation instanceof Operation
+            && SubscriptionResource::class === $operation->getClass()
+            && str_contains($exception->getMessage(), 'expense-categories')
+        ) {
+            return $this->invalidCategory($exception);
         }
 
         if ($exception instanceof SubscriptionLimitReachedException) {
@@ -131,6 +157,24 @@ final class DomainExceptionTranslator
             ),
             default => null,
         };
+    }
+
+    private function invalidCategory(\Throwable $previous): ValidationException
+    {
+        return new ValidationException(
+            new ConstraintViolationList([
+                new ConstraintViolation(
+                    'The selected category is invalid.',
+                    null,
+                    [],
+                    null,
+                    'category',
+                    null,
+                ),
+            ]),
+            null,
+            $previous,
+        );
     }
 
     private static function convertedViolationField(string $message): string

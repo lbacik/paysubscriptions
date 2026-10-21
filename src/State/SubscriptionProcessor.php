@@ -300,14 +300,15 @@ final class SubscriptionProcessor implements ProcessorInterface
     }
 
     /**
-     * The managed category for a resolved category IRI. IRI resolution
-     * already scoped the read to the token User, so a mismatch here only
-     * happens when category state changed mid-request: report it as an
-     * invalid field without disclosure, never as a conflict.
+     * The managed category for a resolved category IRI. The denormalizer
+     * already converted the IRI-resolved entity to its DTO, so only the id
+     * is read here; resolution scoped the read to the token User, so a
+     * mismatch only happens when category state changed mid-request: report
+     * it as an invalid field without disclosure, never as a conflict.
      */
     private function managedCategory(ExpenseCategoryDto $categoryDto, User $user): ExpenseCategory
     {
-        $category = $this->categories->find($categoryDto->id);
+        $category = null !== $categoryDto->id ? $this->categories->find($categoryDto->id) : null;
         if (null === $category || !$category->isOwnedBy($user)) {
             throw new CategoryOwnershipException('The selected category does not belong to this account.');
         }

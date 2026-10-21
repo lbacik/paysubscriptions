@@ -102,9 +102,12 @@ final class Subscription
     public ?bool $pendingReview = null;
 
     // The relation must stay a resource type so HAL renders _links.category.
-    // Input mapping is skipped (the processor resolves the managed category
-    // from the resolved IRI itself); output maps entity -> DTO recursively.
-    #[Map(if: new TargetClass(self::class))]
+    // IRI resolution hands back the managed entity, so a dedicated
+    // denormalizer converts the resolved entity to this DTO on input; input
+    // mapping is skipped (the processor resolves the managed category from
+    // the DTO's id itself), and output maps entity -> DTO through
+    // SubscriptionTransforms::mapCategory.
+    #[Map(if: new TargetClass(self::class), transform: [SubscriptionTransforms::class, 'mapCategory'])]
     public ?ExpenseCategory $category = null;
 
     // Write-only: never mapped (the entity has no such property) and never

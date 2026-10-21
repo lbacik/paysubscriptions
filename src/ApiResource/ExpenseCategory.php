@@ -62,4 +62,22 @@ final class ExpenseCategory
     #[ApiProperty(writable: false)]
     #[Map(if: new TargetClass(self::class))]
     public ?\DateTimeInterface $updatedAt = null;
+
+    /**
+     * Builds the DTO for a managed entity, shared by the Subscription
+     * relation mapping and its IRI denormalizer: both need the same
+     * entity -> DTO conversion the object mapper cannot express for a
+     * relation the serializer resolved to the managed entity.
+     */
+    public static function fromEntity(ExpenseCategoryEntity $entity): self
+    {
+        $dto = new self();
+        $dto->id = $entity->getId();
+        $dto->name = $entity->getName();
+        $dto->color = $entity->getColor();
+        $dto->createdAt = $entity->getCreatedAt();
+        $dto->updatedAt = $entity->getUpdatedAt();
+
+        return $dto;
+    }
 }
