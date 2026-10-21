@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Entity\ExpenseCategory;
+use App\Exception\CategoryInUseException;
 use App\Exception\DuplicateCategoryNameException;
 use App\Form\ExpenseCategoryType;
 use App\Security\ExpenseCategoryVoter;
@@ -122,7 +123,7 @@ class ExpenseCategoryController extends AbstractController
                 try {
                     $this->categoryService->delete($category);
                     $this->addFlash('success', 'Category deleted successfully');
-                } catch (\LogicException $exception) {
+                } catch (CategoryInUseException $exception) {
                     $this->addFlash('danger', $exception->getMessage());
                 }
 

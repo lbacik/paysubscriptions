@@ -16,6 +16,10 @@ use Symfony\Component\Routing\RouterInterface;
  * route, schema, filter, or error that the document does not describe, or a
  * documented operation the implementation does not serve.
  *
+ * Until the docs switch, the document covers only the hand-written v1
+ * resources: routes served by API Platform (ExpenseCategory) are described by
+ * API Platform's generated document and skipped here.
+ *
  * Needs no database: it boots the kernel for the route collection and reads
  * the committed file. Per-resource behavior (isolation, validation statuses,
  * parity) stays in the sibling Api tests.
@@ -57,7 +61,7 @@ final class OpenApiContractTest extends KernelTestCase
         $missing = [];
         foreach ($router->getRouteCollection()->all() as $name => $route) {
             $path = $route->getPath();
-            if (!str_starts_with($path, '/api/v1/')) {
+            if (!str_starts_with($path, '/api/v1/') || null !== $route->getDefault('_api_resource_class')) {
                 continue;
             }
             $docPath = substr($path, \strlen('/api/v1'));
@@ -104,15 +108,9 @@ final class OpenApiContractTest extends KernelTestCase
     {
         $schemas = self::contract()['components']['schemas'];
 
-        foreach (['ExpenseCategory', 'Subscription', 'ExpenseCategoryCreate', 'ExpenseCategoryUpdate', 'SubscriptionCreate', 'SubscriptionUpdate'] as $name) {
+        foreach (['Subscription', 'SubscriptionCreate', 'SubscriptionUpdate'] as $name) {
             self::assertArrayHasKey($name, $schemas, sprintf('Schema %s is missing from the contract.', $name));
         }
-
-        foreach (['id', 'name', 'color', 'createdAt', 'updatedAt'] as $field) {
-            self::assertContains($field, $schemas['ExpenseCategory']['required']);
-        }
-        self::assertSame(['name', 'color'], array_keys($schemas['ExpenseCategoryCreate']['properties']));
-        self::assertSame(['name', 'color'], array_keys($schemas['ExpenseCategoryUpdate']['properties']));
 
         self::assertSame(
             ['name', 'billingCycle', 'amount', 'nextPayment', 'currency', 'convertedAmount', 'categoryId', 'notes'],
@@ -121,7 +119,7 @@ final class OpenApiContractTest extends KernelTestCase
         self::assertContains('confirmConvertedFor', array_keys($schemas['SubscriptionUpdate']['properties']));
 
         // Ownership is bearer-implied: no response schema may leak an owner reference.
-        foreach (['ExpenseCategory', 'Subscription', 'DashboardReport'] as $name) {
+        foreach (['Subscription', 'DashboardReport'] as $name) {
             $properties = array_keys($schemas[$name]['properties'] ?? []);
             self::assertNotContains('owner', $properties, sprintf('%s must not expose owner.', $name));
             self::assertNotContains('owner_id', $properties, sprintf('%s must not expose owner_id.', $name));
@@ -171,12 +169,6 @@ final class OpenApiContractTest extends KernelTestCase
         }
 
         $expectations = [
-            '/expense-categories' => ['get' => ['200', '401', '403'], 'post' => ['201', '401', '403', '409', '422']],
-            '/expense-categories/{id}' => [
-                'get' => ['200', '401', '403', '404'],
-                'patch' => ['200', '401', '403', '404', '409', '422'],
-                'delete' => ['204', '401', '403', '404', '409'],
-            ],
             '/subscriptions' => ['get' => ['200', '401', '403'], 'post' => ['201', '401', '403', '409', '422']],
             '/subscriptions/{id}' => [
                 'get' => ['200', '401', '403', '404'],

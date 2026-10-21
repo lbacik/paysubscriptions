@@ -13,20 +13,26 @@ use Doctrine\ORM\Mapping as ORM;
 use Gedmo\Timestampable\Traits\Timestampable;
 use Symfony\Bridge\Doctrine\Types\UuidType;
 use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
+use App\Validator\CategoryColor;
+use App\Validator\CategoryName;
 use Symfony\Component\Uid\Uuid;
-use Symfony\Component\Validator\Constraints as Assert;
 use Gedmo\Mapping\Annotation as Gedmo;
 
 #[ORM\Entity(repositoryClass: ExpenseCategoryRepository::class)]
 #[ORM\UniqueConstraint(name: 'UNIQ_EXPENSE_CATEGORY_OWNER_NAME', fields: ['owner', 'name'])]
-#[UniqueEntity(fields: ['owner', 'name'], message: 'You already have a category with this name.')]
-class ExpenseCategory
+// Web forms only (ExpenseCategoryType validates the `web` group): API
+// Platform also validates the mapped entity in the Default group, and the API
+// reports a taken name through ExpenseCategoryService on `name` instead.
+#[UniqueEntity(fields: ['owner', 'name'], message: 'You already have a category with this name.', groups: [self::WEB_VALIDATION_GROUP])]
+class ExpenseCategory implements UserOwned
 {
     use Timestampable;
 
     public const DEFAULT_NAME = 'Subscriptions';
 
     public const DEFAULT_COLOR = '#577399';
+
+    public const WEB_VALIDATION_GROUP = 'web';
 
     #[ORM\Id]
     #[ORM\Column(type: UuidType::NAME, unique: true)]
@@ -39,16 +45,11 @@ class ExpenseCategory
     private ?User $owner = null;
 
     #[ORM\Column(length: 100)]
-    #[Assert\NotBlank]
-    #[Assert\Length(min: 2, max: 100)]
+    #[CategoryName]
     private ?string $name = null;
 
     #[ORM\Column(length: 7)]
-    #[Assert\NotBlank]
-    #[Assert\Regex(
-        pattern: '/^#[0-9a-fA-F]{6}$/',
-        message: 'Please provide a color tag in hex format, e.g. #577399.',
-    )]
+    #[CategoryColor]
     private ?string $color = null;
 
     /**
