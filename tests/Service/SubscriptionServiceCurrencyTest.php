@@ -163,22 +163,22 @@ final class SubscriptionServiceCurrencyTest extends TestCase
     private function service(): SubscriptionService
     {
         return new SubscriptionService(
-            $this->createMock(SubscriptionRepository::class),
-            $this->createMock(UserRepository::class),
-            $this->createMock(ExpenseCategoryService::class),
+            $this->createStub(SubscriptionRepository::class),
+            $this->createStub(UserRepository::class),
+            $this->createStub(ExpenseCategoryService::class),
             new RenewalCalculator(),
         );
     }
 
     private function serviceWithPersistedUser(User $persisted): SubscriptionService
     {
-        $userRepository = $this->createMock(UserRepository::class);
+        $userRepository = $this->createStub(UserRepository::class);
         $userRepository->method('find')->willReturn($persisted);
 
         return new SubscriptionService(
-            $this->createMock(SubscriptionRepository::class),
+            $this->createStub(SubscriptionRepository::class),
             $userRepository,
-            $this->createMock(ExpenseCategoryService::class),
+            $this->createStub(ExpenseCategoryService::class),
             new RenewalCalculator(),
         );
     }

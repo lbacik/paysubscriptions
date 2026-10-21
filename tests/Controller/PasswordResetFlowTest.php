@@ -12,7 +12,7 @@ use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\Mime\Email;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use SymfonyCasts\Bundle\ResetPassword\ResetPasswordHelperInterface;
-use Zenstruck\Foundry\Test\ResetDatabase;
+use Zenstruck\Foundry\Attribute\ResetDatabase;
 
 /**
  * Behavioral coverage for the password-reset journey (issue #35).
@@ -22,10 +22,10 @@ use Zenstruck\Foundry\Test\ResetDatabase;
  * enumeration), a known address queues a reset email, and a token completes
  * into a usable new password.
  */
+#[ResetDatabase]
 final class PasswordResetFlowTest extends WebTestCase
 {
     use MailerAssertionsTrait;
-    use ResetDatabase;
 
     private KernelBrowser $client;
     private EntityManagerInterface $em;

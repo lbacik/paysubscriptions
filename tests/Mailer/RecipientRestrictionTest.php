@@ -12,6 +12,7 @@ use App\Repository\RecipientRestrictionRepository;
 use App\Tests\DatabaseTestCase;
 use AsyncAws\Sqs\SqsClient;
 use Doctrine\DBAL\Connection;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Psr\Log\NullLogger;
 use Symfony\Bundle\FrameworkBundle\Test\MailerAssertionsTrait;
 use Symfony\Component\Console\Tester\CommandTester;
@@ -103,9 +104,7 @@ final class RecipientRestrictionTest extends DatabaseTestCase
         yield 'invalid recipient' => [self::bounce('not-an-address')];
     }
 
-    /**
-     * @dataProvider invalidEvents
-     */
+    #[DataProvider('invalidEvents')]
     public function testInvalidEventsChangeNothing(string $body): void
     {
         try {

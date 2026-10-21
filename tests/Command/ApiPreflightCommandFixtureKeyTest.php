@@ -129,10 +129,10 @@ final class ApiPreflightCommandFixtureKeyTest extends TestCase
         ] as $name) {
             $routes->add($name, new Route('/'.$name));
         }
-        $router = $this->createMock(RouterInterface::class);
+        $router = $this->createStub(RouterInterface::class);
         $router->method('getRouteCollection')->willReturn($routes);
 
-        $connection = $this->createMock(Connection::class);
+        $connection = $this->createStub(Connection::class);
         $connection->method('fetchOne')->willReturn(1);
 
         $command = new ApiPreflightCommand(

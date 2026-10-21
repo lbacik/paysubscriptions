@@ -23,45 +23,78 @@ DATABASE_URL="mysql://root:root@127.0.0.1:3306/paysub?charset=utf8mb4" \
   APP_ENV=test vendor/bin/phpunit tests/Controller/DashboardTest.php
 ```
 
-The suite creates the `paysub_test` database on demand and rebuilds its
-schema per test from the entity metadata (`tests/DatabaseTestCase`), so tests
-are order-independent and need no manual setup. CI additionally replays the
+The suite creates the `paysub_test` database on demand and builds its schema
+once per run by replaying the migrations (`#[ResetDatabase]` on
+`tests/DatabaseTestCase`, `reset.mode: migrate` in
+`config/packages/zenstruck_foundry.yaml`); each test then runs inside a
+transaction that is rolled back, so tests are order-independent and need no
+manual setup. CI additionally replays the
 real migrations into `paysub_test` first, proving they apply before tests run.
 
 ## Zero-deprecation gate
 
 The `Run PHPUnit` step in `.github/workflows/test.yml` is also the
-deprecation gate: it runs plain `vendor/bin/phpunit` with no strict override,
-so the configuration in `phpunit.xml.dist` decides what fails the run, and any
-deprecation fails it:
+deprecation gate: it runs plain `vendor/bin/phpunit` with no override, so the
+configuration in `phpunit.xml.dist` decides what fails the run, and any
+deprecation fails it. The gate is PHPUnit 13's native issue handling
+(`symfony/phpunit-bridge`'s `SYMFONY_DEPRECATIONS_HELPER` handler is not used:
+the bridge skips it on PHPUnit 10 and later):
 
-- `<env name="SYMFONY_DEPRECATIONS_HELPER" value="max[total]=0&amp;ignoreFile=tests/deprecations-ignore.txt"/>`
-  (no `force`, so a real environment variable still wins) turns every
-  `trigger_deprecation()` into a failure; the `ignoreFile` is the single
-  exception described below.
+- `failOnDeprecation="true"` and `failOnPhpunitDeprecation="true"` make any
+  deprecation (userland, PHP runtime, or PHPUnit's own) exit non-zero.
+  `failOnNotice="true"` and `failOnWarning="true"` make notices and warnings
+  (including PHPUnit's own notices, such as a mock object with no
+  expectations) fail the run too, instead of passing with an issue listed.
+- `<source ignoreSuppressionOfDeprecations="true">`: Symfony, Doctrine and
+  `DebugClassLoader` report deprecations through `@trigger_error()`, which
+  PHPUnit would otherwise discard as suppressed. Indirect deprecations (vendor
+  code calling vendor code) are not ignored either.
+- `<deprecationTrigger>` names `trigger_deprecation()`,
+  `Doctrine\Deprecations\Deprecation::trigger()` and
+  `::triggerIfCalledFromOutside()`, so a deprecation is attributed to the code
+  that called the trigger rather than to the trigger itself.
 - `<server name="DOCTRINE_DEPRECATIONS" value="trigger" force="true"/>` makes
-  `doctrine/deprecations` throw instead of logging. It must stay a forced
-  `<server>` entry in `phpunit.xml.dist` — not `.env.test`, not
-  `tests/bootstrap.php` — because `doctrine/deprecations` caches its mode on
-  first use and Symfony sets it only at the first kernel boot, so anything
-  that fires earlier would otherwise slip through in the cached mode.
-- There is no `SYMFONY_DEPRECATIONS_HELPER` entry in `.env.test`.
+  `doctrine/deprecations` report through `@trigger_error()` instead of only
+  logging. It must stay a forced `<server>` entry in `phpunit.xml.dist` — not
+  `.env.test`, not `tests/bootstrap.php` — because `doctrine/deprecations`
+  caches its mode on first use and Symfony sets it only at the first kernel
+  boot, so anything that fires earlier would otherwise slip through in the
+  cached mode.
+- The `Symfony\Bridge\PhpUnit\SymfonyExtension` extension enables
+  `DebugClassLoader`, which reports class-level deprecations (a missing
+  `@return` on an overridden internal method, a deprecated parent class, and
+  so on) for both `src/` and vendor classes.
+
+The `DAMA\DoctrineTestBundle\PHPUnit\PHPUnitExtension` and
+`Zenstruck\Foundry\PHPUnit\FoundryExtension` extensions are registered next
+to it: DAMA wraps each test in a rolled-back transaction (a class that runs
+DDL opts out with `#[DAMA\DoctrineTestBundle\PHPUnit\SkipDatabaseRollback]`)
+and Foundry applies `#[Zenstruck\Foundry\Attribute\ResetDatabase]`. The
+deprecated `ResetDatabase`/`Factories` traits must not come back: with the
+extension registered they trigger deprecations, which the gate fails on.
 
 ### No-suppression rule
 
-No `ignoreFile`, `baselineFile`, or other suppression except the single
-exception below. A deprecation is fixed, not hidden: any future suppression
-needs its own issue with justification and a narrow `ignoreFile` regex linking
-to it. `@group legacy` is only for a test that deliberately exercises
-deprecated behavior.
+No deprecation filter, baseline, or other suppression. A deprecation is fixed,
+not hidden: any future suppression needs its own issue with justification and
+a narrow `<deprecationFilter>` in `<source><deprecationFilters>` (a class
+implementing `PHPUnit\Runner\DeprecationFilter` that matches only that exact
+message) linking to it. `#[IgnoreDeprecations]` is only for a test that
+deliberately exercises deprecated behavior.
 
-The one exception is `tests/deprecations-ignore.txt`, kept solely by
-[issue #171](https://github.com/lbacik/paysubscriptions/issues/171): a
-missing-`@return` indirect notice from `league/commonmark` 2.10.3
-(`Util\ArrayCollection::offsetGet()`), still absent on upstream `main`, with
-no newer release carrying a fix. Its single regex matches only that exact
-vendor message. Remove the file and its wiring in `phpunit.xml.dist` once an
-upstream release adds the annotation.
+The former exception for
+[issue #171](https://github.com/lbacik/paysubscriptions/issues/171) (a
+missing `@return` on `league/commonmark`'s `Util\ArrayCollection::offsetGet()`)
+is gone: `league/commonmark` 2.10.4 adds the annotation and the suite reports
+no deprecation without it.
+
+### PHP 8.5 preview report
+
+The `php85` job in `.github/workflows/quality.yml` runs the same suite on PHP
+8.5 with `--do-not-fail-on-deprecation --do-not-fail-on-phpunit-deprecation`,
+so deprecations never turn it red, and `--log-events-text` writes every
+triggered deprecation to a file. The job summarises that file per message in
+the step summary and uploads it as the `php85-deprecations` artifact.
 
 ## Running the gate locally on PHP 8.4
 
@@ -74,7 +107,7 @@ not reproduce the gate. MySQL must be reachable at
 `paysub_test` and can never touch the dev database:
 
 ```sh
-php -v  # must report PHP 8.4.x
+php -v  # must report PHP 8.4.x (PHPUnit 13 needs 8.4.1 or later)
 DATABASE_URL="mysql://root:root@127.0.0.1:3306/paysub?charset=utf8mb4" \
   vendor/bin/phpunit
 ```
@@ -84,8 +117,7 @@ not the full server-reported version (e.g. `9.2` instead of `9.2.0`) makes DBAL
 emit a deprecation per connection, which the gate correctly turns into a
 failure. With the command above the run exits 0.
 
-Run it from the repository root: the `ignoreFile` path is relative, and from
-any other working directory the deprecation handler throws on startup.
+Run it from the repository root, where `phpunit.xml.dist` lives.
 
 No manual setup is needed beyond a reachable MySQL: replay the migrations
 first exactly as CI does (`php bin/console doctrine:database:create

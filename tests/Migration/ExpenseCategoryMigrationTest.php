@@ -6,8 +6,8 @@ namespace App\Tests\Migration;
 
 use App\Entity\ExpenseCategory;
 use App\Tests\DatabaseTestCase;
-use App\Tests\WithoutDatabaseRollback;
 use DAMA\DoctrineTestBundle\Doctrine\DBAL\StaticDriver;
+use DAMA\DoctrineTestBundle\PHPUnit\SkipDatabaseRollback;
 use Doctrine\DBAL\Connection;
 use Symfony\Bundle\FrameworkBundle\Console\Application;
 use Symfony\Component\Console\Input\ArrayInput;
@@ -22,7 +22,7 @@ use Symfony\Component\Uid\Uuid;
  * Needs a database. Runs real DDL, so it opts out of the per-test rollback
  * and re-migrates a clean database for the tests that follow.
  */
-#[WithoutDatabaseRollback]
+#[SkipDatabaseRollback]
 final class ExpenseCategoryMigrationTest extends DatabaseTestCase
 {
     private const PREVIOUS_VERSION = 'DoctrineMigrations\Version20240928142037';
@@ -34,11 +34,6 @@ final class ExpenseCategoryMigrationTest extends DatabaseTestCase
         parent::setUp();
 
         $this->connection = $this->em->getConnection();
-    }
-
-    // Each test drops and rebuilds the database itself; Foundry's per-test reset would be wasted work.
-    public static function _resetDatabaseBeforeEachTest(): void
-    {
     }
 
     public static function tearDownAfterClass(): void

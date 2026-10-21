@@ -8,12 +8,11 @@ use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-use Zenstruck\Foundry\Test\ResetDatabase;
+use Zenstruck\Foundry\Attribute\ResetDatabase;
 
+#[ResetDatabase]
 final class RegistrationTimezoneTest extends WebTestCase
 {
-    use ResetDatabase;
-
     private KernelBrowser $client;
     private EntityManagerInterface $em;
 

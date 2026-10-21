@@ -6,6 +6,7 @@ namespace App\Tests\Form;
 
 use App\Entity\User;
 use App\Form\SettingsType;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Form\FormFactoryInterface;
 
@@ -73,9 +74,7 @@ final class SettingsTypeTest extends KernelTestCase
         self::assertTrue($form->get('timezone')->getErrors()->count() > 0);
     }
 
-    /**
-     * @dataProvider invalidLeadDays
-     */
+    #[DataProvider('invalidLeadDays')]
     public function testOutOfRangeLeadTimeIsRejected(string $leadDays): void
     {
         $user = new User();
@@ -94,7 +93,7 @@ final class SettingsTypeTest extends KernelTestCase
     /**
      * @return iterable<string, array{string}>
      */
-    public function invalidLeadDays(): iterable
+    public static function invalidLeadDays(): iterable
     {
         yield 'zero days' => ['0'];
         yield 'thirty-one days' => ['31'];

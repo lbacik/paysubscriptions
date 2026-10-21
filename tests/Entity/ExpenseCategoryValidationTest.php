@@ -6,6 +6,7 @@ namespace App\Tests\Entity;
 
 use App\Entity\ExpenseCategory;
 use App\Entity\User;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Validator\Validation;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
@@ -71,9 +72,7 @@ final class ExpenseCategoryValidationTest extends TestCase
         );
     }
 
-    /**
-     * @dataProvider invalidColorProvider
-     */
+    #[DataProvider('invalidColorProvider')]
     public function testInvalidColorIsRejected(?string $color): void
     {
         self::assertGreaterThan(
@@ -83,7 +82,7 @@ final class ExpenseCategoryValidationTest extends TestCase
         );
     }
 
-    public function invalidColorProvider(): iterable
+    public static function invalidColorProvider(): iterable
     {
         yield 'empty' => [''];
         yield 'null' => [null];
@@ -94,15 +93,13 @@ final class ExpenseCategoryValidationTest extends TestCase
         yield 'too long' => ['#57739900'];
     }
 
-    /**
-     * @dataProvider validColorProvider
-     */
+    #[DataProvider('validColorProvider')]
     public function testValidColorIsAccepted(string $color): void
     {
         self::assertCount(0, $this->validator->validateProperty($this->createCategory('Food', $color), 'color'));
     }
 
-    public function validColorProvider(): iterable
+    public static function validColorProvider(): iterable
     {
         yield 'lowercase' => ['#577399'];
         yield 'uppercase' => ['#FE5F55'];

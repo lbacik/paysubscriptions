@@ -176,22 +176,22 @@ final class SubscriptionServiceTotalsTest extends TestCase
     private function service(): SubscriptionService
     {
         return new SubscriptionService(
-            $this->createMock(SubscriptionRepository::class),
-            $this->createMock(UserRepository::class),
-            $this->createMock(ExpenseCategoryService::class),
+            $this->createStub(SubscriptionRepository::class),
+            $this->createStub(UserRepository::class),
+            $this->createStub(ExpenseCategoryService::class),
             new RenewalCalculator(),
         );
     }
 
     private function serviceWithSubscriptions(array $subscriptions): SubscriptionService
     {
-        $subscriptionRepository = $this->createMock(SubscriptionRepository::class);
+        $subscriptionRepository = $this->createStub(SubscriptionRepository::class);
         $subscriptionRepository->method('findBy')->willReturn($subscriptions);
 
         return new SubscriptionService(
             $subscriptionRepository,
-            $this->createMock(UserRepository::class),
-            $this->createMock(ExpenseCategoryService::class),
+            $this->createStub(UserRepository::class),
+            $this->createStub(ExpenseCategoryService::class),
             new RenewalCalculator(),
         );
     }

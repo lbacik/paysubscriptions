@@ -16,14 +16,11 @@ use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\BrowserKit\Cookie;
 use Symfony\Component\HttpFoundation\Request;
-use Zenstruck\Foundry\Test\Factories;
-use Zenstruck\Foundry\Test\ResetDatabase;
+use Zenstruck\Foundry\Attribute\ResetDatabase;
 
+#[ResetDatabase]
 final class SubscriptionAuthorizationTest extends WebTestCase
 {
-    use ResetDatabase;
-    use Factories;
-
     /**
      * Boot with debug disabled so error pages render as they do in
      * production: a generic page with no stack traces that could echo the

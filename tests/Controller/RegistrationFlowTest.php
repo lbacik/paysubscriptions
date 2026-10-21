@@ -10,7 +10,7 @@ use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\MailerAssertionsTrait;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\Mime\Email;
-use Zenstruck\Foundry\Test\ResetDatabase;
+use Zenstruck\Foundry\Attribute\ResetDatabase;
 
 /**
  * Behavioral coverage for the registration journey (issue #35).
@@ -19,10 +19,10 @@ use Zenstruck\Foundry\Test\ResetDatabase;
  * submission creates a usable (unverified) account and queues a verification
  * email; duplicates and invalid input re-render with errors instead.
  */
+#[ResetDatabase]
 final class RegistrationFlowTest extends WebTestCase
 {
     use MailerAssertionsTrait;
-    use ResetDatabase;
 
     private KernelBrowser $client;
     private EntityManagerInterface $em;

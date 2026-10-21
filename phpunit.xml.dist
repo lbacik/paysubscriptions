@@ -1,12 +1,22 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<!-- https://phpunit.readthedocs.io/en/latest/configuration.html -->
+<!-- https://docs.phpunit.de/en/13.4/configuration.html -->
+<!-- Zero-deprecation gate: any deprecation fails the run (failOnDeprecation,
+     failOnPhpunitDeprecation), with no exception. A future suppression needs
+     its own issue with justification and a narrow <deprecationFilter> linking
+     to it. No baseline. #[IgnoreDeprecations] is only for a test that
+     deliberately exercises deprecated behavior. See docs/testing.md. -->
 <phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
          backupGlobals="false"
          colors="true"
          bootstrap="tests/bootstrap.php"
-         convertDeprecationsToExceptions="false"
+         cacheDirectory=".phpunit.cache"
+         failOnDeprecation="true"
+         failOnPhpunitDeprecation="true"
+         failOnNotice="true"
+         failOnWarning="true"
+         displayDetailsOnAllIssues="true"
 >
     <php>
         <ini name="display_errors" value="1" />
@@ -20,19 +30,9 @@
         <server name="GOOGLE_RECAPTCHA_SITE_KEY" value="6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI" />
         <server name="GOOGLE_RECAPTCHA_SECRET" value="6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe" />
         <server name="SHELL_VERBOSITY" value="-1" />
-        <!-- Zero-deprecation gate: any deprecation fails the run. The only
-             suppression is the narrow vendor-annotation ignoreFile below,
-             which exists solely because of issue #171 (upstream has not
-             fixed the annotation); a future suppression needs its own issue
-             with justification and a narrow ignoreFile regex linking to it.
-             No baselineFile. @group legacy is only for a test that
-             deliberately exercises deprecated behavior. -->
-        <env name="SYMFONY_DEPRECATIONS_HELPER" value="max[total]=0&amp;ignoreFile=tests/deprecations-ignore.txt" />
         <!-- doctrine/deprecations caches its mode on first use and Symfony sets
              it only at the first kernel boot. -->
         <server name="DOCTRINE_DEPRECATIONS" value="trigger" force="true" />
-        <server name="SYMFONY_PHPUNIT_REMOVE" value="" />
-        <server name="SYMFONY_PHPUNIT_VERSION" value="9.5" />
     </php>
 
     <testsuites>
@@ -41,17 +41,28 @@
         </testsuite>
     </testsuites>
 
-    <coverage processUncoveredFiles="true">
+    <!-- Symfony, Doctrine and DebugClassLoader report deprecations through
+         @trigger_error(), so suppressed deprecations must count. -->
+    <source ignoreSuppressionOfDeprecations="true">
         <include>
             <directory suffix=".php">src</directory>
         </include>
-    </coverage>
 
-    <listeners>
-        <listener class="Symfony\Bridge\PhpUnit\SymfonyTestsListener" />
-    </listeners>
+        <deprecationTrigger>
+            <function>trigger_deprecation</function>
+            <method>Doctrine\Deprecations\Deprecation::trigger</method>
+            <method>Doctrine\Deprecations\Deprecation::triggerIfCalledFromOutside</method>
+        </deprecationTrigger>
+    </source>
 
     <extensions>
-        <extension class="App\Tests\DatabaseTransactionExtension" />
+        <!-- Enables DebugClassLoader (vendor/src class-level deprecations). -->
+        <bootstrap class="Symfony\Bridge\PhpUnit\SymfonyExtension" />
+        <!-- Wraps each test in a rolled-back transaction; see
+             #[DAMA\DoctrineTestBundle\PHPUnit\SkipDatabaseRollback]. -->
+        <bootstrap class="DAMA\DoctrineTestBundle\PHPUnit\PHPUnitExtension" />
+        <!-- Applies #[Zenstruck\Foundry\Attribute\ResetDatabase]; replaces the
+             deprecated ResetDatabase/Factories traits. -->
+        <bootstrap class="Zenstruck\Foundry\PHPUnit\FoundryExtension" />
     </extensions>
 </phpunit>

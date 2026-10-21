@@ -8,8 +8,7 @@ use App\Factory\SubscriptionFactory;
 use App\Factory\UserFactory;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-use Zenstruck\Foundry\Test\Factories;
-use Zenstruck\Foundry\Test\ResetDatabase;
+use Zenstruck\Foundry\Attribute\ResetDatabase;
 
 /**
  * Guards the single source of truth for the WCAG 2.1 AA scan (issue #52):
@@ -20,11 +19,9 @@ use Zenstruck\Foundry\Test\ResetDatabase;
  * rotted: every covered scenario resolves to a real route, and no pending
  * scenario silently became available without being promoted to covered.
  */
+#[ResetDatabase]
 final class AccessibilityScenariosTest extends WebTestCase
 {
-    use ResetDatabase;
-    use Factories;
-
     private const REGISTRY_PATH = __DIR__.'/accessibility/scenarios.json';
 
     /** @return array{scenarios: list<array<string, mixed>>} */

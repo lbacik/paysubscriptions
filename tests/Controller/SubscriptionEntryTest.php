@@ -14,8 +14,7 @@ use App\Repository\SubscriptionRepository;
 use App\Repository\UserRepository;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-use Zenstruck\Foundry\Test\Factories;
-use Zenstruck\Foundry\Test\ResetDatabase;
+use Zenstruck\Foundry\Attribute\ResetDatabase;
 
 /**
  * Behavioral coverage for Subscription entry and editing (#40): add/edit of
@@ -23,11 +22,9 @@ use Zenstruck\Foundry\Test\ResetDatabase;
  * amounts, cross-user category rejection, notes escaping, and the per-User
  * Subscription limit.
  */
+#[ResetDatabase]
 final class SubscriptionEntryTest extends WebTestCase
 {
-    use ResetDatabase;
-    use Factories;
-
     public function testUserCanCreateSubscriptionWithAllFields(): void
     {
         $client = static::createClient();

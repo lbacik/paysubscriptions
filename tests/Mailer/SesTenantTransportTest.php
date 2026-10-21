@@ -9,6 +9,7 @@ use App\Mailer\SesTenantTransport;
 use App\Mailer\SesTenantTransportFactory;
 use AsyncAws\Core\Configuration;
 use AsyncAws\Ses\SesClient;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
@@ -77,9 +78,7 @@ final class SesTenantTransportTest extends TestCase
         yield 'source-arn header' => [self::withHeader($base()->from('no-reply@paysubscriptions.com'), 'X-SES-SOURCE-ARN', 'arn:aws:ses:eu-central-1:045689588845:identity/lukaszbacik.com')];
     }
 
-    /**
-     * @dataProvider boundaryViolations
-     */
+    #[DataProvider('boundaryViolations')]
     public function testRejectsBoundaryViolationsWithoutCallingSes(Email $email): void
     {
         $transport = $this->transport(new MockResponse('{"MessageId":"never"}'));
@@ -125,9 +124,7 @@ final class SesTenantTransportTest extends TestCase
         yield 'custom endpoint' => ['ses+tenant://AKIAEXAMPLE:secret@ses.example.com'];
     }
 
-    /**
-     * @dataProvider rejectedDsns
-     */
+    #[DataProvider('rejectedDsns')]
     public function testFactoryRejectsBoundaryOptionsInTheDsn(string $dsn): void
     {
         $this->expectException(InvalidArgumentException::class);

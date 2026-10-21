@@ -7,6 +7,7 @@ namespace App\Tests\Controller;
 use App\Entity\Limits;
 use App\Enum\BillingCycle;
 use App\Tests\DatabaseTestCase;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
  * The dashboard aggregates the signed-in user's subscriptions into
@@ -86,9 +87,7 @@ final class DashboardTest extends DatabaseTestCase
         self::assertStringContainsString('0.00', $crawler->text(null, true));
     }
 
-    /**
-     * @dataProvider chartTypes
-     */
+    #[DataProvider('chartTypes')]
     public function testChartViewsRender(string $query): void
     {
         $alice = $this->createUser('alice@example.com', self::PASSWORD, true);
@@ -113,9 +112,7 @@ final class DashboardTest extends DatabaseTestCase
         ];
     }
 
-    /**
-     * @dataProvider sortingOptions
-     */
+    #[DataProvider('sortingOptions')]
     public function testSortingOptionsRender(string $query): void
     {
         $alice = $this->createUser('alice@example.com', self::PASSWORD, true);
