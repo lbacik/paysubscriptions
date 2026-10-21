@@ -2,6 +2,20 @@ api_platform:
     title: PaySubscriptions API
     version: 1.0.0
     description: Versioned REST API for User-owned resources (v1).
+    # PROTOTYPE (#246): contract formats from #245 so the three modeling
+    # variants answer in the agreed shapes.
+    mapping:
+        paths:
+            - '%kernel.project_dir%/src/ApiResource'
+            - '%kernel.project_dir%/src/Entity'
+    formats:
+        jsonhal: ['application/hal+json']
+        json: ['application/json']
+        jsonld: ['application/ld+json']
+    patch_formats:
+        json: ['application/merge-patch+json']
+    error_formats:
+        jsonproblem: ['application/problem+json']
     defaults:
         stateless: true
         cache_headers:

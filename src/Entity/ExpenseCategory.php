@@ -4,7 +4,15 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
+use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\Delete;
+use ApiPlatform\Metadata\Get;
+use ApiPlatform\Metadata\GetCollection;
+use ApiPlatform\Metadata\Patch;
+use ApiPlatform\Metadata\Post;
+use App\Prototype\EntityCategoryProcessor;
 use App\Repository\ExpenseCategoryRepository;
+use Symfony\Component\Serializer\Attribute\Groups;
 use DateTime;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -17,6 +25,19 @@ use Symfony\Component\Uid\Uuid;
 use Symfony\Component\Validator\Constraints as Assert;
 use Gedmo\Mapping\Annotation as Gedmo;
 
+// PROTOTYPE (#246) variant A: the Doctrine entity is the API resource.
+#[ApiResource(
+    shortName: 'ProtoEntityExpenseCategory',
+    operations: [
+        new GetCollection(uriTemplate: '/v1/proto-entity/expense-categories', paginationEnabled: false, order: ['name' => 'ASC']),
+        new Get(uriTemplate: '/v1/proto-entity/expense-categories/{id}'),
+        new Post(uriTemplate: '/v1/proto-entity/expense-categories', processor: EntityCategoryProcessor::class),
+        new Patch(uriTemplate: '/v1/proto-entity/expense-categories/{id}', processor: EntityCategoryProcessor::class),
+        new Delete(uriTemplate: '/v1/proto-entity/expense-categories/{id}', processor: EntityCategoryProcessor::class),
+    ],
+    normalizationContext: ['groups' => ['proto_category:read']],
+    denormalizationContext: ['groups' => ['proto_category:write']],
+)]
 #[ORM\Entity(repositoryClass: ExpenseCategoryRepository::class)]
 #[ORM\UniqueConstraint(name: 'UNIQ_EXPENSE_CATEGORY_OWNER_NAME', fields: ['owner', 'name'])]
 #[UniqueEntity(fields: ['owner', 'name'], message: 'You already have a category with this name.')]
@@ -32,17 +53,20 @@ class ExpenseCategory
     #[ORM\Column(type: UuidType::NAME, unique: true)]
     #[ORM\GeneratedValue(strategy: 'CUSTOM')]
     #[ORM\CustomIdGenerator(class: 'doctrine.uuid_generator')]
+    #[Groups(['proto_category:read'])]
     private ?Uuid $id = null;
 
     #[ORM\ManyToOne(targetEntity: User::class, inversedBy: 'expenseCategories')]
     #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
     private ?User $owner = null;
 
+    #[Groups(['proto_category:read', 'proto_category:write'])]
     #[ORM\Column(length: 100)]
     #[Assert\NotBlank]
     #[Assert\Length(min: 2, max: 100)]
     private ?string $name = null;
 
+    #[Groups(['proto_category:read', 'proto_category:write'])]
     #[ORM\Column(length: 7)]
     #[Assert\NotBlank]
     #[Assert\Regex(
@@ -59,10 +83,12 @@ class ExpenseCategory
 
     #[Gedmo\Timestampable(on: 'create')]
     #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: false, options: ["default" => "CURRENT_TIMESTAMP"])]
+    #[Groups(['proto_category:read'])]
     protected $createdAt;
 
     #[Gedmo\Timestampable(on: 'create')]
     #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: false, options: ["default" => "CURRENT_TIMESTAMP"])]
+    #[Groups(['proto_category:read'])]
     protected $updatedAt;
 
     public function __construct()
