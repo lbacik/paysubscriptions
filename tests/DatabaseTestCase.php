@@ -4,18 +4,14 @@ declare(strict_types=1);
 
 namespace App\Tests;
 
-use App\Entity\Subscription;
-use App\Entity\User;
-use App\Enum\BillingCycle;
-use App\Service\ExpenseCategoryService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Zenstruck\Foundry\Attribute\ResetDatabase;
 
 /**
- * Base class for tests that need a real database.
+ * Base class for web tests that need a real database. API v1 tests use
+ * App\Tests\Api\V1\ApiV1TestCase instead; both share DatabaseFixtures.
  *
  * Set DATABASE_URL before running (e.g. the CI migrations job's
  * mysql://root:root@127.0.0.1:3306/paysub — the `when@test` dbname suffix
@@ -40,9 +36,9 @@ use Zenstruck\Foundry\Attribute\ResetDatabase;
 #[ResetDatabase]
 abstract class DatabaseTestCase extends WebTestCase
 {
-    protected KernelBrowser $client;
+    use DatabaseFixtures;
 
-    protected EntityManagerInterface $em;
+    protected KernelBrowser $client;
 
     protected function setUp(): void
     {
@@ -60,64 +56,6 @@ abstract class DatabaseTestCase extends WebTestCase
         }
 
         parent::tearDown();
-    }
-
-    protected function freshEm(): EntityManagerInterface
-    {
-        return static::getContainer()->get(EntityManagerInterface::class);
-    }
-
-    protected function createUser(string $email, string $plainPassword = 'Fixture-Password-1', bool $verified = true): User
-    {
-        /** @var UserPasswordHasherInterface $hasher */
-        $hasher = static::getContainer()->get(UserPasswordHasherInterface::class);
-
-        $user = (new User())
-            ->setEmail($email)
-            ->setVerified($verified);
-        $user->setPassword($hasher->hashPassword($user, $plainPassword));
-
-        $this->em->persist($user);
-        $this->em->flush();
-
-        return $user;
-    }
-
-    protected function createSubscription(
-        User $owner,
-        string $name = 'Netflix',
-        BillingCycle $billingCycle = BillingCycle::Monthly,
-        float $amount = 15.99,
-        ?\DateTimeInterface $nextPayment = null,
-    ): Subscription {
-        // Resolved before building the Subscription: ensureDefaultCategory()
-        // flushes internally, which would otherwise trip Doctrine's cascade
-        // check on the not-yet-persisted Subscription reachable through
-        // User#subscriptions.
-        $category = static::getContainer()->get(ExpenseCategoryService::class)->ensureDefaultCategory($owner);
-
-        $subscription = (new Subscription())
-            ->setName($name)
-            ->setBillingCycle($billingCycle)
-            ->setAmount($amount)
-            ->setNextPayment($nextPayment ?? new \DateTime('2024-01-15'))
-            ->setCategory($category);
-        // Keep both sides of the association in sync: the subscription-limit
-        // check counts the owner's in-memory collection, so setOwner() alone
-        // would leave it stale within the same entity-manager lifecycle.
-        $owner->addSubscription($subscription);
-
-        $this->em->persist($subscription);
-        $this->em->flush();
-
-        return $subscription;
-    }
-
-    protected function freshUser(string $email): ?User
-    {
-        $this->em->clear();
-
-        return $this->em->getRepository(User::class)->findOneBy(['email' => $email]);
     }
 
     protected function login(string $email, string $password): void

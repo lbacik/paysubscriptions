@@ -8,6 +8,7 @@ use App\Entity\ExpenseCategory;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\BillingCycle;
+use App\Exception\CategoryInUseException;
 use App\Exception\DuplicateCategoryNameException;
 use App\Repository\ExpenseCategoryRepository;
 use App\Service\ExpenseCategoryService;
@@ -213,6 +214,49 @@ final class ExpenseCategoryServiceTest extends DatabaseTestCase
         self::assertSame('#00ff00', $reloaded->getColor());
     }
 
+    public function testUpdateChangesNameAndColorAndKeepsOwnName(): void
+    {
+        $user = $this->createUser('owner@example.com');
+        $category = $this->categories->create($user, 'Food', '#ff0000');
+
+        $this->categories->update($category, 'Food', '#00ff00');
+        $this->categories->update($category, 'Groceries', '#00ff00');
+
+        $this->em->clear();
+        $reloaded = $this->em->getRepository(ExpenseCategory::class)->find($category->getId());
+        self::assertSame('Groceries', $reloaded->getName());
+        self::assertSame('#00ff00', $reloaded->getColor());
+    }
+
+    public function testUpdateToTakenNameThrowsAndDiscardsUnsavedChangesWithManagerIntact(): void
+    {
+        $user = $this->createUser('owner@example.com');
+        $this->categories->create($user, 'Rent', '#111111');
+        $category = $this->categories->create($user, 'Food', '#ff0000');
+
+        // The API maps its input onto the managed category before calling
+        // update(): the refused change must not reach a later flush.
+        $category->setName('Rent');
+        $category->setColor('#00ff00');
+
+        try {
+            $this->categories->update($category, 'Rent', '#00ff00');
+            self::fail('A taken name must be refused.');
+        } catch (DuplicateCategoryNameException $exception) {
+            self::assertSame('You already have a category with name "Rent".', $exception->getMessage());
+            self::assertNull($exception->getPrevious(), 'Refused before writing, not by the unique index.');
+        }
+
+        self::assertTrue($this->em->isOpen());
+        self::assertSame('Food', $category->getName());
+        self::assertSame('#ff0000', $category->getColor());
+
+        $this->em->flush();
+        $this->em->clear();
+        $reloaded = $this->em->getRepository(ExpenseCategory::class)->find($category->getId());
+        self::assertSame('Food', $reloaded->getName());
+    }
+
     public function testCategoryNamesAreUniquePerUserButReusableAcrossUsers(): void
     {
         $user = $this->createUser('owner@example.com');
@@ -249,7 +293,7 @@ final class ExpenseCategoryServiceTest extends DatabaseTestCase
         try {
             $this->categories->delete($default);
             self::fail('Deleting a category in use must throw.');
-        } catch (\LogicException $exception) {
+        } catch (CategoryInUseException $exception) {
             self::assertStringContainsString('Reassign them first', $exception->getMessage());
         }
 

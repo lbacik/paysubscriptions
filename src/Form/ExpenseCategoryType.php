@@ -34,6 +34,7 @@ class ExpenseCategoryType extends AbstractType
     {
         $resolver->setDefaults([
             'data_class' => ExpenseCategory::class,
+            'validation_groups' => ['Default', ExpenseCategory::WEB_VALIDATION_GROUP],
         ]);
     }
 }

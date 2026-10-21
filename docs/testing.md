@@ -25,7 +25,7 @@ DATABASE_URL="mysql://root:root@127.0.0.1:3306/paysub?charset=utf8mb4" \
 
 The suite creates the `paysub_test` database on demand and builds its schema
 once per run by replaying the migrations (`#[ResetDatabase]` on
-`tests/DatabaseTestCase`, `reset.mode: migrate` in
+`tests/DatabaseTestCase` and `tests/Api/V1/ApiV1TestCase`, `reset.mode: migrate` in
 `config/packages/zenstruck_foundry.yaml`); each test then runs inside a
 transaction that is rolled back, so tests are order-independent and need no
 manual setup. CI additionally replays the
@@ -165,6 +165,10 @@ authoritative local gate.
   totals (including cross-currency conversion), chart datasets
   (bar/monthly/yearly), dashboard totals and limit gauge.
 - Expense categories, upcoming renewals, and account deletion.
+- API v1 (`tests/Api/V1/` and `tests/Controller/Api/V1/`): the token gate,
+  reads and writes of every resource through the domain services, the
+  problem+json error contract, content negotiation, two-User isolation, and
+  the committed OpenAPI document of the hand-written resources.
 - SES mail boundary and recipient restrictions (`tests/Mailer/`): every
   email goes through the paysubs-app tenant and configuration set from
   `no-reply@paysubscriptions.com` only, and `X-SES-*` headers or foreign
@@ -187,6 +191,47 @@ authoritative local gate.
 - Cross-user ownership: a second user is denied (403 via `SubscriptionVoter`
   for subscriptions, 404 elsewhere) for foreign view/edit/delete, and never
   sees foreign rows.
+
+## API v1 tests
+
+Resources served by API Platform are tested in `tests/Api/V1/` on
+`App\Tests\Api\V1\ApiV1TestCase`, which extends API Platform's
+`ApiPlatform\Test\ApiTestCase` (its client, `assertJsonContains()` and the
+JSON Schema assertions backed by `justinrainbow/json-schema`). Hand-written
+resources keep their tests in `tests/Controller/Api/V1/` until they are
+migrated; each migration deletes them together with the controller.
+
+- **Database and fixtures.** Same lifecycle as `DatabaseTestCase`
+  (`#[ResetDatabase]`, one rolled-back transaction per test). Both base classes
+  share the fixture helpers in `App\Tests\DatabaseFixtures` (`createUser()`,
+  `createSubscription()`, …).
+- **Tokens.** Access tokens are minted in-process by
+  `App\Tests\Api\V1\MintsAccessTokens`, signed with the keys in
+  `tests/Fixtures/oauth`. Every claim the gate checks can be varied. The base
+  class registers the approved CLI client for every test, and
+  `requestAs($user, $method, $url, $options)` sends a request with a valid
+  `api:full` token for `$user`.
+- **Token gate.** `TokenGateTest` covers the whole gate matrix (missing,
+  tampered, expired token; wrong audience, issuer or scope; unknown, narrowed
+  or inactive Client; unverified or deleted User) once, against one endpoint.
+  It also holds the single end-to-end test that uses a token issued through
+  the real OAuth2 flow. Resource suites do not repeat the matrix.
+- **Formats.** Requests default to `Accept: application/hal+json`, the API's
+  default format, and behavior tests use it. One format test per resource
+  requests its item and collection in HAL, `application/json` and
+  `application/ld+json`, and checks each against the JSON Schema API Platform
+  generates (`assertMatchesResourceItemJsonSchema()` /
+  `assertMatchesResourceCollectionJsonSchema()`). Error tests assert
+  `application/problem+json` whatever the `Accept`.
+- **Isolation checklist.** Every resource suite tests these with two Users:
+  - the collection never shows the other User's rows;
+  - GET, PATCH and DELETE on a foreign ID answer 404 and disclose nothing;
+  - a foreign IRI in a write body (for example a Subscription's `category`)
+    is a 422 on that field.
+
+In the test environment the kernel runs in debug mode, so problem bodies
+carry a `trace` that names the test method. A "discloses nothing" assertion
+must look for fixture data that no test or class name contains.
 
 ## External-service fakes
 

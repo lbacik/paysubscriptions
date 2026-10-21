@@ -2,12 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Controller\Api\V1;
+namespace App\Tests\Api\V1;
 
 use App\OAuth2\ApiAccessTokenEntity;
 use App\OAuth2\OAuth2Config;
-use App\Entity\User;
-use App\Tests\DatabaseTestCase;
 use DateTimeImmutable;
 use League\Bundle\OAuth2ServerBundle\Entity\Client as ClientEntity;
 use League\Bundle\OAuth2ServerBundle\Manager\ClientManagerInterface;
@@ -16,22 +14,17 @@ use League\Bundle\OAuth2ServerBundle\ValueObject\Grant;
 use League\Bundle\OAuth2ServerBundle\ValueObject\RedirectUri;
 use League\Bundle\OAuth2ServerBundle\ValueObject\Scope;
 use League\OAuth2\Server\CryptKey;
-use League\OAuth2\Server\Entities\ScopeEntityInterface;
 
 /**
- * Shared scaffolding for the ExpenseCategory API v1 tests (read slice #89,
- * write slice): bearer token minting for the `paysubs-cli` client.
- *
- * Seam note from the read slice applies throughout: behavior is observed
- * through status, content-type, and body only.
+ * Mints API v1 access tokens in-process, signed with the test keypair in
+ * tests/Fixtures/oauth exactly as the authorization server signs issued
+ * tokens (TokenGateTest proves one issued through the real OAuth2 flow opens
+ * the API too). Every claim the gate checks can be varied per token.
  */
-abstract class ExpenseCategoryApiTestCase extends DatabaseTestCase
+trait MintsAccessTokens
 {
     protected const CLIENT_ID = 'paysubs-cli';
     protected const ISSUER = 'http://localhost';
-
-    protected User $user;
-    protected User $other;
 
     protected function craftToken(
         ?string $userIdentifier,
@@ -50,13 +43,17 @@ abstract class ExpenseCategoryApiTestCase extends DatabaseTestCase
         if (null !== $userIdentifier) {
             $entity->setUserIdentifier($userIdentifier);
         }
-        $entity->addScope(new ExpenseCategoryApiTestScope($scope));
+        $entity->addScope(new AccessTokenScope($scope));
         $entity->setExpiryDateTime($expiry ?? new DateTimeImmutable('+15 minutes'));
-        $entity->setPrivateKey(new CryptKey($this->privateKeyPath()));
+        $entity->setPrivateKey(new CryptKey(static::getContainer()->getParameter('kernel.project_dir').'/tests/Fixtures/oauth/private.pem'));
 
         return $entity->toString();
     }
 
+    /**
+     * Registers the public CLI client approved for `api:full`, which
+     * ClientApprovalPolicy requires before any token opens API v1.
+     */
     protected function registerPublicClient(): void
     {
         $manager = static::getContainer()->get(ClientManagerInterface::class);
@@ -66,27 +63,5 @@ abstract class ExpenseCategoryApiTestCase extends DatabaseTestCase
         $client->setGrants(new Grant('authorization_code'), new Grant('refresh_token'));
         $client->setScopes(new Scope(OAuth2Config::SCOPE_FULL));
         $manager->save($client);
-    }
-
-    protected function privateKeyPath(): string
-    {
-        return static::getContainer()->getParameter('kernel.project_dir').'/tests/Fixtures/oauth/private.pem';
-    }
-}
-
-final class ExpenseCategoryApiTestScope implements ScopeEntityInterface
-{
-    public function __construct(private readonly string $identifier)
-    {
-    }
-
-    public function getIdentifier(): string
-    {
-        return $this->identifier;
-    }
-
-    public function jsonSerialize(): string
-    {
-        return $this->identifier;
     }
 }

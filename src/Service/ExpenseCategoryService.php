@@ -7,6 +7,7 @@ namespace App\Service;
 use App\Entity\ExpenseCategory;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Exception\CategoryInUseException;
 use App\Exception\DuplicateCategoryNameException;
 use App\Repository\ExpenseCategoryRepository;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
@@ -208,18 +209,52 @@ class ExpenseCategoryService
      * name and color through rename()/recolor(); the API PATCH path uses this
      * so both stay on the same service rule.
      *
-     * @throws DuplicateCategoryNameException when a concurrent change takes
-     *                                        the same name before this flush.
+     * A name the owner already uses for another category is refused before
+     * anything is written, under the same owner lock as create(). The API
+     * maps its input onto the managed category before calling this, so on
+     * refusal the category is reloaded from the database: its unsaved
+     * changes are discarded and nothing is left for a later flush to write.
+     *
+     * @throws DuplicateCategoryNameException when the name is already taken —
+     *                                        either by an earlier row or by a
+     *                                        concurrent change that committed
+     *                                        while waiting for the owner lock.
      */
     public function update(ExpenseCategory $category, string $name, string $color): void
     {
-        $category->setName($name);
-        $category->setColor($color);
+        $owner = $category->getOwner();
 
         try {
-            $this->categoryRepository->save($category);
+            $updated = $this->entityManager->wrapInTransaction(function () use ($category, $owner, $name, $color): bool {
+                if (null !== $owner?->getId()) {
+                    $this->lockOwner($owner);
+
+                    $holder = $this->categoryRepository->findOneBy(['owner' => $owner, 'name' => $name]);
+                    if (null !== $holder && $holder !== $category) {
+                        // Same sentinel approach as create(): throwing inside
+                        // wrapInTransaction() would close the EntityManager.
+                        // The refresh drops any in-memory change so the flush
+                        // wrapInTransaction() runs on return writes nothing.
+                        if ($this->entityManager->contains($category)) {
+                            $this->entityManager->refresh($category);
+                        }
+
+                        return false;
+                    }
+                }
+
+                $category->setName($name);
+                $category->setColor($color);
+                $this->categoryRepository->save($category);
+
+                return true;
+            });
         } catch (UniqueConstraintViolationException $exception) {
             throw $this->duplicateName($name, $exception);
+        }
+
+        if (!$updated) {
+            throw $this->duplicateName($name);
         }
     }
 
@@ -232,7 +267,7 @@ class ExpenseCategoryService
      * assignments), never from the inverse-side collection alone, which may
      * be stale when Subscriptions were linked via their owning side.
      *
-     * @throws \LogicException when the category still has Subscriptions assigned
+     * @throws CategoryInUseException when the category still has Subscriptions assigned
      */
     public function delete(ExpenseCategory $category): void
     {
@@ -250,7 +285,7 @@ class ExpenseCategoryService
         $usageCount = max($persistedUsage, $category->getSubscriptions()->count());
 
         if ($usageCount > 0) {
-            throw new \LogicException(sprintf(
+            throw new CategoryInUseException(sprintf(
                 'Category "%s" cannot be deleted because it still has %d subscription(s) assigned. Reassign them first.',
                 $category->getName(),
                 $usageCount,

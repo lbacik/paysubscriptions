@@ -2,7 +2,24 @@ api_platform:
     title: PaySubscriptions API
     version: 1.0.0
     description: Versioned REST API for User-owned resources (v1).
+    mapping:
+        paths:
+            - '%kernel.project_dir%/src/ApiResource'
+    # HAL is the default (first) format: JSON-LD's @-members collide with the
+    # resources' own `id` in generated clients. Plain JSON collections are
+    # bare arrays without pagination metadata. JSON:API is not enabled. See
+    # ADR 0007.
+    formats:
+        jsonhal: ['application/hal+json']
+        json: ['application/json']
+        jsonld: ['application/ld+json']
+    # Every error is application/problem+json whatever the Accept: HAL has no
+    # error normalizer and would fall back to a JSON-LD Hydra error.
+    error_formats:
+        jsonproblem: ['application/problem+json']
+    path_segment_name_generator: api_platform.metadata.path_segment_name_generator.dash
     defaults:
+        route_prefix: /v1
         stateless: true
         cache_headers:
             vary: ['Content-Type', 'Authorization', 'Origin']
