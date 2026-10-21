@@ -95,7 +95,7 @@ security:
         # token; sibling issues carve out anything that must stay public.
         # The interactive API documentation (Swagger UI and its generated
         # spec formats) is the one public carve-out: /api/docs, /api/docs.json…
-        - { path: ^/api/docs(\.|$), roles: PUBLIC_ACCESS }
+        - { path: ^/api/docs(\.json)?$, roles: PUBLIC_ACCESS }
         - { path: ^/api, roles: IS_AUTHENTICATED_FULLY }
         # - { path: ^/admin, roles: ROLE_ADMIN }
         # - { path: ^/profile, roles: ROLE_USER }

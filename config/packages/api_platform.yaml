@@ -2,6 +2,9 @@ api_platform:
     title: PaySubscriptions API
     version: 1.0.0
     description: Versioned REST API for User-owned resources (v1).
+    # The API is plain controllers; /api/docs is served by ApiDocsController.
+    enable_docs: false
+    enable_swagger_ui: false
     defaults:
         stateless: true
         cache_headers:

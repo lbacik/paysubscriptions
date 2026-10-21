@@ -54,7 +54,7 @@ final class OAuthApiFirewallTest extends DatabaseTestCase
         $this->client->request('GET', '/api/docs');
         self::assertResponseIsSuccessful();
 
-        $this->client->request('GET', '/api/docs.jsonopenapi');
+        $this->client->request('GET', '/api/docs.json');
         self::assertResponseIsSuccessful();
     }
 
