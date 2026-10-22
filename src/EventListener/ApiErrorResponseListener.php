@@ -26,10 +26,11 @@ use Symfony\Component\HttpKernel\KernelEvents;
  * The converter knows no domain types: the body is always the generic
  * problem with the status text as detail, in the same member order API
  * Platform serializes it (`title`, `detail`, `status`, `type`). The original
- * headers survive, so `WWW-Authenticate` (firewall 401s) and `Allow` (405s)
- * are kept; a 401 without a challenge gains the generic
- * `Bearer error="invalid_token"` one, which every 401 on this boundary
- * carries. `Content-Length` is dropped with the replaced body.
+ * headers survive, so `WWW-Authenticate` (firewall 401s keep their bare
+ * `Bearer` challenge; listener 401s carry `Bearer error="invalid_token"`)
+ * and `Allow` (405s) are kept; a 401 with no challenge at all gains the
+ * generic `Bearer error="invalid_token"` one. `Content-Length` is dropped
+ * with the replaced body.
  */
 final class ApiErrorResponseListener
 {
@@ -59,14 +60,7 @@ final class ApiErrorResponseListener
 
         $detail = Response::$statusTexts[$status] ?? 'An error occurred';
 
-        $headers = $response->headers->all();
-        unset($headers['content-length']);
-        $headers['content-type'] = 'application/problem+json';
-        if (Response::HTTP_UNAUTHORIZED === $status && !isset($headers['www-authenticate'])) {
-            $headers['www-authenticate'] = 'Bearer error="invalid_token"';
-        }
-
-        $event->setResponse(new JsonResponse(
+        $converted = new JsonResponse(
             [
                 'title' => 'An error occurred',
                 'detail' => $detail,
@@ -74,7 +68,21 @@ final class ApiErrorResponseListener
                 'type' => "/errors/{$status}",
             ],
             $status,
-            $headers,
-        ));
+        );
+        // API Platform serializes problems with unescaped slashes; match it
+        // byte-for-byte so the edge body is identical to a platform one.
+        $converted->setEncodingOptions(\JSON_UNESCAPED_SLASHES | \JSON_UNESCAPED_UNICODE);
+        foreach ($response->headers->all() as $name => $values) {
+            if ('content-type' === $name || 'content-length' === $name) {
+                continue;
+            }
+            $converted->headers->set($name, $values);
+        }
+        $converted->headers->set('Content-Type', 'application/problem+json');
+        if (Response::HTTP_UNAUTHORIZED === $status && !$converted->headers->has('WWW-Authenticate')) {
+            $converted->headers->set('WWW-Authenticate', 'Bearer error="invalid_token"');
+        }
+
+        $event->setResponse($converted);
     }
 }

@@ -104,6 +104,7 @@ final class TokenGateTest extends ApiV1TestCase
             'status' => 403,
             'detail' => 'This resource requires the "api:full" scope.',
         ]);
+        self::assertArrayNotHasKey('code', $this->decodedBody());
     }
 
     public function testClientNarrowedAfterIssuanceIsForbidden(): void
@@ -151,6 +152,7 @@ final class TokenGateTest extends ApiV1TestCase
             'status' => 403,
             'detail' => 'This account is not eligible to use the API.',
         ]);
+        self::assertArrayNotHasKey('code', $this->decodedBody());
     }
 
     public function testUserDeletedAfterIssuanceIsUnauthorized(): void

@@ -68,10 +68,7 @@ final class ApiAccessListener
         // bookkeeping of its own.
         $user = $token->getUser();
         if (!$user instanceof User) {
-            throw new UnauthorizedHttpException(
-                'Bearer error="invalid_token"',
-                'Authentication is required to access this resource.',
-            );
+            throw self::invalidToken();
         }
 
         if (!str_starts_with($path, '/api/v1')) {
@@ -93,20 +90,32 @@ final class ApiAccessListener
         // between issuance and expiry (up to 15 minutes).
         $decision = $this->approvals->decide($user, $this->clients->find($token->getOAuthClientId()));
 
-        match ($decision) {
-            ConnectionDecision::Allowed => null,
-            ConnectionDecision::ClientUnknownOrInactive => throw new UnauthorizedHttpException(
-                'Bearer error="invalid_token"',
-                'Authentication is required to access this resource.',
-            ),
-            ConnectionDecision::ClientScopeNotApproved => throw self::insufficientScope(),
-            ConnectionDecision::UserNotEligible => throw new ProblemException(
-                '/problems/account-inactive',
-                'Forbidden',
-                403,
-                'This account is not eligible to use the API.',
-            ),
-        };
+        if (ConnectionDecision::Allowed === $decision) {
+            return;
+        }
+
+        if (ConnectionDecision::ClientUnknownOrInactive === $decision) {
+            throw self::invalidToken();
+        }
+
+        if (ConnectionDecision::ClientScopeNotApproved === $decision) {
+            throw self::insufficientScope();
+        }
+
+        throw new ProblemException(
+            '/problems/account-inactive',
+            'Forbidden',
+            403,
+            'This account is not eligible to use the API.',
+        );
+    }
+
+    private static function invalidToken(): UnauthorizedHttpException
+    {
+        return new UnauthorizedHttpException(
+            'Bearer error="invalid_token"',
+            'Authentication is required to access this resource.',
+        );
     }
 
     private static function insufficientScope(): ProblemException
