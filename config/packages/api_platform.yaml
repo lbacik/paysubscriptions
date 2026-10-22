@@ -28,8 +28,11 @@ api_platform:
     # v1 caller uses; Swagger UI signs in with the dedicated public Client
     # `paysubscriptions-api-docs` (a public client id is not a secret, so it
     # is hard-coded here, not an env var). Relative URLs keep the committed
-    # snapshot host-agnostic. `persist_authorization` stays false (the
-    # default): no bearer token in localStorage on a public page.
+    # snapshot host-agnostic. `persist_authorization` stays false (pinned
+    # explicitly, the default): no bearer token in localStorage on a
+    # public page.
+    swagger:
+        persist_authorization: false
     oauth:
         enabled: true
         type: oauth2

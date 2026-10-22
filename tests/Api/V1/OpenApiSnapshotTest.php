@@ -35,10 +35,7 @@ final class OpenApiSnapshotTest extends KernelTestCase
         return $doc;
     }
 
-    /**
-     * @return array<string, mixed>
-     */
-    private static function exportedContract(): array
+    private static function exportedContractContents(): string
     {
         self::bootKernel();
         $command = static::getContainer()->get('api_platform.openapi.command');
@@ -49,10 +46,12 @@ final class OpenApiSnapshotTest extends KernelTestCase
         try {
             self::assertSame(0, $tester->execute(['--output' => $tmp]));
 
-            $doc = json_decode((string) file_get_contents($tmp), true);
-            self::assertIsArray($doc, 'The generated OpenAPI document must be valid JSON.');
+            $contents = file_get_contents($tmp);
+            self::assertIsString($contents, 'The generated OpenAPI export must be readable.');
+            json_decode($contents, true);
+            self::assertSame(JSON_ERROR_NONE, json_last_error(), 'The generated OpenAPI document must be valid JSON.');
 
-            return $doc;
+            return $contents;
         } finally {
             @unlink($tmp);
         }
@@ -60,9 +59,14 @@ final class OpenApiSnapshotTest extends KernelTestCase
 
     public function testGeneratedDocumentMatchesCommittedSnapshot(): void
     {
+        $path = \dirname(__DIR__, 3).'/resources/openapi/v1.json';
+        self::assertFileExists($path);
+        $committed = file_get_contents($path);
+        self::assertIsString($committed, 'The committed v1 OpenAPI snapshot must be readable.');
+
         self::assertSame(
-            self::committedContract(),
-            self::exportedContract(),
+            $committed,
+            self::exportedContractContents(),
             'The generated OpenAPI document drifted from resources/openapi/v1.json. Regenerate it with '.self::REGENERATE.' and review the diff as a contract change.'
         );
     }
@@ -111,5 +115,6 @@ final class OpenApiSnapshotTest extends KernelTestCase
         self::assertSame('/token', $params->get('api_platform.oauth.tokenUrl'));
         self::assertTrue($params->get('api_platform.oauth.pkce'));
         self::assertSame(['api:full'], array_keys($params->get('api_platform.oauth.scopes')));
+        self::assertFalse($params->get('api_platform.swagger.persist_authorization'));
     }
 }

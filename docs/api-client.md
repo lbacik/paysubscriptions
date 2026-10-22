@@ -15,10 +15,12 @@ the operations runbook, `docs/api-operations.md`.
   (nothing persisted). Calling the API from the docs still needs the
   sign-in; reading the docs does not.
 - **The generated OpenAPI document** is the published API v1 contract:
-  `/api/docs.jsonopenapi` serves it publicly (`.json` and the HTML page
-  serve the same document), and `resources/openapi/v1.json` in the
-  repository carries the identical snapshot. Additive backward-compatible
-  changes stay within v1; breaking changes require a new version.
+  `/api/docs.jsonopenapi` serves it publicly (the HTML page serves the
+  same document through Swagger UI; the `^/api/docs` public-access rule
+  also covers the `.json` variant, which API Platform answers itself),
+  and `resources/openapi/v1.json` in the repository carries the identical
+  snapshot. Additive backward-compatible changes stay within v1; breaking
+  changes require a new version.
 
 ## Discovery URLs
 
