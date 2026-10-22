@@ -17,9 +17,9 @@ use PHPUnit\Framework\Attributes\DataProvider;
  * scope and ClientApprovalPolicy for every /api/v1 route, so resource suites
  * do not repeat this matrix.
  *
- * Problem bodies still carry the pre-migration `code` member: the listener
- * switches to the API Platform problem types when the last hand-written
- * resource is migrated.
+ * Failures are problems: 401s render as the generic `/errors/401` (with a
+ * `Bearer` challenge), 403s as `/problems/insufficient-scope` (with the scope
+ * challenge) or `/problems/account-inactive`.
  */
 final class TokenGateTest extends ApiV1TestCase
 {
@@ -48,7 +48,9 @@ final class TokenGateTest extends ApiV1TestCase
 
         self::assertResponseStatusCodeSame(401);
         self::assertResponseHeaderSame('content-type', 'application/problem+json');
-        self::assertJsonContains(['status' => 401, 'code' => 'unauthorized']);
+        self::assertResponseHeaderSame('WWW-Authenticate', 'Bearer');
+        self::assertJsonContains(['type' => '/errors/401', 'status' => 401]);
+        self::assertArrayNotHasKey('code', $this->decodedBody());
     }
 
     public function testTamperedTokenIsUnauthorized(): void
@@ -60,6 +62,8 @@ final class TokenGateTest extends ApiV1TestCase
 
         self::assertResponseStatusCodeSame(401);
         self::assertResponseHeaderSame('content-type', 'application/problem+json');
+        self::assertResponseHeaderSame('WWW-Authenticate', 'Bearer');
+        self::assertJsonContains(['type' => '/errors/401', 'status' => 401]);
     }
 
     /**
@@ -84,6 +88,7 @@ final class TokenGateTest extends ApiV1TestCase
 
         self::assertResponseStatusCodeSame(401);
         self::assertResponseHeaderSame('content-type', 'application/problem+json');
+        self::assertJsonContains(['type' => '/errors/401', 'status' => 401]);
     }
 
     public function testTokenWithoutFullScopeIsForbidden(): void
@@ -92,7 +97,13 @@ final class TokenGateTest extends ApiV1TestCase
 
         self::assertResponseStatusCodeSame(403);
         self::assertResponseHeaderSame('content-type', 'application/problem+json');
-        self::assertJsonContains(['status' => 403, 'code' => 'insufficient_scope']);
+        self::assertResponseHeaderSame('WWW-Authenticate', 'Bearer error="insufficient_scope", scope="api:full"');
+        self::assertJsonContains([
+            'type' => '/problems/insufficient-scope',
+            'title' => 'Forbidden',
+            'status' => 403,
+            'detail' => 'This resource requires the "api:full" scope.',
+        ]);
     }
 
     public function testClientNarrowedAfterIssuanceIsForbidden(): void
@@ -108,7 +119,8 @@ final class TokenGateTest extends ApiV1TestCase
         $this->requestAs($this->user, 'GET', self::URL);
 
         self::assertResponseStatusCodeSame(403);
-        self::assertJsonContains(['code' => 'insufficient_scope']);
+        self::assertResponseHeaderSame('WWW-Authenticate', 'Bearer error="insufficient_scope", scope="api:full"');
+        self::assertJsonContains(['type' => '/problems/insufficient-scope', 'status' => 403]);
     }
 
     public function testClientDeactivatedAfterIssuanceIsUnauthorized(): void
@@ -122,7 +134,8 @@ final class TokenGateTest extends ApiV1TestCase
         $this->requestAs($this->user, 'GET', self::URL);
 
         self::assertResponseStatusCodeSame(401);
-        self::assertJsonContains(['code' => 'invalid_token']);
+        self::assertResponseHeaderSame('WWW-Authenticate', 'Bearer error="invalid_token"');
+        self::assertJsonContains(['type' => '/errors/401', 'status' => 401]);
     }
 
     public function testUnverifiedUserIsForbidden(): void
@@ -132,7 +145,12 @@ final class TokenGateTest extends ApiV1TestCase
         $this->requestAs($unverified, 'GET', self::URL);
 
         self::assertResponseStatusCodeSame(403);
-        self::assertJsonContains(['code' => 'account_inactive']);
+        self::assertJsonContains([
+            'type' => '/problems/account-inactive',
+            'title' => 'Forbidden',
+            'status' => 403,
+            'detail' => 'This account is not eligible to use the API.',
+        ]);
     }
 
     public function testUserDeletedAfterIssuanceIsUnauthorized(): void
@@ -146,16 +164,18 @@ final class TokenGateTest extends ApiV1TestCase
 
         self::assertResponseStatusCodeSame(401);
         self::assertResponseHeaderSame('content-type', 'application/problem+json');
+        self::assertJsonContains(['type' => '/errors/401', 'status' => 401]);
     }
 
     public function testHandWrittenOpenApiDocumentRequiresATokenWithTheSmokeTestedShape(): void
     {
-        // The CI and deploy smoke tests grep this exact code (issue #101).
+        // The CI and deploy smoke tests grep this exact type (issue #101).
         $this->client->request('GET', '/api/v1/openapi.json');
 
         self::assertResponseStatusCodeSame(401);
         self::assertResponseHeaderSame('content-type', 'application/problem+json');
-        self::assertJsonContains(['code' => 'unauthorized']);
+        self::assertResponseHeaderSame('WWW-Authenticate', 'Bearer');
+        self::assertJsonContains(['type' => '/errors/401', 'status' => 401]);
     }
 
     public function testTokenIssuedThroughTheOAuth2FlowOpensTheApi(): void
@@ -211,5 +231,16 @@ final class TokenGateTest extends ApiV1TestCase
 
         self::assertResponseIsSuccessful();
         self::assertStringContainsString('text/html', (string) $browser->getResponse()->headers->get('Content-Type'));
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function decodedBody(): array
+    {
+        $response = $this->client->getResponse();
+        self::assertNotNull($response);
+
+        return $response->toArray(false);
     }
 }

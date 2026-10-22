@@ -276,7 +276,7 @@ final class DashboardReportTest extends ApiV1TestCase
         $problem = json_decode($response->getContent(false), true);
         self::assertSame(422, $problem['status']);
         self::assertSame($expectedPaths, self::violatedPaths($problem));
-        self::assertNotSame('invalid_filter', $problem['code'] ?? null);
+        self::assertArrayNotHasKey('code', $problem);
     }
 
     public function testMonthSelectorAppliesOnlyToMonthlyDirect(): void

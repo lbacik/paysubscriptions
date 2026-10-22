@@ -290,8 +290,8 @@ jobs:
       #
       #     The contract document itself lives behind the same bearer boundary
       #     as the resources (issue #101): an unauthenticated fetch must stop
-      #     at the firewall with the `unauthorized` problem document, which
-      #     proves the route is served by the app rather than the proxy. The
+      #     at the firewall with the generic `/errors/401` problem document,
+      #     which proves the route is served by the app rather than the proxy. The
       #     authorized read of the same document is operator-run from
       #     docs/api-operations.md §7, since it needs a provisioned client.
       - name: Smoke test OAuth2 discovery and OpenAPI
@@ -309,9 +309,9 @@ jobs:
             || fail "JWKS carries no RSA verification key"
           code=$(curl -s -o /tmp/openapi-smoke.json -w '%{http_code}' "$base/api/v1/openapi.json")
           [ "$code" = "401" ] || fail "openapi.json served $code, expected 401"
-          grep -q '"code":"unauthorized"' /tmp/openapi-smoke.json \
-            || fail "openapi.json misses the unauthorized problem document"
-          echo "discovery serves the correct issuer, audience, and key; openapi.json answers 401 unauthorized"
+          grep -q '"type":"/errors/401"' /tmp/openapi-smoke.json \
+            || fail "openapi.json misses the /errors/401 problem document"
+          echo "discovery serves the correct issuer, audience, and key; openapi.json answers 401 with /errors/401"
 
       # (4) The in-container release preflight (issue #100): key material is
       #     configured and readable, the JWKS builds exactly one key, the

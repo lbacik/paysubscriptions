@@ -74,8 +74,7 @@
           "type",
           "title",
           "status",
-          "detail",
-          "code"
+          "detail"
         ],
         "properties": {
           "type": {
@@ -92,10 +91,6 @@
           "detail": {
             "type": "string",
             "description": "Safe human-readable detail; never leaks another User's data."
-          },
-          "code": {
-            "type": "string",
-            "description": "Stable machine-readable code, e.g. subscription_not_found."
           },
           "errors": {
             "type": "array",

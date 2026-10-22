@@ -126,10 +126,16 @@ curl -fsS https://paysubscriptions.com/token \
 
 - Error shape: token-endpoint failures are OAuth2 protocol errors
   (`invalid_grant`, `access_denied`, `unsupported_grant_type`);
-  API failures are `application/problem+json` (`401` unauthenticated,
-  `403` forbidden, `404` missing/foreign id, `409` name collision,
-  category in use, currency conflict, or subscription limit reached,
-  `422` validation with field violations). `invalid_grant` on refresh
+  API failures are `application/problem+json`. Generic errors use the
+  `/errors/{status}` type (`401` missing or invalid token, `404`
+  missing/foreign id, `405` wrong method). A `401` carries a `Bearer`
+  challenge (`error="invalid_token"` when the gate itself refuses the
+  token). A `403` is either `/problems/insufficient-scope` (with
+  `Bearer error="insufficient_scope", scope="api:full"`) or
+  `/problems/account-inactive`. Domain conflicts are `409`
+  `/problems/*` (`category-in-use`, `currency-conflict`,
+  `subscription-limit-reached`); validation failures are `422` with
+  field violations. `invalid_grant` on refresh
   always means re-authorize from §3 — never retry the same token.
 - Housekeeping: `league:oauth2-server:clear-expired-tokens` purges
   expired codes and tokens.
@@ -195,8 +201,8 @@ After every deploy, in this order:
 1. `deploy.yml` already asserts: public `/login` renders with CSRF,
    the database answers from the web container, the three discovery
    documents serve the correct issuer/audience/key, the versioned
-   OpenAPI document answers 401 with the `unauthorized` problem
-   document behind the bearer boundary, and
+   OpenAPI document answers 401 with the generic `/errors/401`
+   problem document behind the bearer boundary, and
    `./bin/console app:api:preflight` passes inside the container
    (keys configured and readable, one JWKS key, discovery and contract
    routes registered, `v1.json` at contract version, database answers).

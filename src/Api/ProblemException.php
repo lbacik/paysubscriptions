@@ -12,6 +12,10 @@ use Symfony\Component\HttpKernel\Exception\HttpException;
  * rendered by API Platform as `application/problem+json`. Used only where one
  * status covers several domain causes a client must tell apart; every other
  * error keeps API Platform's default `/errors/{status}` type.
+ *
+ * Carries protocol headers (e.g. the `WWW-Authenticate` challenge for
+ * insufficient scope) the same way Symfony HTTP exceptions do: API Platform
+ * merges them into the error response.
  */
 final class ProblemException extends HttpException implements ProblemExceptionInterface
 {
@@ -21,8 +25,9 @@ final class ProblemException extends HttpException implements ProblemExceptionIn
         int $status,
         string $detail,
         ?\Throwable $previous = null,
+        array $headers = [],
     ) {
-        parent::__construct($status, $detail, $previous);
+        parent::__construct($status, $detail, $previous, $headers);
     }
 
     public function getType(): string
