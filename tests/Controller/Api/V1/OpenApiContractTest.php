@@ -17,8 +17,9 @@ use Symfony\Component\Routing\RouterInterface;
  * documented operation the implementation does not serve.
  *
  * Until the docs switch, the document covers only the hand-written v1
- * resources: routes served by API Platform (ExpenseCategory, Subscription)
- * are described by API Platform's generated document and skipped here.
+ * resources: routes served by API Platform (ExpenseCategory, Subscription,
+ * dashboard report) are described by API Platform's generated document and
+ * skipped here.
  *
  * Needs no database: it boots the kernel for the route collection and reads
  * the committed file. Per-resource behavior (isolation, validation statuses,
@@ -108,13 +109,15 @@ final class OpenApiContractTest extends KernelTestCase
     {
         $schemas = self::contract()['components']['schemas'];
 
-        self::assertArrayHasKey('DashboardReport', $schemas, 'Schema DashboardReport is missing from the contract.');
+        self::assertArrayHasKey('Problem', $schemas, 'Schema Problem is missing from the contract.');
 
         // Ownership is bearer-implied: no response schema may leak an owner reference.
-        $properties = array_keys($schemas['DashboardReport']['properties'] ?? []);
-        self::assertNotContains('owner', $properties, 'DashboardReport must not expose owner.');
-        self::assertNotContains('owner_id', $properties, 'DashboardReport must not expose owner_id.');
-        self::assertNotContains('ownerId', $properties, 'DashboardReport must not expose ownerId.');
+        foreach ($schemas as $name => $schema) {
+            $properties = array_keys($schema['properties'] ?? []);
+            self::assertNotContains('owner', $properties, sprintf('%s must not expose owner.', $name));
+            self::assertNotContains('owner_id', $properties, sprintf('%s must not expose owner_id.', $name));
+            self::assertNotContains('ownerId', $properties, sprintf('%s must not expose ownerId.', $name));
+        }
     }
 
     public function testSecurityUsesSingleFullAccessScope(): void
@@ -159,7 +162,6 @@ final class OpenApiContractTest extends KernelTestCase
         }
 
         $expectations = [
-            '/reports/dashboard' => ['get' => ['200', '401', '403', '404', '422']],
             '/openapi.json' => ['get' => ['200', '401', '403']],
         ];
 
@@ -172,17 +174,5 @@ final class OpenApiContractTest extends KernelTestCase
                 }
             }
         }
-    }
-
-    public function testReportSelectorsAreDocumented(): void
-    {
-        $doc = self::contract();
-
-        $reportParams = array_column($doc['paths']['/reports/dashboard']['get']['parameters'] ?? [], 'name');
-        foreach (['chartMode', 'basis', 'categoryId', 'month'] as $selector) {
-            self::assertContains($selector, $reportParams);
-        }
-        self::assertNotContains('year', $reportParams, 'v1 has no year selector (decision #84).');
-        self::assertNotContains('dateRange', $reportParams, 'v1 has no date-range selector (decision #84).');
     }
 }
