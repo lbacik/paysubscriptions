@@ -1,140 +1,2148 @@
 {
-  "openapi": "3.0.3",
-  "info": {
-    "title": "PaySubscriptions API",
-    "version": "1.0.0",
-    "description": "Versioned REST API for User-owned resources. This hand-written document covers the resources not yet migrated to API Platform; ExpenseCategory (/expense-categories), Subscription (/subscriptions) and the dashboard snapshot report (issue #99) are served by API Platform and described by its generated document (/api/docs.jsonopenapi). It covers the published v1 OpenAPI contract endpoint (/openapi.json). Additive backward-compatible changes stay within v1; breaking changes require a new version."
-  },
-  "servers": [
-    {
-      "url": "/api/v1"
-    }
-  ],
-  "security": [
-    {
-      "paySubsOAuth2": [
-        "api:full"
-      ]
-    }
-  ],
-  "paths": {
-    "/openapi.json": {
-      "get": {
-        "operationId": "getOpenApiDocument",
-        "summary": "Published v1 OpenAPI contract",
-        "security": [
-          {
-            "paySubsOAuth2": [
-              "api:full"
-            ]
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "The v1 OpenAPI document.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object"
-                }
-              }
-            }
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "403": {
-            "$ref": "#/components/responses/Forbidden"
-          }
-        }
-      }
-    }
-  },
-  "components": {
-    "securitySchemes": {
-      "paySubsOAuth2": {
-        "type": "oauth2",
-        "description": "User-delegated authorization code with S256 PKCE. Manually registered clients only; explicit scope api:full; 15-minute access tokens issued by this server.",
-        "flows": {
-          "authorizationCode": {
-            "authorizationUrl": "/authorize",
-            "tokenUrl": "/token",
-            "refreshUrl": "/token",
-            "scopes": {
-              "api:full": "Full read/write access to the approving User's data."
-            }
-          }
-        }
-      }
+    "openapi": "3.2.0",
+    "info": {
+        "title": "PaySubscriptions API",
+        "description": "Versioned REST API for User-owned resources (v1).",
+        "version": "1.0.0"
     },
-    "schemas": {
-      "Problem": {
-        "type": "object",
-        "required": [
-          "type",
-          "title",
-          "status",
-          "detail"
-        ],
-        "properties": {
-          "type": {
-            "type": "string",
-            "format": "uri",
-            "description": "Stable problem type URI."
-          },
-          "title": {
-            "type": "string"
-          },
-          "status": {
-            "type": "integer"
-          },
-          "detail": {
-            "type": "string",
-            "description": "Safe human-readable detail; never leaks another User's data."
-          },
-          "errors": {
-            "type": "array",
-            "description": "Field-level violations for 422 write operations.",
-            "items": {
-              "type": "object",
-              "required": [
-                "field",
-                "message"
-              ],
-              "properties": {
-                "field": {
-                  "type": "string"
+    "servers": [
+        {
+            "url": "/",
+            "description": ""
+        }
+    ],
+    "paths": {
+        "/api/v1/reports/dashboard": {
+            "get": {
+                "operationId": "api_v1_reports_dashboard",
+                "tags": [
+                    "DashboardReport"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "DashboardReport resource",
+                        "content": {
+                            "application/hal+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DashboardReport.jsonhal"
+                                }
+                            },
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DashboardReport"
+                                }
+                            },
+                            "application/ld+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DashboardReport.jsonld"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            },
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        },
+                        "links": {}
+                    }
                 },
-                "message": {
-                  "type": "string"
+                "summary": "Retrieves a DashboardReport resource.",
+                "description": "Retrieves a DashboardReport resource.",
+                "parameters": [
+                    {
+                        "name": "chartMode",
+                        "in": "query",
+                        "description": "Chart view: twelve-month charge distribution (bar), monthly doughnut (monthly), or yearly doughnut (yearly). Defaults to bar.",
+                        "required": false,
+                        "deprecated": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "bar",
+                                "monthly",
+                                "yearly"
+                            ],
+                            "default": "bar"
+                        },
+                        "style": "form",
+                        "explode": true
+                    },
+                    {
+                        "name": "basis",
+                        "in": "query",
+                        "description": "Direct-cycle charges (direct) or normalized equivalents (equivalent). The bar view supports direct only; monthly equivalent uses per-Subscription monthly calculations over all reportable Subscriptions; yearly equivalent uses yearly calculations. Defaults to direct.",
+                        "required": false,
+                        "deprecated": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "direct",
+                                "equivalent"
+                            ],
+                            "default": "direct"
+                        },
+                        "style": "form",
+                        "explode": true
+                    },
+                    {
+                        "name": "category",
+                        "in": "query",
+                        "description": "Optional User-owned ExpenseCategory UUID filter; omit for all categories. An unknown or foreign UUID matches nothing and renders an empty report.",
+                        "required": false,
+                        "deprecated": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "style": "form",
+                        "explode": true
+                    },
+                    {
+                        "name": "month",
+                        "in": "query",
+                        "description": "Month of the year (1-12) used only by the monthly direct view. Any other use, or a value outside 1-12, is a validation error.",
+                        "required": false,
+                        "deprecated": false,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 12
+                        },
+                        "style": "form",
+                        "explode": true
+                    }
+                ]
+            }
+        },
+        "/api/v1/expense-categories": {
+            "get": {
+                "operationId": "api_v1expense-categories_get_collection",
+                "tags": [
+                    "ExpenseCategory"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "ExpenseCategory collection",
+                        "content": {
+                            "application/hal+json": {
+                                "schema": {
+                                    "description": "ExpenseCategory.jsonhal collection.",
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/HalCollectionBaseSchemaNoPagination"
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "_embedded": {
+                                                    "additionalProperties": {
+                                                        "type": "array",
+                                                        "items": {
+                                                            "$ref": "#/components/schemas/ExpenseCategory.jsonhal"
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/ExpenseCategory"
+                                    }
+                                }
+                            },
+                            "application/ld+json": {
+                                "schema": {
+                                    "type": "object",
+                                    "description": "ExpenseCategory.jsonld collection.",
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/HydraCollectionBaseSchemaNoPagination"
+                                        },
+                                        {
+                                            "type": "object",
+                                            "required": [
+                                                "member"
+                                            ],
+                                            "properties": {
+                                                "member": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "$ref": "#/components/schemas/ExpenseCategory.jsonld"
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                },
+                "summary": "Retrieves the collection of ExpenseCategory resources.",
+                "description": "Retrieves the collection of ExpenseCategory resources.",
+                "parameters": []
+            },
+            "post": {
+                "operationId": "api_v1expense-categories_post",
+                "tags": [
+                    "ExpenseCategory"
+                ],
+                "responses": {
+                    "201": {
+                        "description": "ExpenseCategory resource created",
+                        "content": {
+                            "application/hal+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ExpenseCategory.jsonhal"
+                                }
+                            },
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ExpenseCategory"
+                                }
+                            },
+                            "application/ld+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ExpenseCategory.jsonld"
+                                }
+                            }
+                        },
+                        "links": {}
+                    },
+                    "400": {
+                        "description": "Invalid input",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            },
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        },
+                        "links": {}
+                    },
+                    "422": {
+                        "description": "An error occurred",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ConstraintViolation"
+                                }
+                            },
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ConstraintViolation"
+                                }
+                            }
+                        },
+                        "links": {}
+                    }
+                },
+                "summary": "Creates a ExpenseCategory resource.",
+                "description": "Creates a ExpenseCategory resource.",
+                "parameters": [],
+                "requestBody": {
+                    "description": "The new ExpenseCategory resource",
+                    "content": {
+                        "application/hal+json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ExpenseCategory.jsonhal"
+                            }
+                        },
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ExpenseCategory"
+                            }
+                        },
+                        "application/ld+json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ExpenseCategory"
+                            }
+                        }
+                    },
+                    "required": true
                 }
-              }
             }
-          }
+        },
+        "/api/v1/expense-categories/{id}": {
+            "get": {
+                "operationId": "api_v1expense-categories_id_get",
+                "tags": [
+                    "ExpenseCategory"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "ExpenseCategory resource",
+                        "content": {
+                            "application/hal+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ExpenseCategory.jsonhal"
+                                }
+                            },
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ExpenseCategory"
+                                }
+                            },
+                            "application/ld+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ExpenseCategory.jsonld"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            },
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        },
+                        "links": {}
+                    }
+                },
+                "summary": "Retrieves a ExpenseCategory resource.",
+                "description": "Retrieves a ExpenseCategory resource.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ExpenseCategory identifier",
+                        "required": true,
+                        "deprecated": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "style": "simple",
+                        "explode": false
+                    }
+                ]
+            },
+            "delete": {
+                "operationId": "api_v1expense-categories_id_delete",
+                "tags": [
+                    "ExpenseCategory"
+                ],
+                "responses": {
+                    "204": {
+                        "description": "ExpenseCategory resource deleted"
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            },
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        },
+                        "links": {}
+                    }
+                },
+                "summary": "Removes the ExpenseCategory resource.",
+                "description": "Removes the ExpenseCategory resource.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ExpenseCategory identifier",
+                        "required": true,
+                        "deprecated": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "style": "simple",
+                        "explode": false
+                    }
+                ]
+            },
+            "patch": {
+                "operationId": "api_v1expense-categories_id_patch",
+                "tags": [
+                    "ExpenseCategory"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "ExpenseCategory resource updated",
+                        "content": {
+                            "application/hal+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ExpenseCategory.jsonhal"
+                                }
+                            },
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ExpenseCategory"
+                                }
+                            },
+                            "application/ld+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ExpenseCategory.jsonld"
+                                }
+                            }
+                        },
+                        "links": {}
+                    },
+                    "400": {
+                        "description": "Invalid input",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            },
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        },
+                        "links": {}
+                    },
+                    "422": {
+                        "description": "An error occurred",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ConstraintViolation"
+                                }
+                            },
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ConstraintViolation"
+                                }
+                            }
+                        },
+                        "links": {}
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            },
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        },
+                        "links": {}
+                    }
+                },
+                "summary": "Updates the ExpenseCategory resource.",
+                "description": "Updates the ExpenseCategory resource.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ExpenseCategory identifier",
+                        "required": true,
+                        "deprecated": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "style": "simple",
+                        "explode": false
+                    }
+                ],
+                "requestBody": {
+                    "description": "The updated ExpenseCategory resource",
+                    "content": {
+                        "application/merge-patch+json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ExpenseCategory.jsonMergePatch"
+                            }
+                        }
+                    },
+                    "required": true
+                }
+            }
+        },
+        "/api/v1/subscriptions": {
+            "get": {
+                "operationId": "api_v1_subscriptions_list",
+                "tags": [
+                    "Subscription"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Subscription collection",
+                        "content": {
+                            "application/hal+json": {
+                                "schema": {
+                                    "description": "Subscription.jsonhal collection.",
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/HalCollectionBaseSchema"
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "_embedded": {
+                                                    "additionalProperties": {
+                                                        "type": "array",
+                                                        "items": {
+                                                            "$ref": "#/components/schemas/Subscription.jsonhal"
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/Subscription"
+                                    }
+                                }
+                            },
+                            "application/ld+json": {
+                                "schema": {
+                                    "type": "object",
+                                    "description": "Subscription.jsonld collection.",
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/HydraCollectionBaseSchema"
+                                        },
+                                        {
+                                            "type": "object",
+                                            "required": [
+                                                "member"
+                                            ],
+                                            "properties": {
+                                                "member": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "$ref": "#/components/schemas/Subscription.jsonld"
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                },
+                "summary": "Retrieves the collection of Subscription resources.",
+                "description": "Retrieves the collection of Subscription resources.",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "The collection page number",
+                        "required": false,
+                        "deprecated": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1
+                        },
+                        "style": "form",
+                        "explode": true
+                    }
+                ]
+            },
+            "post": {
+                "operationId": "api_v1_subscriptions_create",
+                "tags": [
+                    "Subscription"
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Subscription resource created",
+                        "content": {
+                            "application/hal+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Subscription.jsonhal"
+                                }
+                            },
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Subscription"
+                                }
+                            },
+                            "application/ld+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Subscription.jsonld"
+                                }
+                            }
+                        },
+                        "links": {}
+                    },
+                    "400": {
+                        "description": "Invalid input",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            },
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        },
+                        "links": {}
+                    },
+                    "422": {
+                        "description": "An error occurred",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ConstraintViolation"
+                                }
+                            },
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ConstraintViolation"
+                                }
+                            }
+                        },
+                        "links": {}
+                    }
+                },
+                "summary": "Creates a Subscription resource.",
+                "description": "Creates a Subscription resource.",
+                "parameters": [],
+                "requestBody": {
+                    "description": "The new Subscription resource",
+                    "content": {
+                        "application/hal+json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Subscription.jsonhal"
+                            }
+                        },
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Subscription"
+                            }
+                        },
+                        "application/ld+json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Subscription"
+                            }
+                        }
+                    },
+                    "required": true
+                }
+            }
+        },
+        "/api/v1/subscriptions/{id}": {
+            "get": {
+                "operationId": "api_v1_subscriptions_show",
+                "tags": [
+                    "Subscription"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Subscription resource",
+                        "content": {
+                            "application/hal+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Subscription.jsonhal"
+                                }
+                            },
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Subscription"
+                                }
+                            },
+                            "application/ld+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Subscription.jsonld"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            },
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        },
+                        "links": {}
+                    }
+                },
+                "summary": "Retrieves a Subscription resource.",
+                "description": "Retrieves a Subscription resource.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Subscription identifier",
+                        "required": true,
+                        "deprecated": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "style": "simple",
+                        "explode": false
+                    }
+                ]
+            },
+            "delete": {
+                "operationId": "api_v1_subscriptions_delete",
+                "tags": [
+                    "Subscription"
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Subscription resource deleted"
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            },
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        },
+                        "links": {}
+                    }
+                },
+                "summary": "Removes the Subscription resource.",
+                "description": "Removes the Subscription resource.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Subscription identifier",
+                        "required": true,
+                        "deprecated": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "style": "simple",
+                        "explode": false
+                    }
+                ]
+            },
+            "patch": {
+                "operationId": "api_v1_subscriptions_update",
+                "tags": [
+                    "Subscription"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Subscription resource updated",
+                        "content": {
+                            "application/hal+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Subscription.jsonhal"
+                                }
+                            },
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Subscription"
+                                }
+                            },
+                            "application/ld+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Subscription.jsonld"
+                                }
+                            }
+                        },
+                        "links": {}
+                    },
+                    "400": {
+                        "description": "Invalid input",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            },
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        },
+                        "links": {}
+                    },
+                    "422": {
+                        "description": "An error occurred",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ConstraintViolation"
+                                }
+                            },
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ConstraintViolation"
+                                }
+                            }
+                        },
+                        "links": {}
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            },
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        },
+                        "links": {}
+                    }
+                },
+                "summary": "Updates the Subscription resource.",
+                "description": "Updates the Subscription resource.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Subscription identifier",
+                        "required": true,
+                        "deprecated": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "style": "simple",
+                        "explode": false
+                    }
+                ],
+                "requestBody": {
+                    "description": "The updated Subscription resource",
+                    "content": {
+                        "application/merge-patch+json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Subscription.jsonMergePatch"
+                            }
+                        }
+                    },
+                    "required": true
+                }
+            }
         }
-      }
     },
-    "responses": {
-      "Unauthorized": {
-        "description": "Missing or invalid bearer token.",
-        "content": {
-          "application/problem+json": {
-            "schema": {
-              "$ref": "#/components/schemas/Problem"
+    "components": {
+        "schemas": {
+            "ConstraintViolation": {
+                "type": "object",
+                "description": "Unprocessable entity",
+                "properties": {
+                    "status": {
+                        "default": 422,
+                        "type": "integer"
+                    },
+                    "violations": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "propertyPath": {
+                                    "type": "string",
+                                    "description": "The property path of the violation"
+                                },
+                                "message": {
+                                    "type": "string",
+                                    "description": "The message associated with the violation"
+                                },
+                                "code": {
+                                    "type": "string",
+                                    "description": "The code of the violation"
+                                },
+                                "hint": {
+                                    "type": "string",
+                                    "description": "An extra hint to understand the violation"
+                                },
+                                "payload": {
+                                    "type": "object",
+                                    "additionalProperties": true,
+                                    "description": "The serialized payload of the violation"
+                                }
+                            },
+                            "required": [
+                                "propertyPath",
+                                "message"
+                            ]
+                        }
+                    },
+                    "detail": {
+                        "readOnly": true,
+                        "type": "string"
+                    },
+                    "type": {
+                        "readOnly": true,
+                        "type": "string"
+                    },
+                    "title": {
+                        "readOnly": true,
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "instance": {
+                        "readOnly": true,
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                }
+            },
+            "DashboardChart": {
+                "type": "object",
+                "properties": {
+                    "mode": {
+                        "type": "string"
+                    },
+                    "basis": {
+                        "type": "string"
+                    },
+                    "currency": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "labels": {
+                        "description": "month names (bar) or Subscription names (monthly/yearly)",
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "data": {
+                        "description": "decimal strings parallel to labels (monthly/yearly); null for bar",
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "datasets": {
+                        "description": "per-Subscription series (bar); null for monthly/yearly",
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/DashboardDataset"
+                        }
+                    },
+                    "empty": {
+                        "type": "boolean"
+                    },
+                    "hiddenCount": {
+                        "type": "integer"
+                    },
+                    "hiddenCycle": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                }
+            },
+            "DashboardChart.jsonld": {
+                "type": "object",
+                "properties": {
+                    "mode": {
+                        "type": "string"
+                    },
+                    "basis": {
+                        "type": "string"
+                    },
+                    "currency": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "labels": {
+                        "description": "month names (bar) or Subscription names (monthly/yearly)",
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "data": {
+                        "description": "decimal strings parallel to labels (monthly/yearly); null for bar",
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "datasets": {
+                        "description": "per-Subscription series (bar); null for monthly/yearly",
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/DashboardDataset.jsonld"
+                        }
+                    },
+                    "empty": {
+                        "type": "boolean"
+                    },
+                    "hiddenCount": {
+                        "type": "integer"
+                    },
+                    "hiddenCycle": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                }
+            },
+            "DashboardDataset": {
+                "type": "object",
+                "properties": {
+                    "label": {
+                        "type": "string"
+                    },
+                    "data": {
+                        "description": "decimal strings parallel to the month labels",
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "DashboardDataset.jsonld": {
+                "type": "object",
+                "properties": {
+                    "label": {
+                        "type": "string"
+                    },
+                    "data": {
+                        "description": "decimal strings parallel to the month labels",
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "DashboardFilters": {
+                "type": "object",
+                "properties": {
+                    "chartMode": {
+                        "type": "string"
+                    },
+                    "basis": {
+                        "type": "string"
+                    },
+                    "category": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "month": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    }
+                }
+            },
+            "DashboardFilters.jsonld": {
+                "type": "object",
+                "properties": {
+                    "chartMode": {
+                        "type": "string"
+                    },
+                    "basis": {
+                        "type": "string"
+                    },
+                    "category": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "month": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    }
+                }
+            },
+            "DashboardReport": {
+                "type": "object",
+                "description": "Current dashboard snapshot: summary cards plus one chart mode. Stateless snapshot of the authenticated User's Subscriptions reusing the web dashboard calculations. Summary mirrors SubscriptionService::getTotals() plus the User limit; chart series mirror ChartService numeric data with basis/visibility metadata instead of Chart.js options. Pending-review cross-currency Subscriptions stay in counts but are excluded from monetary totals and charts. The month selector applies only to the monthly direct view (monthly Subscriptions plus yearly ones whose next-payment month matches). No year, date-range, payment-history, or forecast semantics.",
+                "properties": {
+                    "summary": {
+                        "$ref": "#/components/schemas/DashboardSummary"
+                    },
+                    "chart": {
+                        "$ref": "#/components/schemas/DashboardChart"
+                    },
+                    "filters": {
+                        "$ref": "#/components/schemas/DashboardFilters"
+                    }
+                }
+            },
+            "DashboardReport.jsonhal": {
+                "allOf": [
+                    {
+                        "type": "object",
+                        "properties": {
+                            "_links": {
+                                "type": "object",
+                                "properties": {
+                                    "self": {
+                                        "type": "object",
+                                        "properties": {
+                                            "href": {
+                                                "type": "string",
+                                                "format": "iri-reference"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "$ref": "#/components/schemas/DashboardReport"
+                    }
+                ],
+                "description": "Current dashboard snapshot: summary cards plus one chart mode. Stateless snapshot of the authenticated User's Subscriptions reusing the web dashboard calculations. Summary mirrors SubscriptionService::getTotals() plus the User limit; chart series mirror ChartService numeric data with basis/visibility metadata instead of Chart.js options. Pending-review cross-currency Subscriptions stay in counts but are excluded from monetary totals and charts. The month selector applies only to the monthly direct view (monthly Subscriptions plus yearly ones whose next-payment month matches). No year, date-range, payment-history, or forecast semantics."
+            },
+            "DashboardReport.jsonld": {
+                "allOf": [
+                    {
+                        "$ref": "#/components/schemas/HydraItemBaseSchema"
+                    },
+                    {
+                        "type": "object",
+                        "properties": {
+                            "summary": {
+                                "$ref": "#/components/schemas/DashboardSummary.jsonld"
+                            },
+                            "chart": {
+                                "$ref": "#/components/schemas/DashboardChart.jsonld"
+                            },
+                            "filters": {
+                                "$ref": "#/components/schemas/DashboardFilters.jsonld"
+                            }
+                        }
+                    }
+                ],
+                "description": "Current dashboard snapshot: summary cards plus one chart mode. Stateless snapshot of the authenticated User's Subscriptions reusing the web dashboard calculations. Summary mirrors SubscriptionService::getTotals() plus the User limit; chart series mirror ChartService numeric data with basis/visibility metadata instead of Chart.js options. Pending-review cross-currency Subscriptions stay in counts but are excluded from monetary totals and charts. The month selector applies only to the monthly direct view (monthly Subscriptions plus yearly ones whose next-payment month matches). No year, date-range, payment-history, or forecast semantics."
+            },
+            "DashboardSummary": {
+                "type": "object",
+                "properties": {
+                    "monthly": {
+                        "type": "string"
+                    },
+                    "yearly": {
+                        "type": "string"
+                    },
+                    "monthlyEquivalent": {
+                        "type": "string"
+                    },
+                    "yearlyEquivalent": {
+                        "type": "string"
+                    },
+                    "count": {
+                        "type": "integer"
+                    },
+                    "limit": {
+                        "type": "integer"
+                    },
+                    "currency": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "pendingReview": {
+                        "type": "integer"
+                    }
+                }
+            },
+            "DashboardSummary.jsonld": {
+                "type": "object",
+                "properties": {
+                    "monthly": {
+                        "type": "string"
+                    },
+                    "yearly": {
+                        "type": "string"
+                    },
+                    "monthlyEquivalent": {
+                        "type": "string"
+                    },
+                    "yearlyEquivalent": {
+                        "type": "string"
+                    },
+                    "count": {
+                        "type": "integer"
+                    },
+                    "limit": {
+                        "type": "integer"
+                    },
+                    "currency": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "pendingReview": {
+                        "type": "integer"
+                    }
+                }
+            },
+            "Error": {
+                "type": "object",
+                "description": "A representation of common errors.",
+                "properties": {
+                    "title": {
+                        "readOnly": true,
+                        "description": "A short, human-readable summary of the problem.",
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "detail": {
+                        "readOnly": true,
+                        "description": "A human-readable explanation specific to this occurrence of the problem.",
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "status": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ],
+                        "examples": [
+                            404
+                        ],
+                        "default": 400
+                    },
+                    "instance": {
+                        "readOnly": true,
+                        "description": "A URI reference that identifies the specific occurrence of the problem. It may or may not yield further information if dereferenced.",
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "type": {
+                        "readOnly": true,
+                        "description": "A URI reference that identifies the problem type",
+                        "type": "string"
+                    }
+                }
+            },
+            "ExpenseCategory": {
+                "type": "object",
+                "description": "API v1 ExpenseCategory: a DTO backed by the entity through stateOptions\nand the object mapper (ADR 0007). Reads use API Platform's Doctrine\nprovider, scoped to the token User by UserOwnedExtension; writes are mapped\nonto the entity and go through ExpenseCategoryService in\nExpenseCategoryProcessor.\n\nThe collection is not paginated: it is a small per-User picker a client\nneeds whole.",
+                "properties": {
+                    "id": {
+                        "readOnly": true,
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "uuid"
+                    },
+                    "name": {
+                        "minLength": 2,
+                        "maxLength": 100,
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "color": {
+                        "pattern": "^(#[0-9a-fA-F]{6})$",
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "createdAt": {
+                        "readOnly": true,
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "updatedAt": {
+                        "readOnly": true,
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    }
+                },
+                "required": [
+                    "name",
+                    "color"
+                ]
+            },
+            "ExpenseCategory.jsonMergePatch": {
+                "type": "object",
+                "description": "API v1 ExpenseCategory: a DTO backed by the entity through stateOptions\nand the object mapper (ADR 0007). Reads use API Platform's Doctrine\nprovider, scoped to the token User by UserOwnedExtension; writes are mapped\nonto the entity and go through ExpenseCategoryService in\nExpenseCategoryProcessor.\n\nThe collection is not paginated: it is a small per-User picker a client\nneeds whole.",
+                "properties": {
+                    "id": {
+                        "readOnly": true,
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "uuid"
+                    },
+                    "name": {
+                        "minLength": 2,
+                        "maxLength": 100,
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "color": {
+                        "pattern": "^(#[0-9a-fA-F]{6})$",
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "createdAt": {
+                        "readOnly": true,
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "updatedAt": {
+                        "readOnly": true,
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    }
+                }
+            },
+            "ExpenseCategory.jsonhal": {
+                "allOf": [
+                    {
+                        "type": "object",
+                        "properties": {
+                            "_links": {
+                                "type": "object",
+                                "properties": {
+                                    "self": {
+                                        "type": "object",
+                                        "properties": {
+                                            "href": {
+                                                "type": "string",
+                                                "format": "iri-reference"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "$ref": "#/components/schemas/ExpenseCategory"
+                    }
+                ],
+                "description": "API v1 ExpenseCategory: a DTO backed by the entity through stateOptions\nand the object mapper (ADR 0007). Reads use API Platform's Doctrine\nprovider, scoped to the token User by UserOwnedExtension; writes are mapped\nonto the entity and go through ExpenseCategoryService in\nExpenseCategoryProcessor.\n\nThe collection is not paginated: it is a small per-User picker a client\nneeds whole."
+            },
+            "ExpenseCategory.jsonld": {
+                "allOf": [
+                    {
+                        "$ref": "#/components/schemas/HydraItemBaseSchema"
+                    },
+                    {
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "readOnly": true,
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "format": "uuid"
+                            },
+                            "name": {
+                                "minLength": 2,
+                                "maxLength": 100,
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "color": {
+                                "pattern": "^(#[0-9a-fA-F]{6})$",
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "createdAt": {
+                                "readOnly": true,
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "format": "date-time"
+                            },
+                            "updatedAt": {
+                                "readOnly": true,
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "format": "date-time"
+                            }
+                        },
+                        "required": [
+                            "name",
+                            "color"
+                        ]
+                    }
+                ],
+                "description": "API v1 ExpenseCategory: a DTO backed by the entity through stateOptions\nand the object mapper (ADR 0007). Reads use API Platform's Doctrine\nprovider, scoped to the token User by UserOwnedExtension; writes are mapped\nonto the entity and go through ExpenseCategoryService in\nExpenseCategoryProcessor.\n\nThe collection is not paginated: it is a small per-User picker a client\nneeds whole."
+            },
+            "HalCollectionBaseSchema": {
+                "allOf": [
+                    {
+                        "$ref": "#/components/schemas/HalCollectionBaseSchemaNoPagination"
+                    },
+                    {
+                        "type": "object",
+                        "properties": {
+                            "itemsPerPage": {
+                                "type": "integer",
+                                "minimum": 0
+                            },
+                            "_links": {
+                                "properties": {
+                                    "first": {
+                                        "type": "object",
+                                        "properties": {
+                                            "href": {
+                                                "type": "string",
+                                                "format": "iri-reference"
+                                            }
+                                        }
+                                    },
+                                    "last": {
+                                        "type": "object",
+                                        "properties": {
+                                            "href": {
+                                                "type": "string",
+                                                "format": "iri-reference"
+                                            }
+                                        }
+                                    },
+                                    "next": {
+                                        "type": "object",
+                                        "properties": {
+                                            "href": {
+                                                "type": "string",
+                                                "format": "iri-reference"
+                                            }
+                                        }
+                                    },
+                                    "previous": {
+                                        "type": "object",
+                                        "properties": {
+                                            "href": {
+                                                "type": "string",
+                                                "format": "iri-reference"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                ]
+            },
+            "HalCollectionBaseSchemaNoPagination": {
+                "type": "object",
+                "properties": {
+                    "totalItems": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "_embedded": {
+                        "anyOf": [
+                            {
+                                "type": "object",
+                                "properties": {
+                                    "item": {
+                                        "type": "array"
+                                    }
+                                }
+                            },
+                            {
+                                "type": "object"
+                            }
+                        ]
+                    },
+                    "_links": {
+                        "type": "object",
+                        "properties": {
+                            "self": {
+                                "type": "object",
+                                "properties": {
+                                    "href": {
+                                        "type": "string",
+                                        "format": "iri-reference"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "required": [
+                    "_links",
+                    "_embedded"
+                ]
+            },
+            "HydraCollectionBaseSchema": {
+                "allOf": [
+                    {
+                        "$ref": "#/components/schemas/HydraCollectionBaseSchemaNoPagination"
+                    },
+                    {
+                        "type": "object",
+                        "properties": {
+                            "view": {
+                                "type": "object",
+                                "properties": {
+                                    "@id": {
+                                        "type": "string",
+                                        "format": "iri-reference"
+                                    },
+                                    "@type": {
+                                        "type": "string"
+                                    },
+                                    "first": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "format": "iri-reference"
+                                    },
+                                    "last": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "format": "iri-reference"
+                                    },
+                                    "previous": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "format": "iri-reference"
+                                    },
+                                    "next": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "format": "iri-reference"
+                                    }
+                                },
+                                "example": {
+                                    "@id": "string",
+                                    "@type": "string",
+                                    "first": "string",
+                                    "last": "string",
+                                    "previous": "string",
+                                    "next": "string"
+                                }
+                            }
+                        }
+                    }
+                ]
+            },
+            "HydraCollectionBaseSchemaNoPagination": {
+                "type": "object",
+                "properties": {
+                    "totalItems": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "search": {
+                        "type": "object",
+                        "properties": {
+                            "@type": {
+                                "type": "string"
+                            },
+                            "template": {
+                                "type": "string"
+                            },
+                            "variableRepresentation": {
+                                "type": "string"
+                            },
+                            "mapping": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "@type": {
+                                            "type": "string"
+                                        },
+                                        "variable": {
+                                            "type": "string"
+                                        },
+                                        "property": {
+                                            "type": [
+                                                "string",
+                                                "null"
+                                            ]
+                                        },
+                                        "required": {
+                                            "type": "boolean"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "HydraItemBaseSchema": {
+                "type": "object",
+                "properties": {
+                    "@context": {
+                        "oneOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "object",
+                                "properties": {
+                                    "@vocab": {
+                                        "type": "string"
+                                    },
+                                    "hydra": {
+                                        "type": "string",
+                                        "enum": [
+                                            "http://www.w3.org/ns/hydra/core#"
+                                        ]
+                                    }
+                                },
+                                "required": [
+                                    "@vocab",
+                                    "hydra"
+                                ],
+                                "additionalProperties": true
+                            }
+                        ]
+                    },
+                    "@id": {
+                        "type": "string"
+                    },
+                    "@type": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "@id",
+                    "@type"
+                ]
+            },
+            "Subscription": {
+                "type": "object",
+                "description": "API v1 Subscription: a DTO backed by the entity through stateOptions and\nthe object mapper (ADR 0007). Item reads use API Platform's Doctrine\nprovider, scoped to the token User by UserOwnedExtension, so a foreign\nidentifier is a 404; the collection uses a custom provider because the\nprice and renewal sorts are computed in SubscriptionService and cannot be\nexpressed as Doctrine ordering. Writes go through SubscriptionService in\nSubscriptionProcessor, which reads this DTO (never the mapped entity) so\nthe client's intent stays visible: the supplied PATCH members and the\nwrite-only confirmConvertedFor.\n\nMoney travels as a decimal string (\"15.99\") in both directions; category\nis an expense-category IRI and appears under _links.category in HAL. The\ncollection is paginated (25 per page, 1-based page) and sorted/filtered\nthrough the `order` and `category` query parameters, validated in the\ncollection provider.",
+                "properties": {
+                    "id": {
+                        "readOnly": true,
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "uuid"
+                    },
+                    "name": {
+                        "minLength": 3,
+                        "maxLength": 255,
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "billingCycle": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "enum": [
+                            "monthly",
+                            "yearly",
+                            null
+                        ]
+                    },
+                    "amount": {
+                        "pattern": "^(\\d+(\\.\\d{1,2})?)$",
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "nextPayment": {
+                        "pattern": "^(\\d{4}-\\d{2}-\\d{2})$",
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "currency": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "convertedAmount": {
+                        "pattern": "^(\\d+(\\.\\d{1,2})?)$",
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "convertedCurrency": {
+                        "readOnly": true,
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "pendingReview": {
+                        "readOnly": true,
+                        "type": [
+                            "boolean",
+                            "null"
+                        ]
+                    },
+                    "category": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "iri-reference",
+                        "example": "https://example.com/"
+                    },
+                    "confirmConvertedFor": {
+                        "writeOnly": true,
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "notes": {
+                        "maxLength": 2000,
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "createdAt": {
+                        "readOnly": true,
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "updatedAt": {
+                        "readOnly": true,
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    }
+                },
+                "required": [
+                    "name",
+                    "billingCycle",
+                    "amount",
+                    "nextPayment"
+                ]
+            },
+            "Subscription.jsonMergePatch": {
+                "type": "object",
+                "description": "API v1 Subscription: a DTO backed by the entity through stateOptions and\nthe object mapper (ADR 0007). Item reads use API Platform's Doctrine\nprovider, scoped to the token User by UserOwnedExtension, so a foreign\nidentifier is a 404; the collection uses a custom provider because the\nprice and renewal sorts are computed in SubscriptionService and cannot be\nexpressed as Doctrine ordering. Writes go through SubscriptionService in\nSubscriptionProcessor, which reads this DTO (never the mapped entity) so\nthe client's intent stays visible: the supplied PATCH members and the\nwrite-only confirmConvertedFor.\n\nMoney travels as a decimal string (\"15.99\") in both directions; category\nis an expense-category IRI and appears under _links.category in HAL. The\ncollection is paginated (25 per page, 1-based page) and sorted/filtered\nthrough the `order` and `category` query parameters, validated in the\ncollection provider.",
+                "properties": {
+                    "id": {
+                        "readOnly": true,
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "uuid"
+                    },
+                    "name": {
+                        "minLength": 3,
+                        "maxLength": 255,
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "billingCycle": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "enum": [
+                            "monthly",
+                            "yearly",
+                            null
+                        ]
+                    },
+                    "amount": {
+                        "pattern": "^(\\d+(\\.\\d{1,2})?)$",
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "nextPayment": {
+                        "pattern": "^(\\d{4}-\\d{2}-\\d{2})$",
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "currency": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "convertedAmount": {
+                        "pattern": "^(\\d+(\\.\\d{1,2})?)$",
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "convertedCurrency": {
+                        "readOnly": true,
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "pendingReview": {
+                        "readOnly": true,
+                        "type": [
+                            "boolean",
+                            "null"
+                        ]
+                    },
+                    "category": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "iri-reference",
+                        "example": "https://example.com/"
+                    },
+                    "confirmConvertedFor": {
+                        "writeOnly": true,
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "notes": {
+                        "maxLength": 2000,
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "createdAt": {
+                        "readOnly": true,
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "updatedAt": {
+                        "readOnly": true,
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    }
+                }
+            },
+            "Subscription.jsonhal": {
+                "allOf": [
+                    {
+                        "type": "object",
+                        "properties": {
+                            "_links": {
+                                "type": "object",
+                                "properties": {
+                                    "self": {
+                                        "type": "object",
+                                        "properties": {
+                                            "href": {
+                                                "type": "string",
+                                                "format": "iri-reference"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "$ref": "#/components/schemas/Subscription"
+                    }
+                ],
+                "description": "API v1 Subscription: a DTO backed by the entity through stateOptions and\nthe object mapper (ADR 0007). Item reads use API Platform's Doctrine\nprovider, scoped to the token User by UserOwnedExtension, so a foreign\nidentifier is a 404; the collection uses a custom provider because the\nprice and renewal sorts are computed in SubscriptionService and cannot be\nexpressed as Doctrine ordering. Writes go through SubscriptionService in\nSubscriptionProcessor, which reads this DTO (never the mapped entity) so\nthe client's intent stays visible: the supplied PATCH members and the\nwrite-only confirmConvertedFor.\n\nMoney travels as a decimal string (\"15.99\") in both directions; category\nis an expense-category IRI and appears under _links.category in HAL. The\ncollection is paginated (25 per page, 1-based page) and sorted/filtered\nthrough the `order` and `category` query parameters, validated in the\ncollection provider."
+            },
+            "Subscription.jsonld": {
+                "allOf": [
+                    {
+                        "$ref": "#/components/schemas/HydraItemBaseSchema"
+                    },
+                    {
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "readOnly": true,
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "format": "uuid"
+                            },
+                            "name": {
+                                "minLength": 3,
+                                "maxLength": 255,
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "billingCycle": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "enum": [
+                                    "monthly",
+                                    "yearly",
+                                    null
+                                ]
+                            },
+                            "amount": {
+                                "pattern": "^(\\d+(\\.\\d{1,2})?)$",
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "nextPayment": {
+                                "pattern": "^(\\d{4}-\\d{2}-\\d{2})$",
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "currency": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "convertedAmount": {
+                                "pattern": "^(\\d+(\\.\\d{1,2})?)$",
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "convertedCurrency": {
+                                "readOnly": true,
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "pendingReview": {
+                                "readOnly": true,
+                                "type": [
+                                    "boolean",
+                                    "null"
+                                ]
+                            },
+                            "category": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "format": "iri-reference",
+                                "example": "https://example.com/"
+                            },
+                            "confirmConvertedFor": {
+                                "writeOnly": true,
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "notes": {
+                                "maxLength": 2000,
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "createdAt": {
+                                "readOnly": true,
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "format": "date-time"
+                            },
+                            "updatedAt": {
+                                "readOnly": true,
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "format": "date-time"
+                            }
+                        },
+                        "required": [
+                            "name",
+                            "billingCycle",
+                            "amount",
+                            "nextPayment"
+                        ]
+                    }
+                ],
+                "description": "API v1 Subscription: a DTO backed by the entity through stateOptions and\nthe object mapper (ADR 0007). Item reads use API Platform's Doctrine\nprovider, scoped to the token User by UserOwnedExtension, so a foreign\nidentifier is a 404; the collection uses a custom provider because the\nprice and renewal sorts are computed in SubscriptionService and cannot be\nexpressed as Doctrine ordering. Writes go through SubscriptionService in\nSubscriptionProcessor, which reads this DTO (never the mapped entity) so\nthe client's intent stays visible: the supplied PATCH members and the\nwrite-only confirmConvertedFor.\n\nMoney travels as a decimal string (\"15.99\") in both directions; category\nis an expense-category IRI and appears under _links.category in HAL. The\ncollection is paginated (25 per page, 1-based page) and sorted/filtered\nthrough the `order` and `category` query parameters, validated in the\ncollection provider."
             }
-          }
-        }
-      },
-      "Forbidden": {
-        "description": "Valid token without api:full scope, unapproved client, or ineligible account.",
-        "content": {
-          "application/problem+json": {
-            "schema": {
-              "$ref": "#/components/schemas/Problem"
+        },
+        "responses": {},
+        "parameters": {},
+        "examples": {},
+        "requestBodies": {},
+        "headers": {},
+        "securitySchemes": {
+            "oauth": {
+                "type": "oauth2",
+                "description": "OAuth 2.0 authorization code Grant",
+                "flows": {
+                    "authorizationCode": {
+                        "authorizationUrl": "/authorize",
+                        "tokenUrl": "/token",
+                        "scopes": {
+                            "api:full": "Full read/write access to the approving User's data."
+                        }
+                    }
+                }
             }
-          }
         }
-      }
-    }
-  }
+    },
+    "security": [
+        {
+            "oauth": [
+                "api:full"
+            ]
+        }
+    ],
+    "tags": [
+        {
+            "name": "DashboardReport",
+            "description": "Dashboard snapshot report for API v1: the current User's summary-card\nvalues and the numeric data behind one dashboard chart mode in a single\nresponse (issue #99).\n\nA DTO resource with a custom provider over DashboardReporter: there is no\nentity behind it (ADR 0007). Calculations reuse the Dashboard report\nmodule, so figures match the dashboard exactly: the summary comes from\nSubscriptionService::getTotals() through DashboardReporter, and the chart\nseries and visibility metadata are the same DashboardReport the web\ndashboard renders.\n\nThe request is stateless: the optional category filter and the month-of-year\nselector travel as explicit query parameters rather than web-session list\nstate. No year, date-range, payment-history, or forecast semantics are\noffered. Pending-review cross-currency Subscriptions stay in the count but\nare excluded from monetary totals and charts, exactly as on the dashboard.\n\nAn unknown or foreign category is not an error: the User-scoped query\nmatches nothing, so the report renders zero totals and an empty chart."
+        },
+        {
+            "name": "ExpenseCategory",
+            "description": "API v1 ExpenseCategory: a DTO backed by the entity through stateOptions\nand the object mapper (ADR 0007). Reads use API Platform's Doctrine\nprovider, scoped to the token User by UserOwnedExtension; writes are mapped\nonto the entity and go through ExpenseCategoryService in\nExpenseCategoryProcessor.\n\nThe collection is not paginated: it is a small per-User picker a client\nneeds whole."
+        },
+        {
+            "name": "Subscription",
+            "description": "API v1 Subscription: a DTO backed by the entity through stateOptions and\nthe object mapper (ADR 0007). Item reads use API Platform's Doctrine\nprovider, scoped to the token User by UserOwnedExtension, so a foreign\nidentifier is a 404; the collection uses a custom provider because the\nprice and renewal sorts are computed in SubscriptionService and cannot be\nexpressed as Doctrine ordering. Writes go through SubscriptionService in\nSubscriptionProcessor, which reads this DTO (never the mapped entity) so\nthe client's intent stays visible: the supplied PATCH members and the\nwrite-only confirmConvertedFor.\n\nMoney travels as a decimal string (\"15.99\") in both directions; category\nis an expense-category IRI and appears under _links.category in HAL. The\ncollection is paginated (25 per page, 1-based page) and sorted/filtered\nthrough the `order` and `category` query parameters, validated in the\ncollection provider."
+        }
+    ],
+    "webhooks": {}
 }

@@ -18,11 +18,11 @@ use Symfony\Component\Routing\RouterInterface;
  * Read-only release preflight for API v1 (issue #100).
  *
  * Verifies, without issuing tokens or touching User data, that a deployment
- * can serve the OAuth2 discovery documents, the versioned OpenAPI contract,
- * and database-backed traffic: key material is configured and readable, the
- * JWKS builds exactly one RSA verification key, the discovery and contract
- * routes exist, the committed contract parses at the expected version, and
- * the database answers.
+ * can serve the OAuth2 discovery documents, the public API docs, and
+ * database-backed traffic: key material is configured and readable, the
+ * JWKS builds exactly one RSA verification key, the discovery and docs
+ * routes exist, the committed generated contract parses at the expected
+ * version, and the database answers.
  *
  * Operators run this after every deploy (and CI runs it as a smoke check).
  * Authenticated flows — token issuance, read, refresh, revocation — are
@@ -45,7 +45,7 @@ final class ApiPreflightCommand extends Command
         'oauth_discovery_authorization_server',
         'oauth_discovery_protected_resource',
         'oauth_discovery_jwks',
-        'api_v1_openapi',
+        'api_doc',
     ];
 
     /**
@@ -138,7 +138,7 @@ final class ApiPreflightCommand extends Command
             'discovery-routes',
             [] === $missingRoutes,
             [] === $missingRoutes
-                ? 'authorization-server, protected-resource, jwks, and openapi routes are registered'
+                ? 'authorization-server, protected-resource, jwks, and docs routes are registered'
                 : 'missing routes: '.implode(', ', $missingRoutes)
         );
 

@@ -125,7 +125,7 @@ final class ApiPreflightCommandFixtureKeyTest extends TestCase
             'oauth_discovery_authorization_server',
             'oauth_discovery_protected_resource',
             'oauth_discovery_jwks',
-            'api_v1_openapi',
+            'api_doc',
         ] as $name) {
             $routes->add($name, new Route('/'.$name));
         }

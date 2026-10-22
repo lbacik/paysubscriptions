@@ -11,7 +11,7 @@ use Symfony\Component\Uid\Uuid;
  * The `^/api` edge converter: any error response API Platform did not render
  * itself becomes the generic `/errors/{status}` problem, keeping the
  * original headers. Covers the firewall's plain-text 401s, routing 404/405s
- * for unrouted paths, and listener throws on the hand-written routes.
+ * for unrouted paths, and refusals on the non-resource entrypoint.
  */
 final class ApiErrorEdgeTest extends ApiV1TestCase
 {
@@ -50,7 +50,7 @@ final class ApiErrorEdgeTest extends ApiV1TestCase
 
     public function testMethodNotAllowedBecomesGenericProblemAndKeepsAllow(): void
     {
-        $response = $this->requestAs($this->user, 'POST', '/api/v1/openapi.json');
+        $response = $this->requestAs($this->user, 'POST', '/api/v1/reports/dashboard');
 
         self::assertResponseStatusCodeSame(405);
         self::assertResponseHeaderSame('content-type', 'application/problem+json');
@@ -59,18 +59,16 @@ final class ApiErrorEdgeTest extends ApiV1TestCase
         self::assertJsonContains(['type' => '/errors/405', 'status' => 405]);
     }
 
-    public function testListenerThrowOnHandWrittenRouteBecomesGenericProblemButKeepsChallenge(): void
+    public function testListenerThrowOnPlatformRouteKeepsDomainTypeAndChallenge(): void
     {
-        // The hand-written contract document has no API Platform rendering:
-        // ApiAccessListener throws, Symfony renders HTML, the edge converts
-        // to the generic problem. The domain type cannot survive HTML, but
-        // the scope challenge does.
-        $this->client->request('GET', '/api/v1/openapi.json', ['auth_bearer' => $this->craftToken('api-edge-user@example.com', scope: 'api:read')]);
+        // ApiAccessListener throws before API Platform renders, so the
+        // domain problem type survives together with the scope challenge.
+        $this->client->request('GET', '/api/v1/expense-categories', ['auth_bearer' => $this->craftToken('api-edge-user@example.com', scope: 'api:read')]);
 
         self::assertResponseStatusCodeSame(403);
         self::assertResponseHeaderSame('content-type', 'application/problem+json');
         self::assertResponseHeaderSame('WWW-Authenticate', 'Bearer error="insufficient_scope", scope="api:full"');
-        self::assertJsonContains(['type' => '/errors/403', 'status' => 403]);
+        self::assertJsonContains(['type' => '/problems/insufficient-scope', 'status' => 403]);
     }
 
     public function testEntrypointWithoutTokenBecomesGenericProblem(): void

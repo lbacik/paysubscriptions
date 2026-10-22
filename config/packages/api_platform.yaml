@@ -23,3 +23,21 @@ api_platform:
         stateless: true
         cache_headers:
             vary: ['Content-Type', 'Authorization', 'Origin']
+    # OAuth2 for the generated document and Swagger UI (issues #258, #260).
+    # The scheme documents the authorization-code + S256 PKCE flow every API
+    # v1 caller uses; Swagger UI signs in with the dedicated public Client
+    # `paysubscriptions-api-docs` (a public client id is not a secret, so it
+    # is hard-coded here, not an env var). Relative URLs keep the committed
+    # snapshot host-agnostic. `persist_authorization` stays false (the
+    # default): no bearer token in localStorage on a public page.
+    oauth:
+        enabled: true
+        type: oauth2
+        flow: authorizationCode
+        clientId: paysubscriptions-api-docs
+        clientSecret: ''
+        tokenUrl: /token
+        authorizationUrl: /authorize
+        pkce: true
+        scopes:
+            'api:full': 'Full read/write access to the approving User''s data.'
