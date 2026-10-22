@@ -73,6 +73,30 @@ final class ApiErrorEdgeTest extends ApiV1TestCase
         self::assertJsonContains(['type' => '/errors/403', 'status' => 403]);
     }
 
+    public function testEntrypointWithoutTokenBecomesGenericProblem(): void
+    {
+        // The firewall refuses the entrypoint probe; the edge converts the
+        // plain-text 401 to the generic problem.
+        $this->client->request('GET', '/api');
+
+        self::assertResponseStatusCodeSame(401);
+        self::assertResponseHeaderSame('content-type', 'application/problem+json');
+        self::assertJsonContains(['type' => '/errors/401', 'status' => 401]);
+    }
+
+    public function testEntrypointWithClientOnlyTokenIsUnauthorized(): void
+    {
+        // A token with no User delegation reaches ApiAccessListener on the
+        // entrypoint probe, which throws invalid_token; API Platform renders
+        // it as the generic problem with the challenge.
+        $this->client->request('GET', '/api', ['auth_bearer' => $this->craftToken(null)]);
+
+        self::assertResponseStatusCodeSame(401);
+        self::assertResponseHeaderSame('content-type', 'application/problem+json');
+        self::assertResponseHeaderSame('WWW-Authenticate', 'Bearer error="invalid_token"');
+        self::assertJsonContains(['type' => '/errors/401', 'status' => 401]);
+    }
+
     public function testEdgeBodyMatchesPlatformBody(): void
     {
         // The same generic problem API Platform renders itself: an unknown
