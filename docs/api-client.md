@@ -6,6 +6,20 @@ token refresh and revocation, disconnect behavior, and every operator
 procedure (secret storage, rotation, migration rehearsal, rollback) live in
 the operations runbook, `docs/api-operations.md`.
 
+## Interactive docs and the published contract
+
+- **Swagger UI** at `/api/docs` is public: open it in a browser with no
+  token, then sign in with the `api:full` scope — it uses the
+  authorization-code + S256 PKCE flow through the dedicated
+  `paysubscriptions-api-docs` Client and keeps the token in memory only
+  (nothing persisted). Calling the API from the docs still needs the
+  sign-in; reading the docs does not.
+- **The generated OpenAPI document** is the published API v1 contract:
+  `/api/docs.jsonopenapi` serves it publicly (`.json` and the HTML page
+  serve the same document), and `resources/openapi/v1.json` in the
+  repository carries the identical snapshot. Additive backward-compatible
+  changes stay within v1; breaking changes require a new version.
+
 ## Discovery URLs
 
 All three documents are public (`GET`, no token) and live outside the

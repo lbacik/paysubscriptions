@@ -7,6 +7,10 @@ namespace App\Tests\Command;
 use App\Command\ApiPreflightCommand;
 use App\OAuth2\JwksProvider;
 use Doctrine\DBAL\Connection;
+use League\Bundle\OAuth2ServerBundle\Manager\ClientManagerInterface;
+use League\Bundle\OAuth2ServerBundle\Model\Client;
+use League\Bundle\OAuth2ServerBundle\ValueObject\RedirectUri;
+use League\Bundle\OAuth2ServerBundle\ValueObject\Scope;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Tester\CommandTester;
@@ -114,7 +118,65 @@ final class ApiPreflightCommandFixtureKeyTest extends TestCase
         self::assertSame(Command::SUCCESS, $tester->getStatusCode(), $tester->getDisplay());
     }
 
-    private function runPreflight(string $privateKey, string $publicKey, string $environment): CommandTester
+    public function testProdFailsWhenDocsClientIsMissing(): void
+    {
+        $tester = $this->runPreflight(
+            $this->privateKeyPath,
+            $this->publicKeyPath,
+            'prod',
+            null,
+            false,
+        );
+
+        self::assertSame(Command::FAILURE, $tester->getStatusCode());
+        self::assertStringContainsString('[FAIL] docs-client', $tester->getDisplay());
+        self::assertStringContainsString(ApiPreflightCommand::DOCS_CLIENT_ID, $tester->getDisplay());
+    }
+
+    public function testProdFailsWhenDocsClientIsInactive(): void
+    {
+        $client = self::validDocsClient('https://paysubscriptions.com');
+        $client->setActive(false);
+
+        $tester = $this->runPreflight($this->privateKeyPath, $this->publicKeyPath, 'prod', $client, false);
+
+        self::assertSame(Command::FAILURE, $tester->getStatusCode());
+        self::assertStringContainsString('[FAIL] docs-client', $tester->getDisplay());
+    }
+
+    public function testProdFailsWhenDocsClientLacksFullScope(): void
+    {
+        $client = new Client('PaySubscriptions API docs', ApiPreflightCommand::DOCS_CLIENT_ID, null);
+        $client->setScopes(new Scope('api:read'));
+        $client->setRedirectUris(new RedirectUri('https://paysubscriptions.com/bundles/apiplatform/swagger-ui/oauth2-redirect.html'));
+
+        $tester = $this->runPreflight($this->privateKeyPath, $this->publicKeyPath, 'prod', $client, false);
+
+        self::assertSame(Command::FAILURE, $tester->getStatusCode());
+        self::assertStringContainsString('[FAIL] docs-client', $tester->getDisplay());
+        self::assertStringContainsString('api:full', $tester->getDisplay());
+    }
+
+    public function testProdFailsWhenDocsClientMissesRedirectUri(): void
+    {
+        $client = new Client('PaySubscriptions API docs', ApiPreflightCommand::DOCS_CLIENT_ID, null);
+        $client->setScopes(new Scope('api:full'));
+        $client->setRedirectUris(new RedirectUri('https://paysubscriptions.com/wrong-redirect.html'));
+
+        $tester = $this->runPreflight($this->privateKeyPath, $this->publicKeyPath, 'prod', $client, false);
+
+        self::assertSame(Command::FAILURE, $tester->getStatusCode());
+        self::assertStringContainsString('[FAIL] docs-client', $tester->getDisplay());
+        self::assertStringContainsString('oauth2-redirect.html', $tester->getDisplay());
+    }
+
+    /**
+     * Runs the preflight with a registered, active docs Client approved for
+     * `api:full` unless $docsClient is given explicitly (null = missing).
+     *
+     * @param ?Client $docsClient Pass null to simulate a missing registration.
+     */
+    private function runPreflight(string $privateKey, string $publicKey, string $environment, ?Client $docsClient = null, bool $useDefaultDocsClient = true): CommandTester
     {
         $projectDir = dirname(__DIR__, 2);
         $privateKey = str_replace('%kernel.project_dir%', $projectDir, $privateKey);
@@ -135,6 +197,11 @@ final class ApiPreflightCommandFixtureKeyTest extends TestCase
         $connection = $this->createStub(Connection::class);
         $connection->method('fetchOne')->willReturn(1);
 
+        $issuer = 'https://paysubscriptions.com';
+        $resolved = $useDefaultDocsClient && null === $docsClient ? self::validDocsClient($issuer) : $docsClient;
+        $clients = $this->createStub(ClientManagerInterface::class);
+        $clients->method('find')->willReturnMap([[ApiPreflightCommand::DOCS_CLIENT_ID, $resolved]]);
+
         $command = new ApiPreflightCommand(
             $router,
             new JwksProvider($publicKey),
@@ -144,12 +211,23 @@ final class ApiPreflightCommandFixtureKeyTest extends TestCase
             $publicKey,
             bin2hex(random_bytes(32)),
             $environment,
+            $clients,
+            $issuer,
         );
 
         $tester = new CommandTester($command);
         $tester->execute([]);
 
         return $tester;
+    }
+
+    private static function validDocsClient(string $issuer): Client
+    {
+        $client = new Client('PaySubscriptions API docs', ApiPreflightCommand::DOCS_CLIENT_ID, null);
+        $client->setScopes(new Scope('api:full'));
+        $client->setRedirectUris(new RedirectUri($issuer.'/bundles/apiplatform/swagger-ui/oauth2-redirect.html'));
+
+        return $client;
     }
 
     private function writeTempFile(string $contents): string
