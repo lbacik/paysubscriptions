@@ -196,32 +196,39 @@ jobs:
         run: |
           routes=$(php bin/console debug:router --env=prod)
           for name in \
+            '_api_/v1/expense-categories{._format}_get_collection' \
+            '_api_/v1/expense-categories{._format}_post' \
+            '_api_/v1/expense-categories/{id}{._format}_get' \
+            '_api_/v1/expense-categories/{id}{._format}_patch' \
+            '_api_/v1/expense-categories/{id}{._format}_delete' \
             api_v1_subscriptions_list api_v1_subscriptions_create \
             api_v1_subscriptions_show api_v1_subscriptions_update \
             api_v1_subscriptions_delete \
-            api_v1_openapi \
+            api_v1_reports_dashboard \
+            api_doc \
             oauth_discovery_authorization_server \
             oauth_discovery_protected_resource oauth_discovery_jwks \
             oauth2_authorize oauth2_token; do
-            echo "$routes" | grep -q " $name " || { echo "::error::route $name is missing"; exit 1; }
+            echo "$routes" | grep -qF " $name " || { echo "::error::route $name is missing"; exit 1; }
           done
           echo "all v1 and discovery routes are registered"
 
-      # Proves the API Platform wiring still exports (the /api entrypoint and
-      # docs the firewall guards), and that the committed v1 contract - the
-      # reviewed artifact OpenApiContractTest locks - parses at v1.0.0 with
-      # every operation it claims.
+      # Proves the API Platform wiring still exports (the public docs the
+      # firewall lets through), and that the committed v1 contract - the
+      # generated artifact OpenApiSnapshotTest locks - parses at 3.2.0/v1.0.0
+      # with every operation it claims.
       - name: Export and validate OpenAPI
         run: |
           php bin/console api:openapi:export --output=/tmp/api-platform.json --env=prod
           php bin/console debug:router --env=prod --show-controllers > /dev/null
           php -r '$p=json_decode(file_get_contents("/tmp/api-platform.json"),true); if (!is_array($p)||!isset($p["openapi"],$p["info"])) {fwrite(STDERR,"platform export is not OpenAPI\n"); exit(1);} echo "platform export: ",$p["openapi"]," ",$p["info"]["title"] ?? "?","\n";'
-          php -r '$c=json_decode(file_get_contents("resources/openapi/v1.json"),true); if (!is_array($c)||"3.0.3"!==($c["openapi"]??null)||"1.0.0"!==($c["info"]["version"]??null)||0===count($c["paths"]??[])) {fwrite(STDERR,"v1 contract invalid\n"); exit(1);} echo "v1 contract: 1.0.0, ",count($c["paths"])," paths\n";'
+          php -r '$c=json_decode(file_get_contents("resources/openapi/v1.json"),true); if (!is_array($c)||"3.2.0"!==($c["openapi"]??null)||"1.0.0"!==($c["info"]["version"]??null)||0===count($c["paths"]??[])) {fwrite(STDERR,"v1 contract invalid\n"); exit(1);} echo "v1 contract: 1.0.0, ",count($c["paths"])," paths\n";'
 
       # Boots the real prod container over HTTP with ephemeral keys and proves
       # the unauthenticated surface behaves: discovery documents serve, the
-      # JWKS carries a key, the API answers 401 with a problem document
-      # instead of an HTML error, and web login still renders its form.
+      # JWKS carries a key, the public docs serve without a token, a resource
+      # answers 401 with a problem document instead of an HTML error, and web
+      # login still renders its form.
       # Authenticated flows (issuance, read, refresh, revocation) need a
       # provisioned client and User, so they stay in the blocking PHPUnit
       # suite rather than here.
@@ -254,7 +261,8 @@ jobs:
           check http://127.0.0.1:8123/.well-known/oauth-authorization-server 200 authorization_endpoint
           check http://127.0.0.1:8123/.well-known/oauth-protected-resource 200 authorization_servers
           check http://127.0.0.1:8123/.well-known/jwks.json 200 '"kty":"RSA"'
-          check http://127.0.0.1:8123/api/v1/openapi.json 401 '"type":"/errors/401"'
+          check http://127.0.0.1:8123/api/docs.jsonopenapi 200 '"openapi"'
+          check http://127.0.0.1:8123/api/v1/expense-categories 401 '"type":"/errors/401"'
           check http://127.0.0.1:8123/login 200 _csrf_token
           echo "runtime smoke passed"
 

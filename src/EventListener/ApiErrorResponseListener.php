@@ -13,9 +13,10 @@ use Symfony\Component\HttpKernel\KernelEvents;
 /**
  * Renders every API error API Platform does not render as the generic
  * `/errors/{status}` problem (decision #87, ADR 0007): the firewall's
- * plain-text 401s, 404/405 for unrouted `/api/*` paths, refusals on the
- * `/api` entrypoint, and throws from `ApiAccessListener` on the hand-written
- * routes (which Symfony's error controller would otherwise render as HTML).
+ * plain-text 401s, 404/405 for unrouted `/api/*` paths, and refusals on the
+ * `/api` entrypoint (which Symfony's error controller would otherwise
+ * render as HTML). Throws from `ApiAccessListener` on resource routes are
+ * rendered by API Platform itself, keeping their domain problem types.
  *
  * Runs early so later response listeners (site-wide security headers) still
  * apply to the converted response. Responses already in

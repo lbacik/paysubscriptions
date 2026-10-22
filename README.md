@@ -72,6 +72,20 @@ The committed `.env` and development Compose database service still default to P
    php bin/console tailwind:build
    ```
 
+   Register the public docs Client Swagger UI on `/api/docs` signs in with
+   (decision #258). It is `authorization_code` only — the stated exception
+   to the two-grant rule in `docs/api-operations.md` §1 — with the local
+   redirect URI:
+
+   ```sh
+   php bin/console league:oauth2-server:create-client \
+     --public \
+     --redirect-uri 'http://localhost:8000/bundles/apiplatform/swagger-ui/oauth2-redirect.html' \
+     --grant-type authorization_code \
+     --scope api:full \
+     'PaySubscriptions API docs' paysubscriptions-api-docs
+   ```
+
 4. Start the application:
 
    ```sh
@@ -124,7 +138,7 @@ The reminder command prevents duplicate sends across routine retries and overlap
 
 ## API
 
-The API is available under `/api/v1`, with an OpenAPI document at `/api/v1/openapi.json`. Approved clients use the authorization-code flow with S256 PKCE and the `api:full` scope. Client registration is performed by an operator.
+The API is available under `/api/v1`, with public interactive docs at `/api/docs` (Swagger UI, no token needed to read) and the generated OpenAPI document at `/api/docs.jsonopenapi` (snapshotted at `resources/openapi/v1.json`). Approved clients use the authorization-code flow with S256 PKCE and the `api:full` scope. Client registration is performed by an operator.
 
 - [API client guide](docs/api-client.md): discovery, sign-in, and authenticated requests
 - [API operations](docs/api-operations.md): client registration, token management, and deployment checks

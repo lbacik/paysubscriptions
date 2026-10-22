@@ -88,11 +88,16 @@ security:
         # are sent to /login first, and the full authorize URL (including the
         # OAuth query) is restored as the post-login target.
         - { path: ^/authorize$, roles: ROLE_USER }
+        # The API docs are public (issue #247): reading them needs no token.
+        # This rule goes before ^/api and covers the Swagger UI page and its
+        # `.json`/`.jsonopenapi` variants. Calling the API from the docs
+        # still needs a Bearer token (ApiAccessListener enforces it).
+        - { path: ^/api/docs, roles: PUBLIC_ACCESS }
         # The API is deny-by-default: a request without a Bearer token skips
         # the OAuth2 authenticator entirely, so without this rule anonymous
-        # traffic would fall through to the resource (issue #88). Every /api
-        # caller — including docs and entrypoint — presents a User-delegated
-        # token; sibling issues carve out anything that must stay public.
+        # traffic would fall through to the resource (issue #88). Every
+        # other /api caller — including the entrypoint, /api/contexts/* and
+        # every resource — presents a User-delegated token.
         - { path: ^/api, roles: IS_AUTHENTICATED_FULLY }
         # - { path: ^/admin, roles: ROLE_ADMIN }
         # - { path: ^/profile, roles: ROLE_USER }

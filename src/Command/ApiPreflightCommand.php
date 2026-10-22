@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Command;
 
 use App\OAuth2\JwksProvider;
+use App\OAuth2\OAuth2Config;
 use Doctrine\DBAL\Connection;
+use League\Bundle\OAuth2ServerBundle\Manager\ClientManagerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -18,11 +20,12 @@ use Symfony\Component\Routing\RouterInterface;
  * Read-only release preflight for API v1 (issue #100).
  *
  * Verifies, without issuing tokens or touching User data, that a deployment
- * can serve the OAuth2 discovery documents, the versioned OpenAPI contract,
- * and database-backed traffic: key material is configured and readable, the
- * JWKS builds exactly one RSA verification key, the discovery and contract
- * routes exist, the committed contract parses at the expected version, and
- * the database answers.
+ * can serve the OAuth2 discovery documents, the public API docs, and
+ * database-backed traffic: key material is configured and readable, the
+ * JWKS builds exactly one RSA verification key, the discovery and docs
+ * routes exist, the committed generated contract parses at the expected
+ * version, the Swagger UI docs Client is registered and approved, and the
+ * database answers.
  *
  * Operators run this after every deploy (and CI runs it as a smoke check).
  * Authenticated flows — token issuance, read, refresh, revocation — are
@@ -40,12 +43,28 @@ final class ApiPreflightCommand extends Command
 {
     public const CONTRACT_VERSION = '1.0.0';
 
+    /**
+     * Identifier of the dedicated public Client Swagger UI on the public
+     * `/api/docs` signs in with (decision #258). A public identifier is not
+     * a secret, so it is hard-coded here and in `api_platform.yaml`, not an
+     * env var.
+     */
+    public const DOCS_CLIENT_ID = 'paysubscriptions-api-docs';
+
+    /**
+     * Path Swagger UI appends to the deployment base URL for its OAuth2
+     * redirect (`absolute_url(asset('bundles/apiplatform/swagger-ui/oauth2-redirect.html'))`):
+     * the registered redirect URI is this path on the deployment's base URL
+     * (`OAUTH2_ISSUER`), byte-exact per environment.
+     */
+    private const DOCS_REDIRECT_PATH = '/bundles/apiplatform/swagger-ui/oauth2-redirect.html';
+
     /** @var list<string> */
     private const DISCOVERY_ROUTES = [
         'oauth_discovery_authorization_server',
         'oauth_discovery_protected_resource',
         'oauth_discovery_jwks',
-        'api_v1_openapi',
+        'api_doc',
     ];
 
     /**
@@ -84,6 +103,11 @@ final class ApiPreflightCommand extends Command
         // configured (see the when@test overrides) — is exempt.
         #[Autowire('%kernel.environment%')]
         private readonly string $environment = 'prod',
+        private readonly ?ClientManagerInterface $clients = null,
+        // Deployment base URL (issue #258): the docs redirect URI is this
+        // plus DOCS_REDIRECT_PATH, byte-exact per environment.
+        #[Autowire('%app.oauth2.issuer%')]
+        private readonly string $issuer = '',
     ) {
         parent::__construct();
     }
@@ -138,14 +162,14 @@ final class ApiPreflightCommand extends Command
             'discovery-routes',
             [] === $missingRoutes,
             [] === $missingRoutes
-                ? 'authorization-server, protected-resource, jwks, and openapi routes are registered'
+                ? 'authorization-server, protected-resource, jwks, and docs routes are registered'
                 : 'missing routes: '.implode(', ', $missingRoutes)
         );
 
         $contractPath = $this->projectDir.'/resources/openapi/v1.json';
         $contract = json_decode(@file_get_contents($contractPath) ?: '', true);
         $contractOk = \is_array($contract)
-            && '3.0.3' === ($contract['openapi'] ?? null)
+            && '3.2.0' === ($contract['openapi'] ?? null)
             && self::CONTRACT_VERSION === ($contract['info']['version'] ?? null);
         $report(
             'openapi-contract',
@@ -154,6 +178,9 @@ final class ApiPreflightCommand extends Command
                 ? sprintf('v1.json parses at contract version %s', self::CONTRACT_VERSION)
                 : 'resources/openapi/v1.json is unreadable or not at contract version '.self::CONTRACT_VERSION
         );
+
+        [$docsOk, $docsDetail] = $this->assessDocsClient();
+        $report('docs-client', $docsOk, $docsDetail);
 
         try {
             $this->connection->fetchOne('SELECT 1');
@@ -197,6 +224,55 @@ final class ApiPreflightCommand extends Command
         return is_readable($path)
             ? [true, sprintf('%s is configured at a readable path', $label)]
             : [false, sprintf('%s path is not readable: %s', $label, $path)];
+    }
+
+    /**
+     * Read-only check that the Swagger UI docs Client (decision #258) is
+     * registered, active, approved for `api:full`, and carries the docs
+     * redirect URI for this deployment's base URL. Never creates a Client:
+     * registration is a manual operator step (docs/api-operations.md §1).
+     *
+     * @return array{bool, string}
+     */
+    private function assessDocsClient(): array
+    {
+        if (null === $this->clients) {
+            return [false, sprintf('docs Client %s cannot be looked up: no client manager is wired', self::DOCS_CLIENT_ID)];
+        }
+
+        try {
+            $client = $this->clients->find(self::DOCS_CLIENT_ID);
+        } catch (\Throwable $e) {
+            return [false, sprintf('docs Client %s is unreachable (%s)', self::DOCS_CLIENT_ID, $e->getMessage())];
+        }
+
+        if (null === $client) {
+            return [false, sprintf('docs Client %s is not registered; register it per docs/api-operations.md §1', self::DOCS_CLIENT_ID)];
+        }
+
+        if (!$client->isActive()) {
+            return [false, sprintf('docs Client %s is deactivated', self::DOCS_CLIENT_ID)];
+        }
+
+        $scopeApproved = false;
+        foreach ($client->getScopes() as $scope) {
+            if (OAuth2Config::SCOPE_FULL === (string) $scope) {
+                $scopeApproved = true;
+                break;
+            }
+        }
+        if (!$scopeApproved) {
+            return [false, sprintf('docs Client %s is not approved for %s', self::DOCS_CLIENT_ID, OAuth2Config::SCOPE_FULL)];
+        }
+
+        $expectedRedirect = rtrim($this->issuer, '/').self::DOCS_REDIRECT_PATH;
+        foreach ($client->getRedirectUris() as $redirectUri) {
+            if ($expectedRedirect === (string) $redirectUri) {
+                return [true, sprintf('docs Client %s is active, approved for %s, and carries the docs redirect URI', self::DOCS_CLIENT_ID, OAuth2Config::SCOPE_FULL)];
+            }
+        }
+
+        return [false, sprintf('docs Client %s misses the docs redirect URI %s', self::DOCS_CLIENT_ID, $expectedRedirect)];
     }
 
     /**

@@ -48,6 +48,16 @@ services:
 
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
+    # Generated OpenAPI contract (issue #260): the global security
+    # requirement carries the single `api:full` scope the listener enforces.
+    # The inner service is injected explicitly: autowiring
+    # OpenApiFactoryInterface here would resolve the alias back to this
+    # decorator.
+    App\OpenApi\OAuthSecurityDecorator:
+        decorates: 'api_platform.openapi.factory'
+        arguments:
+            $decorated: '@App\OpenApi\OAuthSecurityDecorator.inner'
+
     # Web-login throttling (issue #143): the bundle's own username+IP *and*
     # IP limiters, fed by the env-sized login_local/login_global factories
     # (config/packages/rate_limiter.yaml) instead of the static max_attempts

@@ -30,8 +30,9 @@ use Symfony\Component\HttpKernel\KernelEvents;
  * generic `/errors/401` problem), 403s are `ProblemException`s
  * (`/problems/insufficient-scope` with the `WWW-Authenticate` scope
  * challenge, or `/problems/account-inactive`). API Platform renders the
- * throws on its routes; the generic edge converter renders them on the
- * hand-written routes and for firewall refusals.
+ * throws on the resource routes; the generic edge converter renders them
+ * on the non-resource paths (the `/api` entrypoint) and for firewall
+ * refusals.
  */
 final class ApiAccessListener
 {

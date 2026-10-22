@@ -165,10 +165,11 @@ authoritative local gate.
   totals (including cross-currency conversion), chart datasets
   (bar/monthly/yearly), dashboard totals and limit gauge.
 - Expense categories, upcoming renewals, and account deletion.
-- API v1 (`tests/Api/V1/` and `tests/Controller/Api/V1/`): the token gate,
-  reads and writes of every resource through the domain services, the
-  problem+json error contract, content negotiation, two-User isolation, and
-  the committed OpenAPI document of the hand-written resources.
+- API v1 (`tests/Api/V1/`): the token gate, reads and writes of every
+  resource through the domain services, the problem+json error contract,
+  content negotiation, two-User isolation, the generated OpenAPI snapshot
+  (`OpenApiSnapshotTest`), and the every-operation 401/403 gate
+  (`ApiOperationsGateTest`).
 - SES mail boundary and recipient restrictions (`tests/Mailer/`): every
   email goes through the paysubs-app tenant and configuration set from
   `no-reply@paysubscriptions.com` only, and `X-SES-*` headers or foreign
@@ -194,12 +195,11 @@ authoritative local gate.
 
 ## API v1 tests
 
-Resources served by API Platform are tested in `tests/Api/V1/` on
-`App\Tests\Api\V1\ApiV1TestCase`, which extends API Platform's
-`ApiPlatform\Test\ApiTestCase` (its client, `assertJsonContains()` and the
-JSON Schema assertions backed by `justinrainbow/json-schema`). Hand-written
-resources keep their tests in `tests/Controller/Api/V1/` until they are
-migrated; each migration deletes them together with the controller.
+All API v1 resources are served by API Platform and tested in
+`tests/Api/V1/` on `App\Tests\Api\V1\ApiV1TestCase`, which extends API
+Platform's `ApiPlatform\Test\ApiTestCase` (its client,
+`assertJsonContains()` and the JSON Schema assertions backed by
+`justinrainbow/json-schema`).
 
 - **Database and fixtures.** Same lifecycle as `DatabaseTestCase`
   (`#[ResetDatabase]`, one rolled-back transaction per test). Both base classes
@@ -228,6 +228,19 @@ migrated; each migration deletes them together with the controller.
   - GET, PATCH and DELETE on a foreign ID answer 404 and disclose nothing;
   - a foreign IRI in a write body (for example a Subscription's `category`)
     is a 422 on that field.
+- **Generated contract snapshot.** `OpenApiSnapshotTest` (a `KernelTestCase`
+  with no database) exports the generated document in-process
+  (`api:openapi:export` via `CommandTester`) and compares it byte-for-byte
+  with `assertSame` to the committed `resources/openapi/v1.json`. Regenerate
+  manually only, and review the diff as a contract change:
+
+  ```sh
+  bin/console api:openapi:export --output=resources/openapi/v1.json
+  ```
+- **Every-operation gate.** `ApiOperationsGateTest` builds a data provider
+  from every operation in the generated contract and asserts each answers
+  401 without a token and 403 with a token lacking `api:full`, so a new
+  operation cannot ship unprotected.
 
 In the test environment the kernel runs in debug mode, so problem bodies
 carry a `trace` that names the test method. A "discloses nothing" assertion

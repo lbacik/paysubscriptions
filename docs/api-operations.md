@@ -29,15 +29,33 @@ environment):
   'PaySubscriptions CLI'
 ```
 
+The Swagger UI on the public `/api/docs` signs in with its own dedicated
+public Client (decision #258) — same identifier in every environment, so it
+is hard-coded in `config/packages/api_platform.yaml`, not an env var:
+
+```sh
+./bin/console league:oauth2-server:create-client \
+  --public \
+  --redirect-uri 'https://paysubscriptions.com/bundles/apiplatform/swagger-ui/oauth2-redirect.html' \
+  --grant-type authorization_code \
+  --scope api:full \
+  'PaySubscriptions API docs' paysubscriptions-api-docs
+```
+
 Rules, all enforced by tests — get them wrong and sign-in fails closed:
 
 - **One scope, `api:full`.** It is the only available scope; the server
   rejects empty, unknown, and unapproved scope requests instead of
   defaulting. It grants full read/write access to the approving User's
   subscriptions, categories, and reports: only approve trustworthy apps.
-- **Grants are exactly `authorization_code` + `refresh_token`.**
-  Client-credentials, password, implicit, and device grants are disabled;
-  client credentials must never yield access to User-owned data.
+- **Grants are exactly `authorization_code` + `refresh_token` — except the
+  docs Client, which is `authorization_code` only.** Client-credentials,
+  password, implicit, and device grants are disabled; client credentials
+  must never yield access to User-owned data. The docs Client is the one
+  stated exception: it never gets `refresh_token` (League issues no refresh
+  token to a Client without that grant), so a docs sign-in yields one
+  15-minute access token and no long-lived Client session — Swagger UI does
+  not refresh tokens anyway.
 - **Public CLI clients carry no secret** (`--public`). Confidential
   clients post `client_secret_post`; secrets are stored hashed
   (`allow_plaintext_secrets: false`).
@@ -46,7 +64,12 @@ Rules, all enforced by tests — get them wrong and sign-in fails closed:
   port, and path. Register every loopback port the CLI listens on; a
   CLI that picks a random port per run needs each candidate registered
   or a fixed port. Loopback `http` is allowed for the CLI; anything
-  else must be `https`.
+  else must be `https`. The docs Client's redirect is fixed per
+  environment — production
+  `https://paysubscriptions.com/bundles/apiplatform/swagger-ui/oauth2-redirect.html`,
+  dev `http://localhost:8000/bundles/apiplatform/swagger-ui/oauth2-redirect.html`
+  (what Swagger UI builds); `app:api:preflight` checks the deployment's
+  value read-only.
 - **PKCE is S256-only.** `--allow-plain-text-pkce` must not be set;
   the server rejects `plain` challenges.
 - Inspect with `league:oauth2-server:list-clients`, change with
@@ -200,20 +223,22 @@ After every deploy, in this order:
 
 1. `deploy.yml` already asserts: public `/login` renders with CSRF,
    the database answers from the web container, the three discovery
-   documents serve the correct issuer/audience/key, the versioned
-   OpenAPI document answers 401 with the generic `/errors/401`
+   documents serve the correct issuer/audience/key, the generated
+   OpenAPI document serves publicly at `/api/docs.jsonopenapi`, a
+   resource without a token answers 401 with the generic `/errors/401`
    problem document behind the bearer boundary, and
    `./bin/console app:api:preflight` passes inside the container
-   (keys configured and readable, one JWKS key, discovery and contract
-   routes registered, `v1.json` at contract version, database answers).
+   (keys configured and readable, one JWKS key, discovery and docs
+   routes registered, generated `v1.json` at contract version, docs
+   Client registered and approved, database answers).
 2. Operator-run authenticated sequence (needs a registered client and
    a test User; do it against production only with the approved test
    client, then disconnect it per §5):
 
 ```sh
-# token issuance (§3) → authorized reads (resource + versioned contract) → refresh (§4) → revocation (§5)
+# token issuance (§3) → authorized reads (resource + public contract) → refresh (§4) → revocation (§5)
 curl -fsS https://paysubscriptions.com/api/v1/expense-categories -H "Authorization: Bearer <ACCESS>"
-curl -fsS https://paysubscriptions.com/api/v1/openapi.json -H "Authorization: Bearer <ACCESS>" | php -r '$d=json_decode(stream_get_contents(STDIN),true); exit(($d["openapi"] ?? null) === "3.0.3" ? 0 : 1);'
+curl -fsS https://paysubscriptions.com/api/docs.jsonopenapi | php -r '$d=json_decode(stream_get_contents(STDIN),true); exit(($d["openapi"] ?? null) === "3.2.0" ? 0 : 1);'
 curl -fsS https://paysubscriptions.com/token -d grant_type=refresh_token -d client_id=<CLIENT_ID> -d refresh_token=<REFRESH>
 curl -fsS https://paysubscriptions.com/revoke -d token=<REFRESH> -d client_id=<CLIENT_ID>
 # the revoked refresh token must now fail closed:
@@ -222,10 +247,11 @@ curl -s -o /dev/null -w '%{http_code}\n' https://paysubscriptions.com/token \
 ```
 
 3. In CI the same surface is covered without secrets: `release-gates`
-   boots the prod container and checks discovery, JWKS, the 401
-   problem response, and web login; the blocking PHPUnit suite covers
-   issuance, two-User isolation, refresh, revocation, report parity,
-   and the web login/form flows on every pull request and on `main`.
+   boots the prod container and checks discovery, JWKS, the public
+   docs, the 401 problem response, and web login; the blocking PHPUnit
+   suite covers issuance, two-User isolation, refresh, revocation,
+   report parity, and the web login/form flows on every pull request
+   and on `main`.
 
 ### When a check fails (issue #101)
 
@@ -279,10 +305,15 @@ pipeline ships one tagged image or nothing.
    additive-migration, and preflight tests), `migrations`,
    `release-gates`, and the main-only `accessibility` scan.
 2. `resources/openapi/v1.json` reviewed against the implementation:
-   `OpenApiContractTest` locks routes, schemas, filters, security,
-   and problem errors, but the human review of wording and examples
-   is part of the gate.
-3. Secrets provisioned per §6; rotation runbooks read once.
+   the generated document is the published v1 contract —
+   `OpenApiSnapshotTest` locks it byte-for-byte (regenerate manually
+   with `bin/console api:openapi:export
+   --output=resources/openapi/v1.json`) and `ApiOperationsGateTest`
+   locks every operation behind the 401/403 gate — but the human
+   review of wording and examples is part of the gate.
+3. Secrets provisioned per §6; rotation runbooks read once. The
+   `paysubscriptions-api-docs` Client from §1 is registered (production
+   redirect URI) — `app:api:preflight` verifies it read-only.
 4. Create one `v*` tag only after steps 1–3 pass. The tag builds one
    image (`release.yml`) and deploys it once (`deploy.yml`, which
    migrates, converges, and runs the §7 checks). There is no pilot

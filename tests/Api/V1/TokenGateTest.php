@@ -169,17 +169,6 @@ final class TokenGateTest extends ApiV1TestCase
         self::assertJsonContains(['type' => '/errors/401', 'status' => 401]);
     }
 
-    public function testHandWrittenOpenApiDocumentRequiresATokenWithTheSmokeTestedShape(): void
-    {
-        // The CI and deploy smoke tests grep this exact type (issue #101).
-        $this->client->request('GET', '/api/v1/openapi.json');
-
-        self::assertResponseStatusCodeSame(401);
-        self::assertResponseHeaderSame('content-type', 'application/problem+json');
-        self::assertResponseHeaderSame('WWW-Authenticate', 'Bearer');
-        self::assertJsonContains(['type' => '/errors/401', 'status' => 401]);
-    }
-
     public function testTokenIssuedThroughTheOAuth2FlowOpensTheApi(): void
     {
         // The one end-to-end check that minted tokens match issued ones:
