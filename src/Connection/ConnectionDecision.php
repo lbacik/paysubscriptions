@@ -13,7 +13,8 @@ namespace App\Connection;
  * The refusal reasons keep "User not eligible" apart from "Client not
  * approved", and the Client side further separates an unknown or inactive
  * Client from one that is simply not approved for the requested scope, so
- * `/api/v1` can keep its distinct 401/403 problem codes.
+ * `/api/v1` can keep its distinct 401/403 problem types (`/errors/401` vs
+ * `/problems/insufficient-scope` vs `/problems/account-inactive`).
  */
 enum ConnectionDecision
 {

@@ -149,9 +149,10 @@ final class OpenApiContractTest extends KernelTestCase
         $doc = self::contract();
 
         $problem = $doc['components']['schemas']['Problem'];
-        foreach (['type', 'title', 'status', 'detail', 'code'] as $field) {
+        foreach (['type', 'title', 'status', 'detail'] as $field) {
             self::assertContains($field, $problem['required']);
         }
+        self::assertArrayNotHasKey('code', $problem['properties'] ?? []);
 
         foreach ($doc['components']['responses'] as $name => $response) {
             self::assertArrayHasKey(

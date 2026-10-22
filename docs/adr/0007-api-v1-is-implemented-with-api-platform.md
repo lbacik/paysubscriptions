@@ -32,4 +32,10 @@ These decisions were made in [issue #247](https://github.com/lbacik/paysubscript
 ## Consequences
 
 - `symfony/object-mapper` is a dependency. A read-only DTO member needs `#[Map(if: new TargetClass(self::class))]`, because a plain `if: false` blocks both directions and breaks IRI generation. On PATCH the input is mapped onto the managed entity before the processor runs, so a service that refuses a write must leave nothing for a later flush (see `ExpenseCategoryService::update()`).
-- Until the last hand-written resource is migrated, the hand-written routes keep their old error shape. `ApiAccessListener` and `ApiProblemResponseListener` keep producing it on every `/api/v1` route, and `resources/openapi/v1.json` describes only the hand-written resources. Switching to the problem types above, adding the edge converter, removing `App\Api\Problem` and committing the generated OpenAPI document come with the migration's final step.
+- The hand-written routes kept their old error shape until the last resource
+  migrated. With every resource on API Platform, `ApiAccessListener` throws
+  (401 as `/errors/401`; 403 as `/problems/insufficient-scope` or
+  `/problems/account-inactive`), the generic edge converter renders the
+  `/errors/{status}` problem for what API Platform does not render, and
+  `App\Api\Problem` is gone. `resources/openapi/v1.json` describes only the
+  hand-written contract document.
