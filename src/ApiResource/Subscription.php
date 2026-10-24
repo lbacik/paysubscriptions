@@ -41,6 +41,7 @@ use Symfony\Component\Validator\Constraints as Assert;
  * collection provider.
  */
 #[ApiResource(
+    description: "",
     operations: [
         // The api_v1_subscriptions_* route names are kept from the
         // hand-written controller so the CI route-name contract is stable

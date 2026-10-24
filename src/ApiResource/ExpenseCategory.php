@@ -31,6 +31,7 @@ use Symfony\Component\Uid\Uuid;
  * needs whole.
  */
 #[ApiResource(
+    description: "",
     operations: [
         new GetCollection(paginationEnabled: false, order: ['name' => 'ASC']),
         new Get(),

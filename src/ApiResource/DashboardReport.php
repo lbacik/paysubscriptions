@@ -31,6 +31,7 @@ use App\State\DashboardReportProvider;
  * matches nothing, so the report renders zero totals and an empty chart.
  */
 #[ApiResource(
+    description: "",
     operations: [
         new Get(
             name: 'api_v1_reports_dashboard',
