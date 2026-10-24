@@ -33,6 +33,10 @@ api_platform:
     # public page.
     swagger:
         persist_authorization: false
+    # Scalar loads an unpinned script from cdn.jsdelivr.net on /docs, the page
+    # that holds the OAuth sign-in; Swagger UI and ReDoc are served locally.
+    # Keeps /docs off the third-party inventory (docs/third-party-services.md).
+    enable_scalar: false
     oauth:
         enabled: true
         type: oauth2

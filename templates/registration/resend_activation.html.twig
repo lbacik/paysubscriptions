@@ -1,0 +1,40 @@
+{% extends 'base.html.twig' %}
+
+{% block body %}
+    <twig:ContentCenter width="w-full md:w-1/3 px-10 my-20">
+        <form method="post" action="{{ path('resend_activation') }}">
+            <h1 class="mb-10 font-thin text-lg text-color-qua text-right border-b border-color-sec">{{ 'user.no_activation_email'|trans }}</h1>
+
+            <div class="space-y-6">
+                <p class="text-sm text-color-ter">{{ 'user.resend_activation_intro'|trans }}</p>
+
+                <div>
+                    <label for="resendEmail"
+                           class="text-sm text-color-ter"
+                    >{{ 'user.email'|trans }}</label>
+                    <input type="email"
+                           value="{{ last_username }}"
+                           name="email"
+                           id="resendEmail"
+                           class="w-full px-3 py-2 rounded-lg border border-color-sec"
+                           autocomplete="email"
+                           required
+                           autofocus
+                    >
+                </div>
+
+                <input type="hidden" name="_token"
+                       value="{{ csrf_token('resend_activation') }}"
+                >
+
+                <div class="text-center">
+                    <twig:Button class="btn" type="submit">{{ 'user.resend_activation'|trans }}</twig:Button>
+                </div>
+
+                <div class="text-center">
+                    <a href="{{ path('app_login') }}" class="text-green-700 text-sm">{{ 'user.back_to_login'|trans }}</a>
+                </div>
+            </div>
+        </form>
+    </twig:ContentCenter>
+{% endblock %}

@@ -35,18 +35,33 @@ final class AuthenticationTest extends DatabaseTestCase
         self::assertStringContainsString('not active', $crawler->text(null, true));
     }
 
-    public function testUnverifiedLoginPrefillsResendForm(): void
+    public function testLoginPageWithoutErrorOffersNoResendActivation(): void
+    {
+        $crawler = $this->client->request('GET', '/login');
+
+        self::assertResponseIsSuccessful();
+        // A plain sign-in page carries only the sign-in form: the resend
+        // form lives on its own page, reached only after a failed attempt.
+        self::assertCount(0, $crawler->filter('form[action="/register/activation/resend"]'));
+        self::assertCount(0, $crawler->filter('a[href="/register/activation"]'));
+    }
+
+    public function testUnverifiedLoginLinksToResendActivationPage(): void
     {
         $this->createUser('pending@example.com', self::PASSWORD, false);
 
         $this->login('pending@example.com', self::PASSWORD);
 
         $crawler = $this->client->followRedirect();
-        // The alert carries no link or HTML; recovery is the page's own
-        // POST resend form, prefilled with the attempted address.
+        // The alert carries no link or HTML; recovery is a separate hint
+        // with a link to the resend page, not an inline form.
         self::assertCount(0, $crawler->filter('div[role="alert"] a'));
-        self::assertCount(1, $crawler->filter('form[action="/register/activation/resend"]'));
-        self::assertSame('pending@example.com', $crawler->filter('#resendEmail')->attr('value'));
+        self::assertCount(0, $crawler->filter('form[action="/register/activation/resend"]'));
+        self::assertCount(1, $crawler->filter('a[href="/register/activation"]'));
+        self::assertStringContainsString(
+            'activate it before you can sign in',
+            $crawler->text(null, true)
+        );
     }
 
     public function testWrongPasswordHidesVerificationState(): void
@@ -60,11 +75,12 @@ final class AuthenticationTest extends DatabaseTestCase
 
         // A wrong password answers identically whether the account is
         // verified, unverified, or missing entirely: no "not active" hint
-        // that would disclose an unverified registration (the page's resend
-        // form is unconditional, so its presence reveals nothing).
+        // that would disclose an unverified registration (the resend-page
+        // hint follows every failed attempt, so its presence reveals nothing).
         foreach ([$verifiedBody, $unverifiedBody, $unknownBody] as $body) {
             self::assertStringNotContainsString('not active', strip_tags($body));
             self::assertStringContainsString('Invalid credentials', strip_tags($body));
+            self::assertStringContainsString('href="/register/activation"', $body);
         }
         self::assertSame(
             strip_tags($verifiedBody),

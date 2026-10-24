@@ -1299,7 +1299,6 @@
             },
             "ExpenseCategory": {
                 "type": "object",
-                "description": "API v1 ExpenseCategory: a DTO backed by the entity through stateOptions\nand the object mapper (ADR 0007). Reads use API Platform's Doctrine\nprovider, scoped to the token User by UserOwnedExtension; writes are mapped\nonto the entity and go through ExpenseCategoryService in\nExpenseCategoryProcessor.\n\nThe collection is not paginated: it is a small per-User picker a client\nneeds whole.",
                 "properties": {
                     "id": {
                         "readOnly": true,
@@ -1348,7 +1347,6 @@
             },
             "ExpenseCategory.jsonMergePatch": {
                 "type": "object",
-                "description": "API v1 ExpenseCategory: a DTO backed by the entity through stateOptions\nand the object mapper (ADR 0007). Reads use API Platform's Doctrine\nprovider, scoped to the token User by UserOwnedExtension; writes are mapped\nonto the entity and go through ExpenseCategoryService in\nExpenseCategoryProcessor.\n\nThe collection is not paginated: it is a small per-User picker a client\nneeds whole.",
                 "properties": {
                     "id": {
                         "readOnly": true,
@@ -1415,8 +1413,7 @@
                     {
                         "$ref": "#/components/schemas/ExpenseCategory"
                     }
-                ],
-                "description": "API v1 ExpenseCategory: a DTO backed by the entity through stateOptions\nand the object mapper (ADR 0007). Reads use API Platform's Doctrine\nprovider, scoped to the token User by UserOwnedExtension; writes are mapped\nonto the entity and go through ExpenseCategoryService in\nExpenseCategoryProcessor.\n\nThe collection is not paginated: it is a small per-User picker a client\nneeds whole."
+                ]
             },
             "ExpenseCategory.jsonld": {
                 "allOf": [
@@ -1471,8 +1468,7 @@
                             "color"
                         ]
                     }
-                ],
-                "description": "API v1 ExpenseCategory: a DTO backed by the entity through stateOptions\nand the object mapper (ADR 0007). Reads use API Platform's Doctrine\nprovider, scoped to the token User by UserOwnedExtension; writes are mapped\nonto the entity and go through ExpenseCategoryService in\nExpenseCategoryProcessor.\n\nThe collection is not paginated: it is a small per-User picker a client\nneeds whole."
+                ]
             },
             "HalCollectionBaseSchema": {
                 "allOf": [
@@ -1721,7 +1717,6 @@
             },
             "Subscription": {
                 "type": "object",
-                "description": "API v1 Subscription: a DTO backed by the entity through stateOptions and\nthe object mapper (ADR 0007). Item reads use API Platform's Doctrine\nprovider, scoped to the token User by UserOwnedExtension, so a foreign\nidentifier is a 404; the collection uses a custom provider because the\nprice and renewal sorts are computed in SubscriptionService and cannot be\nexpressed as Doctrine ordering. Writes go through SubscriptionService in\nSubscriptionProcessor, which reads this DTO (never the mapped entity) so\nthe client's intent stays visible: the supplied PATCH members and the\nwrite-only confirmConvertedFor.\n\nMoney travels as a decimal string (\"15.99\") in both directions; category\nis an expense-category IRI and appears under _links.category in HAL. The\ncollection is paginated (25 per page, 1-based page) and sorted/filtered\nthrough the `order` and `category` query parameters, validated in the\ncollection provider.",
                 "properties": {
                     "id": {
                         "readOnly": true,
@@ -1839,7 +1834,6 @@
             },
             "Subscription.jsonMergePatch": {
                 "type": "object",
-                "description": "API v1 Subscription: a DTO backed by the entity through stateOptions and\nthe object mapper (ADR 0007). Item reads use API Platform's Doctrine\nprovider, scoped to the token User by UserOwnedExtension, so a foreign\nidentifier is a 404; the collection uses a custom provider because the\nprice and renewal sorts are computed in SubscriptionService and cannot be\nexpressed as Doctrine ordering. Writes go through SubscriptionService in\nSubscriptionProcessor, which reads this DTO (never the mapped entity) so\nthe client's intent stays visible: the supplied PATCH members and the\nwrite-only confirmConvertedFor.\n\nMoney travels as a decimal string (\"15.99\") in both directions; category\nis an expense-category IRI and appears under _links.category in HAL. The\ncollection is paginated (25 per page, 1-based page) and sorted/filtered\nthrough the `order` and `category` query parameters, validated in the\ncollection provider.",
                 "properties": {
                     "id": {
                         "readOnly": true,
@@ -1973,8 +1967,7 @@
                     {
                         "$ref": "#/components/schemas/Subscription"
                     }
-                ],
-                "description": "API v1 Subscription: a DTO backed by the entity through stateOptions and\nthe object mapper (ADR 0007). Item reads use API Platform's Doctrine\nprovider, scoped to the token User by UserOwnedExtension, so a foreign\nidentifier is a 404; the collection uses a custom provider because the\nprice and renewal sorts are computed in SubscriptionService and cannot be\nexpressed as Doctrine ordering. Writes go through SubscriptionService in\nSubscriptionProcessor, which reads this DTO (never the mapped entity) so\nthe client's intent stays visible: the supplied PATCH members and the\nwrite-only confirmConvertedFor.\n\nMoney travels as a decimal string (\"15.99\") in both directions; category\nis an expense-category IRI and appears under _links.category in HAL. The\ncollection is paginated (25 per page, 1-based page) and sorted/filtered\nthrough the `order` and `category` query parameters, validated in the\ncollection provider."
+                ]
             },
             "Subscription.jsonld": {
                 "allOf": [
@@ -2098,8 +2091,7 @@
                             "nextPayment"
                         ]
                     }
-                ],
-                "description": "API v1 Subscription: a DTO backed by the entity through stateOptions and\nthe object mapper (ADR 0007). Item reads use API Platform's Doctrine\nprovider, scoped to the token User by UserOwnedExtension, so a foreign\nidentifier is a 404; the collection uses a custom provider because the\nprice and renewal sorts are computed in SubscriptionService and cannot be\nexpressed as Doctrine ordering. Writes go through SubscriptionService in\nSubscriptionProcessor, which reads this DTO (never the mapped entity) so\nthe client's intent stays visible: the supplied PATCH members and the\nwrite-only confirmConvertedFor.\n\nMoney travels as a decimal string (\"15.99\") in both directions; category\nis an expense-category IRI and appears under _links.category in HAL. The\ncollection is paginated (25 per page, 1-based page) and sorted/filtered\nthrough the `order` and `category` query parameters, validated in the\ncollection provider."
+                ]
             }
         },
         "responses": {},
@@ -2133,15 +2125,15 @@
     "tags": [
         {
             "name": "DashboardReport",
-            "description": "Dashboard snapshot report for API v1: the current User's summary-card\nvalues and the numeric data behind one dashboard chart mode in a single\nresponse (issue #99).\n\nA DTO resource with a custom provider over DashboardReporter: there is no\nentity behind it (ADR 0007). Calculations reuse the Dashboard report\nmodule, so figures match the dashboard exactly: the summary comes from\nSubscriptionService::getTotals() through DashboardReporter, and the chart\nseries and visibility metadata are the same DashboardReport the web\ndashboard renders.\n\nThe request is stateless: the optional category filter and the month-of-year\nselector travel as explicit query parameters rather than web-session list\nstate. No year, date-range, payment-history, or forecast semantics are\noffered. Pending-review cross-currency Subscriptions stay in the count but\nare excluded from monetary totals and charts, exactly as on the dashboard.\n\nAn unknown or foreign category is not an error: the User-scoped query\nmatches nothing, so the report renders zero totals and an empty chart."
+            "description": ""
         },
         {
             "name": "ExpenseCategory",
-            "description": "API v1 ExpenseCategory: a DTO backed by the entity through stateOptions\nand the object mapper (ADR 0007). Reads use API Platform's Doctrine\nprovider, scoped to the token User by UserOwnedExtension; writes are mapped\nonto the entity and go through ExpenseCategoryService in\nExpenseCategoryProcessor.\n\nThe collection is not paginated: it is a small per-User picker a client\nneeds whole."
+            "description": ""
         },
         {
             "name": "Subscription",
-            "description": "API v1 Subscription: a DTO backed by the entity through stateOptions and\nthe object mapper (ADR 0007). Item reads use API Platform's Doctrine\nprovider, scoped to the token User by UserOwnedExtension, so a foreign\nidentifier is a 404; the collection uses a custom provider because the\nprice and renewal sorts are computed in SubscriptionService and cannot be\nexpressed as Doctrine ordering. Writes go through SubscriptionService in\nSubscriptionProcessor, which reads this DTO (never the mapped entity) so\nthe client's intent stays visible: the supplied PATCH members and the\nwrite-only confirmConvertedFor.\n\nMoney travels as a decimal string (\"15.99\") in both directions; category\nis an expense-category IRI and appears under _links.category in HAL. The\ncollection is paginated (25 per page, 1-based page) and sorted/filtered\nthrough the `order` and `category` query parameters, validated in the\ncollection provider."
+            "description": ""
         }
     ],
     "webhooks": {}

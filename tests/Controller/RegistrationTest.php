@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Controller;
 
 use App\Entity\User;
+use App\Security\EmailVerifier;
 use App\Tests\DatabaseTestCase;
 use Symfony\Bundle\FrameworkBundle\Test\MailerAssertionsTrait;
 use SymfonyCasts\Bundle\VerifyEmail\VerifyEmailHelperInterface;
@@ -52,6 +53,39 @@ final class RegistrationTest extends DatabaseTestCase
         $email = $this->getMailerMessage(0);
         self::assertEmailSubjectContains($email, 'Please Confirm your Email');
         self::assertEmailAddressContains($email, 'To', 'newuser@example.com');
+    }
+
+    public function testFailedConfirmationEmailSendsVisitorToResendPage(): void
+    {
+        // Keep the overridden service across requests: a reboot would
+        // rebuild the container and drop the failing double.
+        $this->client->disableReboot();
+        $verifier = $this->createStub(EmailVerifier::class);
+        $verifier->method('sendEmailConfirmation')
+            ->willThrowException(new \RuntimeException('Mail transport down.'));
+        static::getContainer()->set(EmailVerifier::class, $verifier);
+
+        $crawler = $this->client->request('GET', '/register');
+        $form = $crawler->selectButton('Register')->form([
+            'registration_form[email]' => 'nomail@example.com',
+            'registration_form[plainPassword][first]' => self::STRONG_PASSWORD,
+            'registration_form[plainPassword][second]' => self::STRONG_PASSWORD,
+            'registration_form[agreeTerms]' => '1',
+        ]);
+        $this->client->submit($form);
+
+        // The account exists; the visitor lands on the resend page instead
+        // of the login page, which no longer carries a resend form.
+        self::assertResponseRedirects('/register/activation');
+        self::assertNotNull($this->freshUser('nomail@example.com'));
+
+        $crawler = $this->client->followRedirect();
+        self::assertResponseIsSuccessful();
+        self::assertCount(1, $crawler->filter('form[action="/register/activation/resend"]'));
+        self::assertStringContainsString(
+            'could not send the verification email',
+            $crawler->text(null, true)
+        );
     }
 
     public function testNewAccountCannotLogInBeforeVerification(): void

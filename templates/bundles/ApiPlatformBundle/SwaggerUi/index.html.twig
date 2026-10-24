@@ -1,10 +1,17 @@
 {#
- Copy of api-platform/core's SwaggerUi/index.html.twig with ONE change: the
- OAuth2 redirectUrl is the literal /bundles/... path, not asset(...). With
- AssetMapper active asset() returns a digested /assets/bundles/...-<hash>.html
- URL, which never matches the byte-exact redirect URI registered for the
- `paysubscriptions-api-docs` Client (docs/api-operations.md), so /authorize
- answers 401. The file is served from public/bundles via assets:install.
+ Copy of api-platform/core's SwaggerUi/index.html.twig with these changes:
+
+ - The OAuth2 redirectUrl is the literal /bundles/... path, not asset(...).
+   With AssetMapper active asset() returns a digested
+   /assets/bundles/...-<hash>.html URL, which never matches the byte-exact
+   redirect URI registered for the `paysubscriptions-api-docs` Client
+   (docs/api-operations.md), so /authorize answers 401. The file is served
+   from public/bundles via assets:install.
+ - No third-party hosts (docs/third-party-services.md): the Scalar branch,
+   which loads its script from cdn.jsdelivr.net, is removed (Scalar is
+   disabled in config/packages/api_platform.yaml), and the header logo is not
+   a link to api-platform.com.
+
  Re-sync with the vendor template when upgrading api-platform/core.
 #}
 <!DOCTYPE html>
@@ -79,7 +86,7 @@
 
 {% block header %}
     <header>
-        <a id="logo" href="https://api-platform.com"><img src="{{ asset('bundles/apiplatform/logo-header.svg', assetPackage) }}" alt="API Platform"></a>
+        <span id="logo"><img src="{{ asset('bundles/apiplatform/logo-header.svg', assetPackage) }}" alt="API Platform"></span>
     </header>
 {% endblock %}
 
@@ -118,10 +125,7 @@
 {% endif %}
 
 {% block javascript %}
-    {% if is_scalar %}
-        <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"{{ csp_nonce_attr|raw }}></script>
-        <script src="{{ asset('bundles/apiplatform/init-scalar-ui.js', assetPackage) }}"{{ csp_nonce_attr|raw }}></script>
-    {% elseif (reDocEnabled and 're_doc' == active_ui) %}
+    {% if (reDocEnabled and 're_doc' == active_ui) %}
         <script src="{{ asset('bundles/apiplatform/redoc/redoc.standalone.js', assetPackage) }}"{{ csp_nonce_attr|raw }}></script>
         <script src="{{ asset('bundles/apiplatform/init-redoc-ui.js', assetPackage) }}"{{ csp_nonce_attr|raw }}></script>
     {% else %}

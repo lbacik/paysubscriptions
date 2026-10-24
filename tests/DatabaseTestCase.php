@@ -71,17 +71,16 @@ abstract class DatabaseTestCase extends WebTestCase
     }
 
     /**
-     * Reads the activation-resend CSRF token out of the login page's
-     * standalone resend form (issue #143), the same place a browser would
-     * get it from.
+     * Reads the activation-resend CSRF token out of the standalone resend
+     * page's form (issue #143), the same place a browser would get it from.
      */
     protected function resendCsrfToken(): string
     {
-        $crawler = $this->client->request('GET', '/login');
+        $crawler = $this->client->request('GET', '/register/activation');
         self::assertResponseIsSuccessful();
 
         $token = $crawler->filter('form[action="/register/activation/resend"] input[name="_token"]')->attr('value');
-        self::assertNotNull($token, 'expected a resend form on the login page');
+        self::assertNotNull($token, 'expected a resend form on the resend activation page');
 
         return $token;
     }
