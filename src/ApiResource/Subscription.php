@@ -11,6 +11,7 @@ use ApiPlatform\Metadata\Delete;
 use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\GetCollection;
 use ApiPlatform\Metadata\Patch;
+use ApiPlatform\Metadata\QueryParameter;
 use ApiPlatform\Metadata\Post;
 use App\Entity\Subscription as SubscriptionEntity;
 use App\Enum\BillingCycle;
@@ -50,6 +51,33 @@ use Symfony\Component\Validator\Constraints as Assert;
             name: 'api_v1_subscriptions_list',
             provider: SubscriptionCollectionProvider::class,
             paginationItemsPerPage: 25,
+            // The sort and category selectors are documented here for
+            // generated clients, but never validated here: the collection
+            // provider stays the only validator so violation paths and
+            // messages stay stable.
+            queryParameterValidationEnabled: false,
+            parameters: [
+                'order[name]' => new QueryParameter(
+                    key: 'order[name]',
+                    description: 'Sort by subscription name ("asc" or "desc"). Only one "order[field]" parameter may be sent at a time (otherwise 422). Default sort is name/asc, ties broken by name then id.',
+                    schema: ['type' => 'string', 'enum' => ['asc', 'desc']],
+                ),
+                'order[price]' => new QueryParameter(
+                    key: 'order[price]',
+                    description: 'Sort by comparable price ("asc" or "desc"). Only one "order[field]" parameter may be sent at a time (otherwise 422). Default sort is name/asc, ties broken by name then id.',
+                    schema: ['type' => 'string', 'enum' => ['asc', 'desc']],
+                ),
+                'order[renewal]' => new QueryParameter(
+                    key: 'order[renewal]',
+                    description: 'Sort by next renewal date ("asc" or "desc"). Only one "order[field]" parameter may be sent at a time (otherwise 422). Default sort is name/asc, ties broken by name then id.',
+                    schema: ['type' => 'string', 'enum' => ['asc', 'desc']],
+                ),
+                'category' => new QueryParameter(
+                    key: 'category',
+                    description: 'Filter by ExpenseCategory UUID. A malformed UUID is a 422 on "category"; an unknown or foreign UUID matches nothing.',
+                    schema: ['type' => 'string', 'format' => 'uuid'],
+                ),
+            ],
         ),
         new Post(name: 'api_v1_subscriptions_create', processor: SubscriptionProcessor::class),
         new Get(name: 'api_v1_subscriptions_show'),

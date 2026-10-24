@@ -117,4 +117,42 @@ final class OpenApiSnapshotTest extends KernelTestCase
         self::assertSame(['api:full'], array_keys($params->get('api_platform.oauth.scopes')));
         self::assertFalse($params->get('api_platform.swagger.persist_authorization'));
     }
+
+    public function testSubscriptionListDeclaresSortAndCategoryParameters(): void
+    {
+        $doc = self::committedContract();
+
+        $list = $doc['paths']['/api/v1/subscriptions']['get'] ?? null;
+        self::assertIsArray($list, 'The Subscription list operation must exist in the published contract.');
+        $byName = [];
+        foreach ($list['parameters'] ?? [] as $parameter) {
+            $byName[$parameter['name']] = $parameter;
+        }
+
+        foreach (['order[name]', 'order[price]', 'order[renewal]'] as $name) {
+            self::assertArrayHasKey($name, $byName, sprintf('The Subscription list must declare "%s".', $name));
+            self::assertSame('query', $byName[$name]['in']);
+            self::assertSame('string', $byName[$name]['schema']['type'] ?? null);
+            self::assertSame(['asc', 'desc'], $byName[$name]['schema']['enum'] ?? null);
+            self::assertStringContainsString('Only one', $byName[$name]['description'] ?? '');
+            self::assertStringContainsString('422', $byName[$name]['description'] ?? '');
+            self::assertStringContainsString('name/asc', $byName[$name]['description'] ?? '');
+        }
+
+        self::assertArrayHasKey('category', $byName, 'The Subscription list must declare "category".');
+        self::assertSame('query', $byName['category']['in']);
+        self::assertSame('string', $byName['category']['schema']['type'] ?? null);
+        self::assertSame('uuid', $byName['category']['schema']['format'] ?? null);
+        self::assertStringContainsString('422', $byName['category']['description'] ?? '');
+        self::assertStringContainsString('matches nothing', $byName['category']['description'] ?? '');
+
+        foreach (['get', 'patch', 'delete'] as $method) {
+            $item = $doc['paths']['/api/v1/subscriptions/{id}'][$method] ?? null;
+            self::assertIsArray($item, sprintf('The Subscription item %s operation must exist.', $method));
+            $names = array_column($item['parameters'] ?? [], 'name');
+            foreach (['order[name]', 'order[price]', 'order[renewal]', 'category'] as $name) {
+                self::assertNotContains($name, $names, sprintf('The Subscription item %s operation must not declare "%s".', $method, $name));
+            }
+        }
+    }
 }

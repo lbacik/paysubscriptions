@@ -576,6 +576,67 @@
                         },
                         "style": "form",
                         "explode": true
+                    },
+                    {
+                        "name": "order[name]",
+                        "in": "query",
+                        "description": "Sort by subscription name (\"asc\" or \"desc\"). Only one \"order[field]\" parameter may be sent at a time (otherwise 422). Default sort is name/asc, ties broken by name then id.",
+                        "required": false,
+                        "deprecated": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "asc",
+                                "desc"
+                            ]
+                        },
+                        "style": "form",
+                        "explode": true
+                    },
+                    {
+                        "name": "order[price]",
+                        "in": "query",
+                        "description": "Sort by comparable price (\"asc\" or \"desc\"). Only one \"order[field]\" parameter may be sent at a time (otherwise 422). Default sort is name/asc, ties broken by name then id.",
+                        "required": false,
+                        "deprecated": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "asc",
+                                "desc"
+                            ]
+                        },
+                        "style": "form",
+                        "explode": true
+                    },
+                    {
+                        "name": "order[renewal]",
+                        "in": "query",
+                        "description": "Sort by next renewal date (\"asc\" or \"desc\"). Only one \"order[field]\" parameter may be sent at a time (otherwise 422). Default sort is name/asc, ties broken by name then id.",
+                        "required": false,
+                        "deprecated": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "asc",
+                                "desc"
+                            ]
+                        },
+                        "style": "form",
+                        "explode": true
+                    },
+                    {
+                        "name": "category",
+                        "in": "query",
+                        "description": "Filter by ExpenseCategory UUID. A malformed UUID is a 422 on \"category\"; an unknown or foreign UUID matches nothing.",
+                        "required": false,
+                        "deprecated": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "style": "form",
+                        "explode": true
                     }
                 ]
             },
