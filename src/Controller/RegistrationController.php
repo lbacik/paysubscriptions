@@ -29,6 +29,7 @@ use Symfony\Component\RateLimiter\RateLimiterFactory;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Csrf\CsrfToken;
 use Symfony\Component\Security\Csrf\CsrfTokenManagerInterface;
+use Symfony\Component\Security\Http\Authentication\AuthenticationUtils;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use SymfonyCasts\Bundle\VerifyEmail\Exception\VerifyEmailExceptionInterface;
 
@@ -125,15 +126,15 @@ class RegistrationController extends AbstractController
                 $this->sendConfirmationEmail($user);
             } catch (\Throwable $exception) {
                 // The account is usable; only the verification email failed.
-                // Log for observability and tell the visitor how to recover
-                // (the resend route) instead of answering with an HTTP 500.
+                // Log for observability and send the visitor straight to the
+                // resend page instead of answering with an HTTP 500.
                 $this->logger->error('Verification email could not be sent.', ['exception' => $exception]);
                 $this->addFlash(
                     'danger',
-                    'Your account has been created, but we could not send the verification email. Please request a new one from the login page.'
+                    'Your account has been created, but we could not send the verification email. Please request a new one.'
                 );
 
-                return $this->redirectToRoute('app_login');
+                return $this->redirectToRoute('app_resend_activation_request');
             }
 
             // do anything else you need here, like send an email
@@ -178,6 +179,20 @@ class RegistrationController extends AbstractController
         $this->addFlash('success', 'Your email address has been verified.');
 
         return $this->redirectToRoute('app_login');
+    }
+
+    /**
+     * Standalone page holding the resend form: the login page links here
+     * after a failed sign-in, and registration redirects here when the
+     * verification email could not be sent. The address is prefilled from
+     * the session (last attempted login), so it never travels in the URL.
+     */
+    #[Route('/register/activation', name: 'app_resend_activation_request', methods: ['GET'])]
+    public function resendActivationRequest(AuthenticationUtils $authenticationUtils): Response
+    {
+        return $this->render('registration/resend_activation.html.twig', [
+            'last_username' => $authenticationUtils->getLastUsername(),
+        ]);
     }
 
     #[Route('/register/activation/resend', name: 'resend_activation', methods: ['POST'])]

@@ -125,7 +125,16 @@ final class ActivationResendTest extends DatabaseTestCase
         self::assertEmailCount(0);
     }
 
-    public function testUnverifiedLoginOffersWorkingResendForm(): void
+    public function testResendPageRendersForm(): void
+    {
+        $crawler = $this->client->request('GET', '/register/activation');
+
+        self::assertResponseIsSuccessful();
+        self::assertCount(1, $crawler->filter('form[action="/register/activation/resend"][method="post"]'));
+        self::assertSame('', (string) $crawler->filter('#resendEmail')->attr('value'));
+    }
+
+    public function testUnverifiedLoginLeadsToWorkingResendForm(): void
     {
         $this->createUser('resend-unverified@example.com', self::PASSWORD, false);
 
@@ -135,9 +144,13 @@ final class ActivationResendTest extends DatabaseTestCase
         $crawler = $this->client->followRedirect();
         self::assertStringContainsString('not active', $crawler->text(null, true));
 
-        // The login page's resend form (POST, not a link) is prefilled with
-        // the attempted address and carries a token the endpoint accepts:
-        // submitting it queues the email.
+        // The login page only links to the resend page; that page's form
+        // (POST) is prefilled with the attempted address and carries a token
+        // the endpoint accepts: submitting it queues the email.
+        $crawler = $this->client->click($crawler->filter('a[href="/register/activation"]')->link());
+        self::assertResponseIsSuccessful();
+        self::assertSame('resend-unverified@example.com', $crawler->filter('#resendEmail')->attr('value'));
+
         $form = $crawler->selectButton('Resend activation email')->form();
         $this->client->submit($form);
 

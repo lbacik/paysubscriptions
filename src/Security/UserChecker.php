@@ -29,8 +29,8 @@ class UserChecker implements UserCheckerInterface
 
         if (!$user->isVerified()) {
             // A stable key plus the address as data: the login template
-            // renders the (escaped) message and points at its own POST
-            // resend form, so no HTML travels inside the exception.
+            // renders the (escaped) message and links to the resend page
+            // itself, so no HTML travels inside the exception.
             throw new CustomUserMessageAccountStatusException(
                 'user.account_not_verified',
                 ['email' => $user->getEmail()]

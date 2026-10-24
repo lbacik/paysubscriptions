@@ -17,6 +17,7 @@
     { "id": "contact", "path": "/contact", "auth": false, "viewports": ["desktop"] },
     { "id": "register", "path": "/register", "auth": false, "viewports": ["desktop"] },
     { "id": "login", "path": "/login", "auth": false, "viewports": ["desktop", "narrow"] },
+    { "id": "resend-activation", "path": "/register/activation", "auth": false, "viewports": ["desktop"] },
     { "id": "reset-request", "path": "/reset-password", "auth": false, "viewports": ["desktop"] },
     { "id": "reset-check-email", "path": "/reset-password/check-email", "auth": false, "viewports": ["desktop"] },
     { "id": "dashboard", "path": "/dashboard", "auth": true, "viewports": ["desktop", "narrow"] },
