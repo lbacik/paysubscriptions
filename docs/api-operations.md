@@ -316,8 +316,14 @@ pipeline ships one tagged image or nothing.
    redirect URI) — `app:api:preflight` verifies it read-only.
 4. Create one `v*` tag only after steps 1–3 pass. The tag builds one
    image (`release.yml`) and deploys it once (`deploy.yml`, which
-   migrates, converges, and runs the §7 checks). There is no pilot
-   or dark launch: the tagged pipeline is the rollout.
+   migrates, converges, and runs the §7 checks). After a successful
+   deploy, `release.yml`'s `dispatch-sdk-release` job notifies the
+   SDK generator (§10). There is no pilot
+   or dark launch: the tagged pipeline is the rollout. In the tag's
+   Actions run, check the `dispatch-sdk-release` job: green means
+   the generator was notified, a `::notice::` in its log means the
+   dispatch is disabled (no secret yet) and was skipped, and red
+   means the notification failed (the deploy itself is unaffected).
 5. After the deploy, run the §7 operator sequence once with the first
    approved CLI: browser sign-in with loopback PKCE (§3), an
    authorized read, a refresh (§4), and a disconnect (§5). Watch the
@@ -326,3 +332,53 @@ pipeline ships one tagged image or nothing.
 6. A failed smoke or CLI path blocks acceptance and invokes the §7
    failure procedure (logs → image rollback per §8 → fix forward in
    CI), not a new tag.
+
+## 10. SDK generator dispatch (`SDK_GENERATOR_DISPATCH_TOKEN`)
+
+After every successful tag-triggered deploy, `release.yml`'s
+`dispatch-sdk-release` job sends one `repository_dispatch` with
+`event_type: api-release` to the SDK generator's canonical
+repository, `lbacik/jsonhub-sdk-generator`. The payload carries
+only `client_payload.product` (`paysubscriptions`) and
+`client_payload.source_api_version` (the pushed tag) — no
+`api_url`. The generator cuts an SDK Release of
+`paysubscriptions-sdk` with the tag as its Source API Version.
+Manual redeploys and rollbacks (`deploy.yml` → Run workflow) never
+dispatch: the job lives in `release.yml` behind `needs: deploy` for
+exactly that reason. A failed notification fails only the
+`dispatch-sdk-release` job — the deploy above it stays green.
+
+- **Token.** A fine-grained personal access token scoped to the
+  `lbacik/jsonhub-sdk-generator` repository with Contents: Read and
+  write. That permission also allows pushing to the generator —
+  accepted knowingly, since `repository_dispatch` delivery requires
+  the Contents write scope.
+- **Storage.** A secret of the `production` environment in this
+  repository, named `SDK_GENERATOR_DISPATCH_TOKEN`. The dispatch
+  job names the `production` environment so it can read it; while
+  the secret is empty the job logs a `::notice::` and succeeds
+  without sending anything.
+- **Expiry and rotation.** The token expires after one year. Before
+  it lapses, mint a replacement with the same repository scope and
+  Contents permission, overwrite the environment secret, and delete
+  the old token. If it lapses first, dispatches fail red until the
+  replacement lands — recover per the last bullet below.
+- **Rollout switch and kill switch.** Adding the secret is the
+  rollout switch (this can merge before the generator side is
+  ready); removing it (or emptying it) is the kill switch — the
+  dispatch goes back to notice-and-skip without touching the
+  workflow.
+- **Prerequisites before adding it.** Do not store the secret until
+  all of these hold: the generator requires
+  `client_payload.product`; the `paysubscriptions` Product exists in
+  the generator; the `lbacik/paysubscriptions-sdk-ts` repository
+  exists; and the generator has its `PAYSUBSCRIPTIONS_SDK_TS_TOKEN`
+  secret to push the generated SDK there.
+- **Failed dispatch recovery.** Open the tag's Actions run and use
+  "Re-run failed jobs" on the red `dispatch-sdk-release` job — it
+  re-sends the same `product` + `source_api_version` pair, and a
+  duplicate dispatch is harmless (the generator cuts the same SDK
+  Release again for the same Source API Version). If the generator
+  repository is ever renamed, the dispatch URL in `release.yml`
+  must be updated to the new canonical name: the POST never follows
+  redirects.
