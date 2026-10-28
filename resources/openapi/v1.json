@@ -145,10 +145,13 @@
                                             "type": "object",
                                             "properties": {
                                                 "_embedded": {
-                                                    "additionalProperties": {
-                                                        "type": "array",
-                                                        "items": {
-                                                            "$ref": "#/components/schemas/ExpenseCategory.jsonhal"
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "item": {
+                                                            "type": "array",
+                                                            "items": {
+                                                                "$ref": "#/components/schemas/ExpenseCategory.jsonhal"
+                                                            }
                                                         }
                                                     }
                                                 }
@@ -513,10 +516,13 @@
                                             "type": "object",
                                             "properties": {
                                                 "_embedded": {
-                                                    "additionalProperties": {
-                                                        "type": "array",
-                                                        "items": {
-                                                            "$ref": "#/components/schemas/Subscription.jsonhal"
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "item": {
+                                                            "type": "array",
+                                                            "items": {
+                                                                "$ref": "#/components/schemas/Subscription.jsonhal"
+                                                            }
                                                         }
                                                     }
                                                 }
@@ -1483,7 +1489,17 @@
                                 "minimum": 0
                             },
                             "_links": {
+                                "type": "object",
                                 "properties": {
+                                    "self": {
+                                        "type": "object",
+                                        "properties": {
+                                            "href": {
+                                                "type": "string",
+                                                "format": "iri-reference"
+                                            }
+                                        }
+                                    },
                                     "first": {
                                         "type": "object",
                                         "properties": {
@@ -1511,12 +1527,24 @@
                                             }
                                         }
                                     },
-                                    "previous": {
+                                    "prev": {
                                         "type": "object",
                                         "properties": {
                                             "href": {
                                                 "type": "string",
                                                 "format": "iri-reference"
+                                            }
+                                        }
+                                    },
+                                    "item": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "object",
+                                            "properties": {
+                                                "href": {
+                                                    "type": "string",
+                                                    "format": "iri-reference"
+                                                }
                                             }
                                         }
                                     }
@@ -1534,19 +1562,12 @@
                         "minimum": 0
                     },
                     "_embedded": {
-                        "anyOf": [
-                            {
-                                "type": "object",
-                                "properties": {
-                                    "item": {
-                                        "type": "array"
-                                    }
-                                }
-                            },
-                            {
-                                "type": "object"
+                        "type": "object",
+                        "properties": {
+                            "item": {
+                                "type": "array"
                             }
-                        ]
+                        }
                     },
                     "_links": {
                         "type": "object",
@@ -1559,13 +1580,60 @@
                                         "format": "iri-reference"
                                     }
                                 }
+                            },
+                            "first": {
+                                "type": "object",
+                                "properties": {
+                                    "href": {
+                                        "type": "string",
+                                        "format": "iri-reference"
+                                    }
+                                }
+                            },
+                            "last": {
+                                "type": "object",
+                                "properties": {
+                                    "href": {
+                                        "type": "string",
+                                        "format": "iri-reference"
+                                    }
+                                }
+                            },
+                            "prev": {
+                                "type": "object",
+                                "properties": {
+                                    "href": {
+                                        "type": "string",
+                                        "format": "iri-reference"
+                                    }
+                                }
+                            },
+                            "next": {
+                                "type": "object",
+                                "properties": {
+                                    "href": {
+                                        "type": "string",
+                                        "format": "iri-reference"
+                                    }
+                                }
+                            },
+                            "item": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "href": {
+                                            "type": "string",
+                                            "format": "iri-reference"
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
                 },
                 "required": [
-                    "_links",
-                    "_embedded"
+                    "_links"
                 ]
             },
             "HydraCollectionBaseSchema": {
@@ -1944,29 +2012,135 @@
                 }
             },
             "Subscription.jsonhal": {
-                "allOf": [
-                    {
+                "type": "object",
+                "properties": {
+                    "_links": {
                         "type": "object",
                         "properties": {
-                            "_links": {
+                            "self": {
                                 "type": "object",
                                 "properties": {
-                                    "self": {
-                                        "type": "object",
-                                        "properties": {
-                                            "href": {
-                                                "type": "string",
-                                                "format": "iri-reference"
-                                            }
-                                        }
+                                    "href": {
+                                        "type": "string",
+                                        "format": "iri-reference"
+                                    }
+                                }
+                            },
+                            "category": {
+                                "type": "object",
+                                "properties": {
+                                    "href": {
+                                        "type": "string",
+                                        "format": "iri-reference"
                                     }
                                 }
                             }
                         }
                     },
-                    {
-                        "$ref": "#/components/schemas/Subscription"
+                    "id": {
+                        "readOnly": true,
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "uuid"
+                    },
+                    "name": {
+                        "minLength": 3,
+                        "maxLength": 255,
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "billingCycle": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "enum": [
+                            "monthly",
+                            "yearly",
+                            null
+                        ]
+                    },
+                    "amount": {
+                        "pattern": "^(\\d+(\\.\\d{1,2})?)$",
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "nextPayment": {
+                        "pattern": "^(\\d{4}-\\d{2}-\\d{2})$",
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "currency": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "convertedAmount": {
+                        "pattern": "^(\\d+(\\.\\d{1,2})?)$",
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "convertedCurrency": {
+                        "readOnly": true,
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "pendingReview": {
+                        "readOnly": true,
+                        "type": [
+                            "boolean",
+                            "null"
+                        ]
+                    },
+                    "confirmConvertedFor": {
+                        "writeOnly": true,
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "notes": {
+                        "maxLength": 2000,
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "createdAt": {
+                        "readOnly": true,
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "updatedAt": {
+                        "readOnly": true,
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
                     }
+                },
+                "required": [
+                    "name",
+                    "billingCycle",
+                    "amount",
+                    "nextPayment"
                 ]
             },
             "Subscription.jsonld": {

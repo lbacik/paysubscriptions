@@ -58,6 +58,17 @@ services:
         arguments:
             $decorated: '@App\OpenApi\OAuthSecurityDecorator.inner'
 
+    # Generated OpenAPI contract (issue #277): the HAL collection and item
+    # schemas describe what the HAL normalizers send (`prev`, collection
+    # `self`, named `_embedded.item`, `_links.category`). Registered like the
+    # OAuth security decorator above: the inner service is injected
+    # explicitly, since autowiring OpenApiFactoryInterface here would resolve
+    # the alias back to this decorator.
+    App\OpenApi\HalSchemaDecorator:
+        decorates: 'api_platform.openapi.factory'
+        arguments:
+            $decorated: '@App\OpenApi\HalSchemaDecorator.inner'
+
     # Web-login throttling (issue #143): the bundle's own username+IP *and*
     # IP limiters, fed by the env-sized login_local/login_global factories
     # (config/packages/rate_limiter.yaml) instead of the static max_attempts
