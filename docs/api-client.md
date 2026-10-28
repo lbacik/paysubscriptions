@@ -20,7 +20,9 @@ the operations runbook, `docs/api-operations.md`.
   also covers the `.json` variant, which API Platform answers itself),
   and `resources/openapi/v1.json` in the repository carries the identical
   snapshot. Additive backward-compatible changes stay within v1; breaking
-  changes require a new version.
+  changes require a new version. The contract is published as OpenAPI 3.2,
+  and `/api/docs.jsonopenapi?spec_version=3.0.0` serves the same contract
+  as OpenAPI 3.0 for tools that cannot read 3.2 (such as openapi-generator).
 
 ## Discovery URLs
 
