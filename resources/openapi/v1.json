@@ -39,17 +39,166 @@
                             }
                         }
                     },
-                    "404": {
-                        "description": "Not found",
+                    "401": {
+                        "description": "Unauthorized. The request carries no usable bearer token (problem type \"/errors/401\").",
                         "content": {
                             "application/problem+json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/Error"
+                                },
+                                "examples": {
+                                    "unauthorized": {
+                                        "summary": "Missing or invalid token",
+                                        "value": {
+                                            "type": "/errors/401",
+                                            "title": "An error occurred",
+                                            "status": 401,
+                                            "detail": "Unauthorized"
+                                        }
+                                    }
                                 }
                             },
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        },
+                        "headers": {
+                            "WWW-Authenticate": {
+                                "in": "header",
+                                "description": "The bearer challenge the client must answer.",
+                                "required": false,
+                                "deprecated": false,
+                                "allowEmptyValue": false,
+                                "schema": {
+                                    "type": "string"
+                                },
+                                "style": "simple",
+                                "explode": false,
+                                "allowReserved": false,
+                                "example": "Bearer"
+                            }
+                        },
+                        "links": {}
+                    },
+                    "403": {
+                        "description": "Forbidden. Either the token lacks the \"api:full\" scope (\"/problems/insufficient-scope\") or the account is not eligible (\"/problems/account-inactive\"). Neither case should trigger a token refresh.",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                },
+                                "examples": {
+                                    "insufficient-scope": {
+                                        "summary": "Token without the api:full scope",
+                                        "value": {
+                                            "type": "/problems/insufficient-scope",
+                                            "title": "Forbidden",
+                                            "status": 403,
+                                            "detail": "This resource requires the \"api:full\" scope."
+                                        }
+                                    },
+                                    "account-inactive": {
+                                        "summary": "Unverified account",
+                                        "value": {
+                                            "type": "/problems/account-inactive",
+                                            "title": "Forbidden",
+                                            "status": 403,
+                                            "detail": "This account is not eligible to use the API."
+                                        }
+                                    }
+                                }
+                            },
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        },
+                        "links": {}
+                    },
+                    "422": {
+                        "description": "Unprocessable entity. A \"chartMode\", \"basis\", \"month\" or \"category\" selector is invalid (problem type \"/validation_errors/{id}\", a fresh id per occurrence).",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ConstraintViolation"
+                                },
+                                "examples": {
+                                    "chartMode": {
+                                        "summary": "Unknown chart mode",
+                                        "description": "The \"type\" carries a per-occurrence id; only the \"/validation_errors/\" prefix is stable.",
+                                        "value": {
+                                            "type": "/validation_errors/00000000-0000-4000-8000-000000000000",
+                                            "title": "An error occurred",
+                                            "status": 422,
+                                            "detail": "chartMode: The value you selected is not a valid choice.",
+                                            "violations": [
+                                                {
+                                                    "propertyPath": "chartMode",
+                                                    "message": "The value you selected is not a valid choice.",
+                                                    "code": "8e179f1b-97aa-4560-a02f-2a8b42e49df7"
+                                                }
+                                            ]
+                                        }
+                                    },
+                                    "basis": {
+                                        "summary": "Unknown basis",
+                                        "description": "The \"type\" carries a per-occurrence id; only the \"/validation_errors/\" prefix is stable.",
+                                        "value": {
+                                            "type": "/validation_errors/00000000-0000-4000-8000-000000000000",
+                                            "title": "An error occurred",
+                                            "status": 422,
+                                            "detail": "basis: The value you selected is not a valid choice.",
+                                            "violations": [
+                                                {
+                                                    "propertyPath": "basis",
+                                                    "message": "The value you selected is not a valid choice.",
+                                                    "code": "8e179f1b-97aa-4560-a02f-2a8b42e49df7"
+                                                }
+                                            ]
+                                        }
+                                    },
+                                    "month": {
+                                        "summary": "Month outside 1-12",
+                                        "description": "The \"type\" carries a per-occurrence id; only the \"/validation_errors/\" prefix is stable.",
+                                        "value": {
+                                            "type": "/validation_errors/00000000-0000-4000-8000-000000000000",
+                                            "title": "An error occurred",
+                                            "status": 422,
+                                            "detail": "month: This value should be between 1 and 12.",
+                                            "violations": [
+                                                {
+                                                    "propertyPath": "month",
+                                                    "message": "This value should be between 1 and 12.",
+                                                    "code": "04b91c99-a946-4221-afc5-e65ebac401eb"
+                                                }
+                                            ]
+                                        }
+                                    },
+                                    "category": {
+                                        "summary": "Malformed category filter",
+                                        "description": "The \"type\" carries a per-occurrence id; only the \"/validation_errors/\" prefix is stable.",
+                                        "value": {
+                                            "type": "/validation_errors/00000000-0000-4000-8000-000000000000",
+                                            "title": "An error occurred",
+                                            "status": 422,
+                                            "detail": "category: This value is not a valid UUID.",
+                                            "violations": [
+                                                {
+                                                    "propertyPath": "category",
+                                                    "message": "This value is not a valid UUID.",
+                                                    "code": "51120b12-a2bc-41bf-aa53-cd73daf330d0"
+                                                }
+                                            ]
+                                        }
+                                    }
+                                }
+                            },
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ConstraintViolation"
                                 }
                             }
                         },
@@ -194,6 +343,85 @@
                                 }
                             }
                         }
+                    },
+                    "401": {
+                        "description": "Unauthorized. The request carries no usable bearer token (problem type \"/errors/401\").",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                },
+                                "examples": {
+                                    "unauthorized": {
+                                        "summary": "Missing or invalid token",
+                                        "value": {
+                                            "type": "/errors/401",
+                                            "title": "An error occurred",
+                                            "status": 401,
+                                            "detail": "Unauthorized"
+                                        }
+                                    }
+                                }
+                            },
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        },
+                        "headers": {
+                            "WWW-Authenticate": {
+                                "in": "header",
+                                "description": "The bearer challenge the client must answer.",
+                                "required": false,
+                                "deprecated": false,
+                                "allowEmptyValue": false,
+                                "schema": {
+                                    "type": "string"
+                                },
+                                "style": "simple",
+                                "explode": false,
+                                "allowReserved": false,
+                                "example": "Bearer"
+                            }
+                        },
+                        "links": {}
+                    },
+                    "403": {
+                        "description": "Forbidden. Either the token lacks the \"api:full\" scope (\"/problems/insufficient-scope\") or the account is not eligible (\"/problems/account-inactive\"). Neither case should trigger a token refresh.",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                },
+                                "examples": {
+                                    "insufficient-scope": {
+                                        "summary": "Token without the api:full scope",
+                                        "value": {
+                                            "type": "/problems/insufficient-scope",
+                                            "title": "Forbidden",
+                                            "status": 403,
+                                            "detail": "This resource requires the \"api:full\" scope."
+                                        }
+                                    },
+                                    "account-inactive": {
+                                        "summary": "Unverified account",
+                                        "value": {
+                                            "type": "/problems/account-inactive",
+                                            "title": "Forbidden",
+                                            "status": 403,
+                                            "detail": "This account is not eligible to use the API."
+                                        }
+                                    }
+                                }
+                            },
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        },
+                        "links": {}
                     }
                 },
                 "summary": "Retrieves the collection of ExpenseCategory resources.",
@@ -254,6 +482,85 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/ConstraintViolation"
+                                }
+                            }
+                        },
+                        "links": {}
+                    },
+                    "401": {
+                        "description": "Unauthorized. The request carries no usable bearer token (problem type \"/errors/401\").",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                },
+                                "examples": {
+                                    "unauthorized": {
+                                        "summary": "Missing or invalid token",
+                                        "value": {
+                                            "type": "/errors/401",
+                                            "title": "An error occurred",
+                                            "status": 401,
+                                            "detail": "Unauthorized"
+                                        }
+                                    }
+                                }
+                            },
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        },
+                        "headers": {
+                            "WWW-Authenticate": {
+                                "in": "header",
+                                "description": "The bearer challenge the client must answer.",
+                                "required": false,
+                                "deprecated": false,
+                                "allowEmptyValue": false,
+                                "schema": {
+                                    "type": "string"
+                                },
+                                "style": "simple",
+                                "explode": false,
+                                "allowReserved": false,
+                                "example": "Bearer"
+                            }
+                        },
+                        "links": {}
+                    },
+                    "403": {
+                        "description": "Forbidden. Either the token lacks the \"api:full\" scope (\"/problems/insufficient-scope\") or the account is not eligible (\"/problems/account-inactive\"). Neither case should trigger a token refresh.",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                },
+                                "examples": {
+                                    "insufficient-scope": {
+                                        "summary": "Token without the api:full scope",
+                                        "value": {
+                                            "type": "/problems/insufficient-scope",
+                                            "title": "Forbidden",
+                                            "status": 403,
+                                            "detail": "This resource requires the \"api:full\" scope."
+                                        }
+                                    },
+                                    "account-inactive": {
+                                        "summary": "Unverified account",
+                                        "value": {
+                                            "type": "/problems/account-inactive",
+                                            "title": "Forbidden",
+                                            "status": 403,
+                                            "detail": "This account is not eligible to use the API."
+                                        }
+                                    }
+                                }
+                            },
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
                                 }
                             }
                         },
@@ -328,6 +635,85 @@
                             }
                         },
                         "links": {}
+                    },
+                    "401": {
+                        "description": "Unauthorized. The request carries no usable bearer token (problem type \"/errors/401\").",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                },
+                                "examples": {
+                                    "unauthorized": {
+                                        "summary": "Missing or invalid token",
+                                        "value": {
+                                            "type": "/errors/401",
+                                            "title": "An error occurred",
+                                            "status": 401,
+                                            "detail": "Unauthorized"
+                                        }
+                                    }
+                                }
+                            },
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        },
+                        "headers": {
+                            "WWW-Authenticate": {
+                                "in": "header",
+                                "description": "The bearer challenge the client must answer.",
+                                "required": false,
+                                "deprecated": false,
+                                "allowEmptyValue": false,
+                                "schema": {
+                                    "type": "string"
+                                },
+                                "style": "simple",
+                                "explode": false,
+                                "allowReserved": false,
+                                "example": "Bearer"
+                            }
+                        },
+                        "links": {}
+                    },
+                    "403": {
+                        "description": "Forbidden. Either the token lacks the \"api:full\" scope (\"/problems/insufficient-scope\") or the account is not eligible (\"/problems/account-inactive\"). Neither case should trigger a token refresh.",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                },
+                                "examples": {
+                                    "insufficient-scope": {
+                                        "summary": "Token without the api:full scope",
+                                        "value": {
+                                            "type": "/problems/insufficient-scope",
+                                            "title": "Forbidden",
+                                            "status": 403,
+                                            "detail": "This resource requires the \"api:full\" scope."
+                                        }
+                                    },
+                                    "account-inactive": {
+                                        "summary": "Unverified account",
+                                        "value": {
+                                            "type": "/problems/account-inactive",
+                                            "title": "Forbidden",
+                                            "status": 403,
+                                            "detail": "This account is not eligible to use the API."
+                                        }
+                                    }
+                                }
+                            },
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        },
+                        "links": {}
                     }
                 },
                 "summary": "Retrieves a ExpenseCategory resource.",
@@ -362,6 +748,112 @@
                             "application/problem+json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/Error"
+                                }
+                            },
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        },
+                        "links": {}
+                    },
+                    "401": {
+                        "description": "Unauthorized. The request carries no usable bearer token (problem type \"/errors/401\").",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                },
+                                "examples": {
+                                    "unauthorized": {
+                                        "summary": "Missing or invalid token",
+                                        "value": {
+                                            "type": "/errors/401",
+                                            "title": "An error occurred",
+                                            "status": 401,
+                                            "detail": "Unauthorized"
+                                        }
+                                    }
+                                }
+                            },
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        },
+                        "headers": {
+                            "WWW-Authenticate": {
+                                "in": "header",
+                                "description": "The bearer challenge the client must answer.",
+                                "required": false,
+                                "deprecated": false,
+                                "allowEmptyValue": false,
+                                "schema": {
+                                    "type": "string"
+                                },
+                                "style": "simple",
+                                "explode": false,
+                                "allowReserved": false,
+                                "example": "Bearer"
+                            }
+                        },
+                        "links": {}
+                    },
+                    "403": {
+                        "description": "Forbidden. Either the token lacks the \"api:full\" scope (\"/problems/insufficient-scope\") or the account is not eligible (\"/problems/account-inactive\"). Neither case should trigger a token refresh.",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                },
+                                "examples": {
+                                    "insufficient-scope": {
+                                        "summary": "Token without the api:full scope",
+                                        "value": {
+                                            "type": "/problems/insufficient-scope",
+                                            "title": "Forbidden",
+                                            "status": 403,
+                                            "detail": "This resource requires the \"api:full\" scope."
+                                        }
+                                    },
+                                    "account-inactive": {
+                                        "summary": "Unverified account",
+                                        "value": {
+                                            "type": "/problems/account-inactive",
+                                            "title": "Forbidden",
+                                            "status": 403,
+                                            "detail": "This account is not eligible to use the API."
+                                        }
+                                    }
+                                }
+                            },
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        },
+                        "links": {}
+                    },
+                    "409": {
+                        "description": "Conflict. The category still has Subscriptions assigned (\"/problems/category-in-use\"). Reassign them first.",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                },
+                                "examples": {
+                                    "category-in-use": {
+                                        "summary": "Category still in use",
+                                        "value": {
+                                            "type": "/problems/category-in-use",
+                                            "title": "Expense category in use",
+                                            "status": 409,
+                                            "detail": "Category \"Subscriptions\" cannot be deleted because it still has 1 subscription(s) assigned. Reassign them first."
+                                        }
+                                    }
                                 }
                             },
                             "application/json": {
@@ -455,6 +947,85 @@
                             "application/problem+json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/Error"
+                                }
+                            },
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        },
+                        "links": {}
+                    },
+                    "401": {
+                        "description": "Unauthorized. The request carries no usable bearer token (problem type \"/errors/401\").",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                },
+                                "examples": {
+                                    "unauthorized": {
+                                        "summary": "Missing or invalid token",
+                                        "value": {
+                                            "type": "/errors/401",
+                                            "title": "An error occurred",
+                                            "status": 401,
+                                            "detail": "Unauthorized"
+                                        }
+                                    }
+                                }
+                            },
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        },
+                        "headers": {
+                            "WWW-Authenticate": {
+                                "in": "header",
+                                "description": "The bearer challenge the client must answer.",
+                                "required": false,
+                                "deprecated": false,
+                                "allowEmptyValue": false,
+                                "schema": {
+                                    "type": "string"
+                                },
+                                "style": "simple",
+                                "explode": false,
+                                "allowReserved": false,
+                                "example": "Bearer"
+                            }
+                        },
+                        "links": {}
+                    },
+                    "403": {
+                        "description": "Forbidden. Either the token lacks the \"api:full\" scope (\"/problems/insufficient-scope\") or the account is not eligible (\"/problems/account-inactive\"). Neither case should trigger a token refresh.",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                },
+                                "examples": {
+                                    "insufficient-scope": {
+                                        "summary": "Token without the api:full scope",
+                                        "value": {
+                                            "type": "/problems/insufficient-scope",
+                                            "title": "Forbidden",
+                                            "status": 403,
+                                            "detail": "This resource requires the \"api:full\" scope."
+                                        }
+                                    },
+                                    "account-inactive": {
+                                        "summary": "Unverified account",
+                                        "value": {
+                                            "type": "/problems/account-inactive",
+                                            "title": "Forbidden",
+                                            "status": 403,
+                                            "detail": "This account is not eligible to use the API."
+                                        }
+                                    }
                                 }
                             },
                             "application/json": {
@@ -565,6 +1136,137 @@
                                 }
                             }
                         }
+                    },
+                    "401": {
+                        "description": "Unauthorized. The request carries no usable bearer token (problem type \"/errors/401\").",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                },
+                                "examples": {
+                                    "unauthorized": {
+                                        "summary": "Missing or invalid token",
+                                        "value": {
+                                            "type": "/errors/401",
+                                            "title": "An error occurred",
+                                            "status": 401,
+                                            "detail": "Unauthorized"
+                                        }
+                                    }
+                                }
+                            },
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        },
+                        "headers": {
+                            "WWW-Authenticate": {
+                                "in": "header",
+                                "description": "The bearer challenge the client must answer.",
+                                "required": false,
+                                "deprecated": false,
+                                "allowEmptyValue": false,
+                                "schema": {
+                                    "type": "string"
+                                },
+                                "style": "simple",
+                                "explode": false,
+                                "allowReserved": false,
+                                "example": "Bearer"
+                            }
+                        },
+                        "links": {}
+                    },
+                    "403": {
+                        "description": "Forbidden. Either the token lacks the \"api:full\" scope (\"/problems/insufficient-scope\") or the account is not eligible (\"/problems/account-inactive\"). Neither case should trigger a token refresh.",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                },
+                                "examples": {
+                                    "insufficient-scope": {
+                                        "summary": "Token without the api:full scope",
+                                        "value": {
+                                            "type": "/problems/insufficient-scope",
+                                            "title": "Forbidden",
+                                            "status": 403,
+                                            "detail": "This resource requires the \"api:full\" scope."
+                                        }
+                                    },
+                                    "account-inactive": {
+                                        "summary": "Unverified account",
+                                        "value": {
+                                            "type": "/problems/account-inactive",
+                                            "title": "Forbidden",
+                                            "status": 403,
+                                            "detail": "This account is not eligible to use the API."
+                                        }
+                                    }
+                                }
+                            },
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        },
+                        "links": {}
+                    },
+                    "422": {
+                        "description": "Unprocessable entity. An \"order\" or \"category\" selector is invalid (problem type \"/validation_errors/{id}\", a fresh id per occurrence).",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ConstraintViolation"
+                                },
+                                "examples": {
+                                    "order": {
+                                        "summary": "Invalid sort selector",
+                                        "description": "The \"type\" carries a per-occurrence id; only the \"/validation_errors/\" prefix is stable.",
+                                        "value": {
+                                            "type": "/validation_errors/00000000-0000-4000-8000-000000000000",
+                                            "title": "An error occurred",
+                                            "status": 422,
+                                            "detail": "order: Sort must be a single \"order[field]\" parameter with direction \"asc\" or \"desc\".",
+                                            "violations": [
+                                                {
+                                                    "propertyPath": "order",
+                                                    "message": "Sort must be a single \"order[field]\" parameter with direction \"asc\" or \"desc\".",
+                                                    "code": null
+                                                }
+                                            ]
+                                        }
+                                    },
+                                    "category": {
+                                        "summary": "Malformed category filter",
+                                        "description": "The \"type\" carries a per-occurrence id; only the \"/validation_errors/\" prefix is stable.",
+                                        "value": {
+                                            "type": "/validation_errors/00000000-0000-4000-8000-000000000000",
+                                            "title": "An error occurred",
+                                            "status": 422,
+                                            "detail": "category: The selected category is invalid.",
+                                            "violations": [
+                                                {
+                                                    "propertyPath": "category",
+                                                    "message": "The selected category is invalid.",
+                                                    "code": null
+                                                }
+                                            ]
+                                        }
+                                    }
+                                }
+                            },
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ConstraintViolation"
+                                }
+                            }
+                        },
+                        "links": {}
                     }
                 },
                 "summary": "Retrieves the collection of Subscription resources.",
@@ -704,6 +1406,112 @@
                             }
                         },
                         "links": {}
+                    },
+                    "401": {
+                        "description": "Unauthorized. The request carries no usable bearer token (problem type \"/errors/401\").",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                },
+                                "examples": {
+                                    "unauthorized": {
+                                        "summary": "Missing or invalid token",
+                                        "value": {
+                                            "type": "/errors/401",
+                                            "title": "An error occurred",
+                                            "status": 401,
+                                            "detail": "Unauthorized"
+                                        }
+                                    }
+                                }
+                            },
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        },
+                        "headers": {
+                            "WWW-Authenticate": {
+                                "in": "header",
+                                "description": "The bearer challenge the client must answer.",
+                                "required": false,
+                                "deprecated": false,
+                                "allowEmptyValue": false,
+                                "schema": {
+                                    "type": "string"
+                                },
+                                "style": "simple",
+                                "explode": false,
+                                "allowReserved": false,
+                                "example": "Bearer"
+                            }
+                        },
+                        "links": {}
+                    },
+                    "403": {
+                        "description": "Forbidden. Either the token lacks the \"api:full\" scope (\"/problems/insufficient-scope\") or the account is not eligible (\"/problems/account-inactive\"). Neither case should trigger a token refresh.",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                },
+                                "examples": {
+                                    "insufficient-scope": {
+                                        "summary": "Token without the api:full scope",
+                                        "value": {
+                                            "type": "/problems/insufficient-scope",
+                                            "title": "Forbidden",
+                                            "status": 403,
+                                            "detail": "This resource requires the \"api:full\" scope."
+                                        }
+                                    },
+                                    "account-inactive": {
+                                        "summary": "Unverified account",
+                                        "value": {
+                                            "type": "/problems/account-inactive",
+                                            "title": "Forbidden",
+                                            "status": 403,
+                                            "detail": "This account is not eligible to use the API."
+                                        }
+                                    }
+                                }
+                            },
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        },
+                        "links": {}
+                    },
+                    "409": {
+                        "description": "Conflict. The per-User Subscription limit is reached (\"/problems/subscription-limit-reached\").",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                },
+                                "examples": {
+                                    "subscription-limit-reached": {
+                                        "summary": "Subscription limit reached",
+                                        "value": {
+                                            "type": "/problems/subscription-limit-reached",
+                                            "title": "Subscription limit reached",
+                                            "status": 409,
+                                            "detail": "You have reached the maximum number of subscriptions."
+                                        }
+                                    }
+                                }
+                            },
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        },
+                        "links": {}
                     }
                 },
                 "summary": "Creates a Subscription resource.",
@@ -774,6 +1582,85 @@
                             }
                         },
                         "links": {}
+                    },
+                    "401": {
+                        "description": "Unauthorized. The request carries no usable bearer token (problem type \"/errors/401\").",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                },
+                                "examples": {
+                                    "unauthorized": {
+                                        "summary": "Missing or invalid token",
+                                        "value": {
+                                            "type": "/errors/401",
+                                            "title": "An error occurred",
+                                            "status": 401,
+                                            "detail": "Unauthorized"
+                                        }
+                                    }
+                                }
+                            },
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        },
+                        "headers": {
+                            "WWW-Authenticate": {
+                                "in": "header",
+                                "description": "The bearer challenge the client must answer.",
+                                "required": false,
+                                "deprecated": false,
+                                "allowEmptyValue": false,
+                                "schema": {
+                                    "type": "string"
+                                },
+                                "style": "simple",
+                                "explode": false,
+                                "allowReserved": false,
+                                "example": "Bearer"
+                            }
+                        },
+                        "links": {}
+                    },
+                    "403": {
+                        "description": "Forbidden. Either the token lacks the \"api:full\" scope (\"/problems/insufficient-scope\") or the account is not eligible (\"/problems/account-inactive\"). Neither case should trigger a token refresh.",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                },
+                                "examples": {
+                                    "insufficient-scope": {
+                                        "summary": "Token without the api:full scope",
+                                        "value": {
+                                            "type": "/problems/insufficient-scope",
+                                            "title": "Forbidden",
+                                            "status": 403,
+                                            "detail": "This resource requires the \"api:full\" scope."
+                                        }
+                                    },
+                                    "account-inactive": {
+                                        "summary": "Unverified account",
+                                        "value": {
+                                            "type": "/problems/account-inactive",
+                                            "title": "Forbidden",
+                                            "status": 403,
+                                            "detail": "This account is not eligible to use the API."
+                                        }
+                                    }
+                                }
+                            },
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        },
+                        "links": {}
                     }
                 },
                 "summary": "Retrieves a Subscription resource.",
@@ -808,6 +1695,85 @@
                             "application/problem+json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/Error"
+                                }
+                            },
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        },
+                        "links": {}
+                    },
+                    "401": {
+                        "description": "Unauthorized. The request carries no usable bearer token (problem type \"/errors/401\").",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                },
+                                "examples": {
+                                    "unauthorized": {
+                                        "summary": "Missing or invalid token",
+                                        "value": {
+                                            "type": "/errors/401",
+                                            "title": "An error occurred",
+                                            "status": 401,
+                                            "detail": "Unauthorized"
+                                        }
+                                    }
+                                }
+                            },
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        },
+                        "headers": {
+                            "WWW-Authenticate": {
+                                "in": "header",
+                                "description": "The bearer challenge the client must answer.",
+                                "required": false,
+                                "deprecated": false,
+                                "allowEmptyValue": false,
+                                "schema": {
+                                    "type": "string"
+                                },
+                                "style": "simple",
+                                "explode": false,
+                                "allowReserved": false,
+                                "example": "Bearer"
+                            }
+                        },
+                        "links": {}
+                    },
+                    "403": {
+                        "description": "Forbidden. Either the token lacks the \"api:full\" scope (\"/problems/insufficient-scope\") or the account is not eligible (\"/problems/account-inactive\"). Neither case should trigger a token refresh.",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                },
+                                "examples": {
+                                    "insufficient-scope": {
+                                        "summary": "Token without the api:full scope",
+                                        "value": {
+                                            "type": "/problems/insufficient-scope",
+                                            "title": "Forbidden",
+                                            "status": 403,
+                                            "detail": "This resource requires the \"api:full\" scope."
+                                        }
+                                    },
+                                    "account-inactive": {
+                                        "summary": "Unverified account",
+                                        "value": {
+                                            "type": "/problems/account-inactive",
+                                            "title": "Forbidden",
+                                            "status": 403,
+                                            "detail": "This account is not eligible to use the API."
+                                        }
+                                    }
                                 }
                             },
                             "application/json": {
@@ -901,6 +1867,112 @@
                             "application/problem+json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/Error"
+                                }
+                            },
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        },
+                        "links": {}
+                    },
+                    "401": {
+                        "description": "Unauthorized. The request carries no usable bearer token (problem type \"/errors/401\").",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                },
+                                "examples": {
+                                    "unauthorized": {
+                                        "summary": "Missing or invalid token",
+                                        "value": {
+                                            "type": "/errors/401",
+                                            "title": "An error occurred",
+                                            "status": 401,
+                                            "detail": "Unauthorized"
+                                        }
+                                    }
+                                }
+                            },
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        },
+                        "headers": {
+                            "WWW-Authenticate": {
+                                "in": "header",
+                                "description": "The bearer challenge the client must answer.",
+                                "required": false,
+                                "deprecated": false,
+                                "allowEmptyValue": false,
+                                "schema": {
+                                    "type": "string"
+                                },
+                                "style": "simple",
+                                "explode": false,
+                                "allowReserved": false,
+                                "example": "Bearer"
+                            }
+                        },
+                        "links": {}
+                    },
+                    "403": {
+                        "description": "Forbidden. Either the token lacks the \"api:full\" scope (\"/problems/insufficient-scope\") or the account is not eligible (\"/problems/account-inactive\"). Neither case should trigger a token refresh.",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                },
+                                "examples": {
+                                    "insufficient-scope": {
+                                        "summary": "Token without the api:full scope",
+                                        "value": {
+                                            "type": "/problems/insufficient-scope",
+                                            "title": "Forbidden",
+                                            "status": 403,
+                                            "detail": "This resource requires the \"api:full\" scope."
+                                        }
+                                    },
+                                    "account-inactive": {
+                                        "summary": "Unverified account",
+                                        "value": {
+                                            "type": "/problems/account-inactive",
+                                            "title": "Forbidden",
+                                            "status": 403,
+                                            "detail": "This account is not eligible to use the API."
+                                        }
+                                    }
+                                }
+                            },
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        },
+                        "links": {}
+                    },
+                    "409": {
+                        "description": "Conflict. The converted amount was confirmed for a different main currency (\"/problems/currency-conflict\").",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                },
+                                "examples": {
+                                    "currency-conflict": {
+                                        "summary": "Converted amount confirmed for the wrong currency",
+                                        "value": {
+                                            "type": "/problems/currency-conflict",
+                                            "title": "Converted amount currency conflict",
+                                            "status": 409,
+                                            "detail": "The converted amount was confirmed for USD, but your current main currency is PLN."
+                                        }
+                                    }
                                 }
                             },
                             "application/json": {

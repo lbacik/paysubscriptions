@@ -69,6 +69,16 @@ services:
         arguments:
             $decorated: '@App\OpenApi\HalSchemaDecorator.inner'
 
+    # Generated OpenAPI contract (issue #280): every error status the API v1
+    # operations return, declared with their problem `type` values as named
+    # examples. Registered like the decorators above: the inner service is
+    # injected explicitly, since autowiring OpenApiFactoryInterface here
+    # would resolve the alias back to this decorator.
+    App\OpenApi\ErrorResponsesDecorator:
+        decorates: 'api_platform.openapi.factory'
+        arguments:
+            $decorated: '@App\OpenApi\ErrorResponsesDecorator.inner'
+
     # Web-login throttling (issue #143): the bundle's own username+IP *and*
     # IP limiters, fed by the env-sized login_local/login_global factories
     # (config/packages/rate_limiter.yaml) instead of the static max_attempts
