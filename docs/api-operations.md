@@ -149,7 +149,12 @@ curl -fsS https://paysubscriptions.com/token \
 
 - Error shape: token-endpoint failures are OAuth2 protocol errors
   (`invalid_grant`, `access_denied`, `unsupported_grant_type`);
-  API failures are `application/problem+json`. Generic errors use the
+  API failures are `application/problem+json`. The published contract
+  (`resources/openapi/v1.json`, served at `/api/docs.jsonopenapi`) is the
+  authoritative list of error statuses and problem types per operation:
+  every `/api/v1` operation declares its `401`/`403`, and the operations
+  that can fail that way declare their `409`/`422` with the problem
+  `type` values as named examples. Generic errors use the
   `/errors/{status}` type (`401` missing or invalid token, `404`
   missing/foreign id, `405` wrong method). A `401` carries a `Bearer`
   challenge (`error="invalid_token"` when the gate itself refuses the
